@@ -140,3 +140,5 @@ The core API should be:
 - small and explicit
 - reusable across interfaces
 - stable enough for automation and future products
+
+The future API server direction should therefore stay thin and mirror this core surface rather than redefining it.

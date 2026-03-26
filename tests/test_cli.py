@@ -8,6 +8,13 @@ from pathlib import Path
 
 import yaml
 
+from linkar.core import load_project, load_template, resolve_project_assets, run_template
+from linkar.errors import (
+    AssetResolutionError,
+    ProjectValidationError,
+    TemplateValidationError,
+)
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -689,3 +696,80 @@ cp "${RESULTS_DIR}/fastq/sample.txt" "${LINKAR_RESULTS_DIR}/consumed.txt"
     assert "Step 2: template 'consume_fastq'" in methods.stdout
     assert methods.stdout.index("produce_fastq") < methods.stdout.index("consume_fastq")
     assert "sample_name=S1" in methods.stdout
+
+
+def test_core_raises_typed_project_and_template_errors(tmp_path: Path) -> None:
+    broken_project = tmp_path / "broken_project"
+    broken_project.mkdir()
+    (broken_project / "project.yaml").write_text("templates: []\n")
+    try:
+        load_project(broken_project)
+    except ProjectValidationError as exc:
+        assert exc.code == "invalid_project"
+    else:
+        raise AssertionError("Expected ProjectValidationError")
+
+    broken_template = tmp_path / "broken_template"
+    broken_template.mkdir()
+    (broken_template / "template.yaml").write_text("id: broken\nrun: {}\n")
+    try:
+        load_template(broken_template)
+    except TemplateValidationError as exc:
+        assert exc.code == "invalid_template"
+    else:
+        raise AssertionError("Expected TemplateValidationError")
+
+
+def test_resolve_project_assets_returns_structured_pack_info(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    make_template(
+        pack_root / "templates",
+        "asset_template",
+        "  name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/name.txt"
+""",
+    )
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    project_file = project_dir / "project.yaml"
+    project = yaml.safe_load(project_file.read_text())
+    project["packs"] = [{"ref": str(pack_root), "binding": "default"}]
+    project_file.write_text(yaml.safe_dump(project, sort_keys=False))
+
+    assets = resolve_project_assets(project_dir)
+    assert assets == [
+        {
+            "pack_ref": str(pack_root.resolve()),
+            "pack_root": str(pack_root.resolve()),
+            "pack_revision": None,
+            "binding": "default",
+        }
+    ]
+
+
+def test_missing_binding_asset_raises_typed_error(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    make_template(
+        pack_root / "templates",
+        "binding_error",
+        "  source_dir:\n    type: path\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+cp "${SOURCE_DIR}/sample.txt" "${LINKAR_RESULTS_DIR}/copied.txt"
+""",
+    )
+    try:
+        run_template(
+            "binding_error",
+            pack_refs=[str(pack_root)],
+            binding_ref=str(tmp_path / "missing_binding"),
+        )
+    except AssetResolutionError as exc:
+        assert exc.code == "asset_resolution_error"
+        assert "binding.yaml not found" in str(exc)
+    else:
+        raise AssertionError("Expected AssetResolutionError")

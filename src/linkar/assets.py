@@ -6,6 +6,8 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from linkar.errors import AssetResolutionError
+
 
 @dataclass(frozen=True)
 class ResolvedAsset:
@@ -56,7 +58,7 @@ def run_git(args: list[str], cwd: Path | None = None) -> str:
     )
     if completed.returncode != 0:
         message = completed.stderr.strip() or completed.stdout.strip() or "git command failed"
-        raise RuntimeError(message)
+        raise AssetResolutionError(message)
     return completed.stdout.strip()
 
 

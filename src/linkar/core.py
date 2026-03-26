@@ -14,10 +14,14 @@ import yaml
 
 from linkar.assets import ResolvedAsset, resolve_asset_ref, resolve_asset_refs
 from linkar import __version__
-
-
-class LinkarError(Exception):
-    """Base error for linkar."""
+from linkar.errors import (
+    AssetResolutionError,
+    ExecutionError,
+    LinkarError,
+    ParameterResolutionError,
+    ProjectValidationError,
+    TemplateValidationError,
+)
 
 
 @dataclass
@@ -82,17 +86,17 @@ def load_project(path: str | Path) -> Project:
     root_path = Path(path).resolve()
     file_path = project_file(root_path)
     if not file_path.exists():
-        raise LinkarError(f"Project file not found: {file_path}")
+        raise ProjectValidationError(f"Project file not found: {file_path}")
     data = load_yaml(file_path)
     project_id = data.get("id")
     if not project_id:
-        raise LinkarError("project.yaml field 'id' is required")
+        raise ProjectValidationError("project.yaml field 'id' is required")
     templates = data.setdefault("templates", [])
     if not isinstance(templates, list):
-        raise LinkarError("project.yaml field 'templates' must be a list")
+        raise ProjectValidationError("project.yaml field 'templates' must be a list")
     packs = data.setdefault("packs", [])
     if not isinstance(packs, list):
-        raise LinkarError("project.yaml field 'packs' must be a list")
+        raise ProjectValidationError("project.yaml field 'packs' must be a list")
     return Project(root=file_path.parent, data=data)
 
 
@@ -101,7 +105,7 @@ def init_project(path: str | Path, project_id: str | None = None) -> Path:
     root.mkdir(parents=True, exist_ok=True)
     file_path = root / "project.yaml"
     if file_path.exists():
-        raise LinkarError(f"Project already exists: {file_path}")
+        raise ProjectValidationError(f"Project already exists: {file_path}")
     data = {
         "id": project_id or root.name,
         "packs": [],
@@ -136,13 +140,13 @@ def project_pack_entries(project: Project | None) -> list[PackEntry]:
             entries.append(PackEntry(asset=resolve_asset_ref(item)))
             continue
         if not isinstance(item, dict):
-            raise LinkarError("project.yaml pack entries must be strings or mappings")
+            raise ProjectValidationError("project.yaml pack entries must be strings or mappings")
         ref = item.get("ref")
         if not ref or not isinstance(ref, str):
-            raise LinkarError("project.yaml pack entry field 'ref' is required")
+            raise ProjectValidationError("project.yaml pack entry field 'ref' is required")
         binding = item.get("binding")
         if binding is not None and not isinstance(binding, str):
-            raise LinkarError("project.yaml pack entry field 'binding' must be a string")
+            raise ProjectValidationError("project.yaml pack entry field 'binding' must be a string")
         entries.append(PackEntry(asset=resolve_asset_ref(ref), binding=binding))
     return entries
 
@@ -164,12 +168,12 @@ def load_template(
                 candidates.append(candidate)
                 candidate_assets.append(pack_asset)
         if not candidates:
-            raise LinkarError(
+            raise AssetResolutionError(
                 f"Template not found: {template_ref}. Pass a template path or use --pack."
             )
         if len(candidates) > 1:
             joined = ", ".join(asset.ref for asset in candidate_assets)
-            raise LinkarError(
+            raise AssetResolutionError(
                 f"Template '{template_ref}' is ambiguous across packs: {joined}"
             )
         root = candidates[0]
@@ -177,33 +181,39 @@ def load_template(
 
     spec_path = root / "template.yaml"
     if not spec_path.exists():
-        raise LinkarError(f"template.yaml not found in {root}")
+        raise TemplateValidationError(f"template.yaml not found in {root}")
 
     data = load_yaml(spec_path)
     template_id = data.get("id")
     if not template_id:
-        raise LinkarError(f"Template id missing in {spec_path}")
+        raise TemplateValidationError(f"Template id missing in {spec_path}")
 
     run = data.get("run") or {}
     entry = run.get("entry")
     if not entry:
-        raise LinkarError(f"Template run.entry missing in {spec_path}")
+        raise TemplateValidationError(f"Template run.entry missing in {spec_path}")
     entry_path = root / entry
     if not entry_path.exists():
-        raise LinkarError(f"Template entrypoint not found: {entry_path}")
+        raise TemplateValidationError(f"Template entrypoint not found: {entry_path}")
 
     params = data.get("params") or {}
     if not isinstance(params, dict):
-        raise LinkarError(f"Template params must be a mapping in {spec_path}")
+        raise TemplateValidationError(f"Template params must be a mapping in {spec_path}")
     for key, raw_spec in params.items():
         if not isinstance(key, str) or not key:
-            raise LinkarError(f"Template param names must be non-empty strings in {spec_path}")
+            raise TemplateValidationError(
+                f"Template param names must be non-empty strings in {spec_path}"
+            )
         spec = raw_spec or {}
         if not isinstance(spec, dict):
-            raise LinkarError(f"Template param spec must be a mapping for '{key}' in {spec_path}")
+            raise TemplateValidationError(
+                f"Template param spec must be a mapping for '{key}' in {spec_path}"
+            )
         param_type = spec.get("type", "str")
         if param_type not in {"str", "int", "float", "bool", "path"}:
-            raise LinkarError(f"Unsupported param type '{param_type}' for '{key}' in {spec_path}")
+            raise TemplateValidationError(
+                f"Unsupported param type '{param_type}' for '{key}' in {spec_path}"
+            )
 
     return TemplateSpec(
         id=template_id,
@@ -236,10 +246,10 @@ def parse_param_value(value: Any, param_type: str) -> Any:
             return True
         if lowered in {"0", "false", "no", "off"}:
             return False
-        raise LinkarError(f"Invalid bool value: {value}")
+        raise ParameterResolutionError(f"Invalid bool value: {value}")
     if param_type == "path":
         return str(Path(value).expanduser().resolve())
-    raise LinkarError(f"Unsupported param type: {param_type}")
+    raise ParameterResolutionError(f"Unsupported param type: {param_type}")
 
 
 def format_env_value(value: Any) -> str:
@@ -264,13 +274,13 @@ def binding_asset_root(binding_ref: str | Path | None, pack_root: Path | None) -
         return None
     if binding_ref == "default":
         if pack_root is None:
-            raise LinkarError("Binding 'default' requires a selected pack")
+            raise AssetResolutionError("Binding 'default' requires a selected pack")
         if not (pack_root / "binding.yaml").exists():
-            raise LinkarError(f"Pack does not provide a default binding: {pack_root}")
+            raise AssetResolutionError(f"Pack does not provide a default binding: {pack_root}")
         return pack_root
     binding_asset = resolve_asset_ref(binding_ref)
     if not (binding_asset.root / "binding.yaml").exists():
-        raise LinkarError(f"binding.yaml not found in {binding_asset.root}")
+        raise AssetResolutionError(f"binding.yaml not found in {binding_asset.root}")
     return binding_asset.root
 
 
@@ -281,7 +291,7 @@ def load_binding_config(binding_ref: str | Path | None, pack_root: Path | None) 
     data = load_yaml(root / "binding.yaml")
     templates = data.get("templates") or {}
     if not isinstance(templates, dict):
-        raise LinkarError("binding.yaml field 'templates' must be a mapping")
+        raise AssetResolutionError("binding.yaml field 'templates' must be a mapping")
     return root, data
 
 
@@ -293,14 +303,14 @@ def resolve_binding_function(name: str, search_roots: list[Path]) -> Any:
         module_name = f"linkar_binding_{candidate.stem}_{abs(hash(str(candidate)))}"
         spec = importlib.util.spec_from_file_location(module_name, candidate)
         if spec is None or spec.loader is None:
-            raise LinkarError(f"Unable to load binding function: {candidate}")
+            raise AssetResolutionError(f"Unable to load binding function: {candidate}")
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         resolve = getattr(module, "resolve", None)
         if not callable(resolve):
-            raise LinkarError(f"Binding function file must define resolve(ctx): {candidate}")
+            raise AssetResolutionError(f"Binding function file must define resolve(ctx): {candidate}")
         return resolve
-    raise LinkarError(f"Binding function not found: {name}")
+    raise AssetResolutionError(f"Binding function not found: {name}")
 
 
 def resolve_bound_value(
@@ -314,16 +324,22 @@ def resolve_bound_value(
     templates = binding_data.get("templates") or {}
     template_binding = templates.get(template.id) or {}
     if not isinstance(template_binding, dict):
-        raise LinkarError(f"binding.yaml template entry must be a mapping for '{template.id}'")
+        raise AssetResolutionError(
+            f"binding.yaml template entry must be a mapping for '{template.id}'"
+        )
     params = template_binding.get("params") or {}
     if not isinstance(params, dict):
-        raise LinkarError(f"binding.yaml params entry must be a mapping for '{template.id}'")
+        raise AssetResolutionError(
+            f"binding.yaml params entry must be a mapping for '{template.id}'"
+        )
     if key not in params:
         return False, None, None
 
     rule = params[key] or {}
     if not isinstance(rule, dict):
-        raise LinkarError(f"binding.yaml param rule must be a mapping for '{template.id}.{key}'")
+        raise AssetResolutionError(
+            f"binding.yaml param rule must be a mapping for '{template.id}.{key}'"
+        )
     source = rule.get("from")
     ctx = BindingContext(template=template, project=project, resolved_params=dict(resolved_params))
 
@@ -331,7 +347,7 @@ def resolve_bound_value(
         output_key = rule.get("key", key)
         value = ctx.latest_output(str(output_key))
         if value is None:
-            raise LinkarError(
+            raise ParameterResolutionError(
                 f"Binding could not resolve output '{output_key}' for '{template.id}.{key}'"
             )
         return True, value, {
@@ -342,7 +358,9 @@ def resolve_bound_value(
     if source == "function":
         function_name = rule.get("name")
         if not function_name or not isinstance(function_name, str):
-            raise LinkarError(f"Binding function name is required for '{template.id}.{key}'")
+            raise AssetResolutionError(
+                f"Binding function name is required for '{template.id}.{key}'"
+            )
         search_roots = []
         if binding_root is not None:
             search_roots.append(binding_root)
@@ -350,7 +368,7 @@ def resolve_bound_value(
             search_roots.append(template.pack_root)
         value = resolve_binding_function(function_name, search_roots)(ctx)
         if value is None:
-            raise LinkarError(
+            raise ParameterResolutionError(
                 f"Binding function returned no value for '{template.id}.{key}'"
             )
         return True, value, {
@@ -360,13 +378,17 @@ def resolve_bound_value(
         }
     if source == "value":
         if "value" not in rule:
-            raise LinkarError(f"Binding literal value is required for '{template.id}.{key}'")
+            raise AssetResolutionError(
+                f"Binding literal value is required for '{template.id}.{key}'"
+            )
         return True, rule["value"], {
             "source": "binding",
             "binding_source": "value",
         }
 
-    raise LinkarError(f"Unsupported binding source '{source}' for '{template.id}.{key}'")
+    raise AssetResolutionError(
+        f"Unsupported binding source '{source}' for '{template.id}.{key}'"
+    )
 
 
 def resolve_params_detailed(
@@ -406,7 +428,7 @@ def resolve_params_detailed(
                 raw_value = spec["default"]
                 raw_provenance = {"source": "default"}
             elif spec.get("required"):
-                raise LinkarError(f"Missing required param: {key}")
+                raise ParameterResolutionError(f"Missing required param: {key}")
             else:
                 continue
 
@@ -494,8 +516,30 @@ def list_project_runs(project: str | Path | Project | None = None) -> list[dict[
     else:
         project_obj = project
     if project_obj is None:
-        raise LinkarError("No active project found")
+        raise ProjectValidationError("No active project found")
     return list(project_obj.data.get("templates", []))
+
+
+def resolve_project_assets(project: str | Path | Project | None = None) -> list[dict[str, Any]]:
+    if isinstance(project, (str, Path)):
+        project_obj = load_project(project)
+    elif project is None:
+        project_obj = discover_project()
+    else:
+        project_obj = project
+    if project_obj is None:
+        raise ProjectValidationError("No active project found")
+    assets: list[dict[str, Any]] = []
+    for entry in project_pack_entries(project_obj):
+        assets.append(
+            {
+                "pack_ref": entry.asset.ref,
+                "pack_root": str(entry.asset.root),
+                "pack_revision": entry.asset.revision,
+                "binding": entry.binding,
+            }
+        )
+    return assets
 
 
 def inspect_run(run_ref: str | Path, project: str | Path | Project | None = None) -> dict[str, Any]:
@@ -504,7 +548,7 @@ def inspect_run(run_ref: str | Path, project: str | Path | Project | None = None
         target = ref_path.resolve()
         meta_path = target if target.is_file() else target / ".linkar" / "meta.json"
         if not meta_path.exists():
-            raise LinkarError(f"Run metadata not found: {meta_path}")
+            raise ProjectValidationError(f"Run metadata not found: {meta_path}")
         with meta_path.open("r", encoding="utf-8") as handle:
             return json.load(handle)
 
@@ -524,7 +568,7 @@ def inspect_run(run_ref: str | Path, project: str | Path | Project | None = None
         meta_path = (project_root / entry["meta"]).resolve()
         with meta_path.open("r", encoding="utf-8") as handle:
             return json.load(handle)
-    raise LinkarError(f"Run not found: {run_ref}")
+    raise ProjectValidationError(f"Run not found: {run_ref}")
 
 
 def list_templates(
@@ -631,7 +675,7 @@ def run_template(
     linkar_dir.mkdir(exist_ok=True)
 
     if template.run_mode != "direct":
-        raise LinkarError(f"Unsupported run mode: {template.run_mode}")
+        raise ExecutionError(f"Unsupported run mode: {template.run_mode}")
 
     env = os.environ.copy()
     for key, value in resolved_params.items():
@@ -671,7 +715,7 @@ def run_template(
     )
 
     if completed.returncode != 0:
-        raise LinkarError(
+        raise ExecutionError(
             f"Template execution failed with exit code {completed.returncode}. "
             f"See {runtime_path}"
         )

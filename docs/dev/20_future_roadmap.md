@@ -262,22 +262,22 @@ Turn structured provenance into useful narrative outputs.
 Make the core robust enough to support non-CLI consumers cleanly.
 
 ### Scope Checklist
-- [ ] Strengthen structured core return values
-- [ ] Standardize error types
-- [ ] Add inspection-oriented API helpers
-- [ ] Plan a thin external API/server direction
+- [x] Strengthen structured core return values
+- [x] Standardize error types
+- [x] Add inspection-oriented API helpers
+- [x] Plan a thin external API/server direction
 
 ### Deliverables Checklist
-- [ ] Stable core API contract
-- [ ] Clearer error model
-- [ ] `list_templates(...)` or equivalent helper
-- [ ] `inspect_run(...)` or equivalent helper
-- [ ] `resolve_project_assets(...)` or equivalent helper
-- [ ] Separate future API/server direction doc if needed
+- [x] Stable core API contract
+- [x] Clearer error model
+- [x] `list_templates(...)` or equivalent helper
+- [x] `inspect_run(...)` or equivalent helper
+- [x] `resolve_project_assets(...)` or equivalent helper
+- [x] Separate future API/server direction doc if needed
 
 ### Validation Checklist
-- [ ] An AI agent can use the core without shell scraping
-- [ ] The CLI remains a frontend over the same semantics
+- [x] An AI agent can use the core without shell scraping
+- [x] The CLI remains a frontend over the same semantics
 
 ### Explicit Deferrals
 - [ ] Do not build a multi-user system in this phase
@@ -285,7 +285,7 @@ Make the core robust enough to support non-CLI consumers cleanly.
 - [ ] Do not build job queue behavior in this phase
 
 ### Exit Criteria
-- [ ] The core is ready to be wrapped by an API server without semantic redesign
+- [x] The core is ready to be wrapped by an API server without semantic redesign
 
 ## Phase 9: Registry and Product Layer
 ### Objective
