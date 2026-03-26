@@ -210,27 +210,27 @@ Allow packs and bindings to be loaded from remote references while keeping the m
 Make Linkar easier to inspect and operate once the runtime semantics are stable.
 
 ### Scope Checklist
-- [ ] Add project inspection helpers
-- [ ] Add template inspection helpers
-- [ ] Add metadata inspection tools
-- [ ] Add output browsing and traceability helpers
+- [x] Add project inspection helpers
+- [x] Add template inspection helpers
+- [x] Add metadata inspection tools
+- [x] Add output browsing and traceability helpers
 
 ### Deliverables Checklist
-- [ ] Ability to list project runs
-- [ ] Ability to inspect run metadata
-- [ ] Ability to inspect resolved outputs
-- [ ] Ability to inspect available templates from configured packs
+- [x] Ability to list project runs
+- [x] Ability to inspect run metadata
+- [x] Ability to inspect resolved outputs
+- [x] Ability to inspect available templates from configured packs
 
 ### Validation Checklist
-- [ ] Users can answer common inspection questions without manually opening YAML and JSON files each time
-- [ ] Inspection helpers remain thin over the core data model
+- [x] Users can answer common inspection questions without manually opening YAML and JSON files each time
+- [x] Inspection helpers remain thin over the core data model
 
 ### Explicit Deferrals
 - [ ] Do not add web UI in this phase
 - [ ] Do not add authenticated API server behavior in this phase
 
 ### Exit Criteria
-- [ ] Linkar is operationally inspectable without adding product-level complexity
+- [x] Linkar is operationally inspectable without adding product-level complexity
 
 ## Phase 7: Methods Generation
 ### Objective

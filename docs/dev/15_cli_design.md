@@ -128,7 +128,15 @@ Future versions may add commands for:
 - methods generation
 - pack discovery
 
-These should only be added when the core behavior is already well-defined.
+Once the core behavior is well-defined, thin inspection commands are appropriate.
+
+Examples of the inspection layer:
+
+```bash
+linkar project runs
+linkar templates
+linkar inspect run hello_001
+```
 
 ## Summary
 The Linkar CLI should stay:

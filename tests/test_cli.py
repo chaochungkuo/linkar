@@ -581,3 +581,72 @@ def resolve(ctx):
     assert (outdir / "results" / "copied.txt").read_text().strip() == "REMOTE"
     meta = json.loads((outdir / ".linkar" / "meta.json").read_text())
     assert meta["binding"]["ref"] == git_url
+
+
+def test_project_runs_command_lists_indexed_runs(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    completed = run_cli(
+        "run",
+        "hello",
+        "--pack",
+        str(ROOT / "examples" / "packs" / "basic"),
+        "--param",
+        "name=ListRuns",
+        cwd=project_dir,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+    runs = run_cli("project", "runs", cwd=project_dir)
+    assert runs.returncode == 0, runs.stderr
+    assert "hello_001\thello\t" in runs.stdout
+
+
+def test_templates_command_lists_templates_from_configured_project_packs(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    make_template(
+        pack_root / "templates",
+        "listed_template",
+        "  name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/name.txt"
+""",
+    )
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    project_file = project_dir / "project.yaml"
+    project = yaml.safe_load(project_file.read_text())
+    project["packs"] = [{"ref": str(pack_root)}]
+    project_file.write_text(yaml.safe_dump(project, sort_keys=False))
+
+    completed = run_cli("templates", cwd=project_dir)
+    assert completed.returncode == 0, completed.stderr
+    assert f"listed_template\t{pack_root.resolve()}" in completed.stdout
+
+
+def test_inspect_run_command_returns_metadata_json(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    completed = run_cli(
+        "run",
+        "hello",
+        "--pack",
+        str(ROOT / "examples" / "packs" / "basic"),
+        "--param",
+        "name=Inspect",
+        cwd=project_dir,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+    inspected = run_cli("inspect", "run", "hello_001", cwd=project_dir)
+    assert inspected.returncode == 0, inspected.stderr
+    metadata = json.loads(inspected.stdout)
+    assert metadata["template"] == "hello"
+    assert metadata["params"]["name"] == "Inspect"

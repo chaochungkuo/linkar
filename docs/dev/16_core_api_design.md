@@ -29,6 +29,9 @@ load_project(path)
 init_project(path, project_id=None)
 load_template(template_ref, pack_refs=None)
 resolve_params(template, cli_params=None, project=None)
+list_project_runs(project=None)
+list_templates(pack_refs=None, project=None)
+inspect_run(run_ref, project=None)
 ```
 
 These exact names may evolve, but the shape should remain similar.
@@ -95,6 +98,17 @@ This logic should be reusable independently of full execution so it can support:
 - validation
 - preview/debugging
 - future UI and agent flows
+
+## Inspection Helpers
+The core should also expose thin inspection helpers for stable post-run access.
+
+Representative helpers:
+
+- `list_project_runs(...)`
+- `list_templates(...)`
+- `inspect_run(...)`
+
+These should remain data access helpers over the existing model, not a second semantic layer.
 
 ## Error Model
 The core API should raise structured errors for:

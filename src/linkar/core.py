@@ -486,6 +486,86 @@ def update_project(project: Project, template: TemplateSpec, instance_id: str, o
     save_yaml(project.root / "project.yaml", project.data)
 
 
+def list_project_runs(project: str | Path | Project | None = None) -> list[dict[str, Any]]:
+    if isinstance(project, (str, Path)):
+        project_obj = load_project(project)
+    elif project is None:
+        project_obj = discover_project()
+    else:
+        project_obj = project
+    if project_obj is None:
+        raise LinkarError("No active project found")
+    return list(project_obj.data.get("templates", []))
+
+
+def inspect_run(run_ref: str | Path, project: str | Path | Project | None = None) -> dict[str, Any]:
+    ref_path = Path(run_ref)
+    if ref_path.exists():
+        target = ref_path.resolve()
+        meta_path = target if target.is_file() else target / ".linkar" / "meta.json"
+        if not meta_path.exists():
+            raise LinkarError(f"Run metadata not found: {meta_path}")
+        with meta_path.open("r", encoding="utf-8") as handle:
+            return json.load(handle)
+
+    runs = list_project_runs(project=project)
+    for entry in runs:
+        if entry.get("instance_id") != str(run_ref):
+            continue
+        if isinstance(project, Project):
+            project_root = project.root
+        elif isinstance(project, (str, Path)):
+            project_root = load_project(project).root
+        else:
+            project_obj = discover_project()
+            if project_obj is None:
+                break
+            project_root = project_obj.root
+        meta_path = (project_root / entry["meta"]).resolve()
+        with meta_path.open("r", encoding="utf-8") as handle:
+            return json.load(handle)
+    raise LinkarError(f"Run not found: {run_ref}")
+
+
+def list_templates(
+    pack_refs: str | Path | list[str | Path] | None = None,
+    project: str | Path | Project | None = None,
+) -> list[dict[str, Any]]:
+    if isinstance(project, (str, Path)):
+        project_obj = load_project(project)
+    elif project is None:
+        project_obj = discover_project()
+    else:
+        project_obj = project
+    project_entries = project_pack_entries(project_obj)
+    pack_assets = resolve_asset_refs(pack_refs) + [entry.asset for entry in project_entries]
+    seen: set[tuple[str, str]] = set()
+    templates: list[dict[str, Any]] = []
+    for asset in pack_assets:
+        templates_dir = asset.root / "templates"
+        if not templates_dir.exists():
+            continue
+        for child in sorted(templates_dir.iterdir()):
+            spec_path = child / "template.yaml"
+            if not child.is_dir() or not spec_path.exists():
+                continue
+            spec = load_yaml(spec_path)
+            template_id = spec.get("id") or child.name
+            key = (template_id, asset.ref)
+            if key in seen:
+                continue
+            seen.add(key)
+            templates.append(
+                {
+                    "id": template_id,
+                    "pack_ref": asset.ref,
+                    "pack_revision": asset.revision,
+                    "path": str(child.resolve()),
+                }
+            )
+    return templates
+
+
 def run_template(
     template_ref: str | Path,
     params: dict[str, Any] | None = None,
