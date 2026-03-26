@@ -171,6 +171,105 @@ def test_ephemeral_run_uses_linkar_runs(tmp_path: Path) -> None:
     assert (outdir / "results" / "greeting.txt").read_text().strip() == "Hello, Ephemeral"
 
 
+def test_project_pack_configuration_is_used_for_template_lookup(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    hello_template = ROOT / "examples" / "packs" / "basic" / "templates" / "hello"
+    target_template = pack_root / "templates" / "hello"
+    target_template.mkdir(parents=True)
+    (target_template / "template.yaml").write_text((hello_template / "template.yaml").read_text())
+    run_script = target_template / "run.sh"
+    run_script.write_text((hello_template / "run.sh").read_text())
+    run_script.chmod(0o755)
+
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    project_file = project_dir / "project.yaml"
+    project = yaml.safe_load(project_file.read_text())
+    project["packs"] = [{"ref": str(pack_root)}]
+    project_file.write_text(yaml.safe_dump(project, sort_keys=False))
+
+    completed = run_cli(
+        "run",
+        "hello",
+        "--param",
+        "name=ConfiguredPack",
+        cwd=project_dir,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+    indexed = yaml.safe_load(project_file.read_text())
+    assert indexed["templates"][0]["id"] == "hello"
+
+
+def test_multiple_pack_flags_are_searched_in_order(tmp_path: Path) -> None:
+    pack_one = tmp_path / "pack_one"
+    pack_two = tmp_path / "pack_two"
+    make_template(
+        pack_two / "templates",
+        "wave",
+        "  name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'Wave, %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/wave.txt"
+""",
+    )
+    pack_one.mkdir(parents=True)
+
+    completed = run_cli(
+        "run",
+        "wave",
+        "--pack",
+        str(pack_one),
+        "--pack",
+        str(pack_two),
+        "--param",
+        "name=Linkar",
+        cwd=tmp_path,
+    )
+    assert completed.returncode == 0, completed.stderr
+    outdir = Path(completed.stdout.strip())
+    assert (outdir / "results" / "wave.txt").read_text().strip() == "Wave, Linkar"
+
+
+def test_ambiguous_template_ids_across_packs_fail_clearly(tmp_path: Path) -> None:
+    pack_one = tmp_path / "pack_one"
+    pack_two = tmp_path / "pack_two"
+    make_template(
+        pack_one / "templates",
+        "dup",
+        "  name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'one %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/out.txt"
+""",
+    )
+    make_template(
+        pack_two / "templates",
+        "dup",
+        "  name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'two %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/out.txt"
+""",
+    )
+
+    completed = run_cli(
+        "run",
+        "dup",
+        "--pack",
+        str(pack_one),
+        "--pack",
+        str(pack_two),
+        "--param",
+        "name=Linkar",
+        cwd=tmp_path,
+    )
+    assert completed.returncode == 1
+    assert "ambiguous across packs" in completed.stderr
+
+
 def test_failed_run_writes_runtime_diagnostics(tmp_path: Path) -> None:
     template = make_template(
         tmp_path / "templates",

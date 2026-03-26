@@ -81,22 +81,22 @@ Build the smallest correct Linkar that can execute templates reliably in project
 Make reusable template collections practical without increasing semantic complexity.
 
 ### Scope Checklist
-- [ ] Support pack loading from local filesystem paths
-- [ ] Support template lookup by template id across one or more pack roots
-- [ ] Support optional project-level `packs:` configuration
+- [x] Support pack loading from local filesystem paths
+- [x] Support template lookup by template id across one or more pack roots
+- [x] Support optional project-level `packs:` configuration
 
 ### Deliverables Checklist
-- [ ] Pack search-path behavior in the core
-- [ ] CLI support for ad hoc `--pack`
-- [ ] Project-level `packs:` support in `project.yaml`
-- [ ] Clear error behavior when templates are missing across packs
-- [ ] Clear error behavior when templates are ambiguous across packs
+- [x] Pack search-path behavior in the core
+- [x] CLI support for ad hoc `--pack`
+- [x] Project-level `packs:` support in `project.yaml`
+- [x] Clear error behavior when templates are missing across packs
+- [x] Clear error behavior when templates are ambiguous across packs
 
 ### Validation Checklist
-- [ ] A template can be loaded by explicit path
-- [ ] A template can be loaded by template id via pack lookup
-- [ ] Project-level pack configuration removes the need for repeated `--pack`
-- [ ] Template loading remains deterministic
+- [x] A template can be loaded by explicit path
+- [x] A template can be loaded by template id via pack lookup
+- [x] Project-level pack configuration removes the need for repeated `--pack`
+- [x] Template loading remains deterministic
 
 ### Explicit Deferrals
 - [ ] Do not add GitHub fetching in this phase
@@ -105,7 +105,7 @@ Make reusable template collections practical without increasing semantic complex
 - [ ] Do not add registry behavior in this phase
 
 ### Exit Criteria
-- [ ] Users can configure packs once and run templates from them repeatedly in a project
+- [x] Users can configure packs once and run templates from them repeatedly in a project
 
 ## Phase 3: Binding MVP
 ### Objective

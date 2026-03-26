@@ -98,16 +98,59 @@ def discover_project(start: str | Path | None = None) -> Project | None:
     return None
 
 
-def load_template(template_ref: str | Path, pack_root: str | Path | None = None) -> TemplateSpec:
+def normalize_pack_refs(pack_refs: str | Path | list[str | Path] | None) -> list[Path]:
+    if pack_refs is None:
+        return []
+    if isinstance(pack_refs, (str, Path)):
+        raw_refs: list[str | Path] = [pack_refs]
+    else:
+        raw_refs = list(pack_refs)
+    normalized: list[Path] = []
+    for ref in raw_refs:
+        normalized.append(Path(ref).expanduser().resolve())
+    return normalized
+
+
+def project_pack_refs(project: Project | None) -> list[Path]:
+    if project is None:
+        return []
+    refs: list[Path] = []
+    for item in project.data.get("packs", []):
+        if isinstance(item, str):
+            refs.append(Path(item).expanduser().resolve())
+            continue
+        if not isinstance(item, dict):
+            raise LinkarError("project.yaml pack entries must be strings or mappings")
+        ref = item.get("ref")
+        if not ref or not isinstance(ref, str):
+            raise LinkarError("project.yaml pack entry field 'ref' is required")
+        refs.append(Path(ref).expanduser().resolve())
+    return refs
+
+
+def load_template(
+    template_ref: str | Path,
+    pack_refs: str | Path | list[str | Path] | None = None,
+) -> TemplateSpec:
     ref_path = Path(template_ref)
     if ref_path.exists():
         root = ref_path.resolve()
-    elif pack_root is not None:
-        root = Path(pack_root).resolve() / "templates" / str(template_ref)
     else:
-        raise LinkarError(
-            f"Template not found: {template_ref}. Pass a template path or use --pack."
-        )
+        candidates: list[Path] = []
+        for pack_root in normalize_pack_refs(pack_refs):
+            candidate = pack_root / "templates" / str(template_ref)
+            if (candidate / "template.yaml").exists():
+                candidates.append(candidate)
+        if not candidates:
+            raise LinkarError(
+                f"Template not found: {template_ref}. Pass a template path or use --pack."
+            )
+        if len(candidates) > 1:
+            joined = ", ".join(str(path.parent.parent) for path in candidates)
+            raise LinkarError(
+                f"Template '{template_ref}' is ambiguous across packs: {joined}"
+            )
+        root = candidates[0]
 
     spec_path = root / "template.yaml"
     if not spec_path.exists():
@@ -279,15 +322,16 @@ def run_template(
     params: dict[str, Any] | None = None,
     project: str | Path | Project | None = None,
     outdir: str | Path | None = None,
-    pack_root: str | Path | None = None,
+    pack_refs: str | Path | list[str | Path] | None = None,
 ) -> dict[str, Any]:
-    template = load_template(template_ref, pack_root=pack_root)
     if isinstance(project, (str, Path)):
         project_obj = load_project(project)
     elif project is None:
         project_obj = discover_project()
     else:
         project_obj = project
+    combined_pack_refs = normalize_pack_refs(pack_refs) + project_pack_refs(project_obj)
+    template = load_template(template_ref, pack_refs=combined_pack_refs)
     resolved_params = resolve_params(template, cli_params=params, project=project_obj)
     instance_id = next_instance_id(template.id, project_obj)
     output_dir = determine_outdir(template, project_obj, outdir, instance_id)
