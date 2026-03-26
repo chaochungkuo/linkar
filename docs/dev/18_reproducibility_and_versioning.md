@@ -44,6 +44,7 @@ Version capture should include, where practical:
 - Linkar version
 - key tool versions used by the template
 - pack reference and version or revision when available
+- binding reference and revision when available
 - environment identifiers or manager metadata in future versions
 
 This does not mean Linkar becomes an environment manager. It means the run record should preserve enough context to interpret results later.

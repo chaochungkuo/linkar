@@ -12,6 +12,7 @@ from typing import Any
 
 import yaml
 
+from linkar.assets import ResolvedAsset, resolve_asset_ref, resolve_asset_refs
 from linkar import __version__
 
 
@@ -27,6 +28,8 @@ class TemplateSpec:
     run_entry: str
     run_mode: str
     pack_root: Path | None = None
+    pack_ref: str | None = None
+    pack_revision: str | None = None
 
 
 @dataclass
@@ -37,7 +40,7 @@ class Project:
 
 @dataclass
 class PackEntry:
-    ref: Path
+    asset: ResolvedAsset
     binding: str | None = None
 
 
@@ -120,21 +123,8 @@ def normalize_binding_ref(binding_ref: str | Path | None) -> str | Path | None:
     if binding_ref is None:
         return None
     if isinstance(binding_ref, Path):
-        return binding_ref.expanduser().resolve()
+        return str(binding_ref.expanduser().resolve())
     return binding_ref
-
-
-def normalize_pack_refs(pack_refs: str | Path | list[str | Path] | None) -> list[Path]:
-    if pack_refs is None:
-        return []
-    if isinstance(pack_refs, (str, Path)):
-        raw_refs: list[str | Path] = [pack_refs]
-    else:
-        raw_refs = list(pack_refs)
-    normalized: list[Path] = []
-    for ref in raw_refs:
-        normalized.append(Path(ref).expanduser().resolve())
-    return normalized
 
 
 def project_pack_entries(project: Project | None) -> list[PackEntry]:
@@ -143,7 +133,7 @@ def project_pack_entries(project: Project | None) -> list[PackEntry]:
     entries: list[PackEntry] = []
     for item in project.data.get("packs", []):
         if isinstance(item, str):
-            entries.append(PackEntry(ref=Path(item).expanduser().resolve()))
+            entries.append(PackEntry(asset=resolve_asset_ref(item)))
             continue
         if not isinstance(item, dict):
             raise LinkarError("project.yaml pack entries must be strings or mappings")
@@ -153,33 +143,37 @@ def project_pack_entries(project: Project | None) -> list[PackEntry]:
         binding = item.get("binding")
         if binding is not None and not isinstance(binding, str):
             raise LinkarError("project.yaml pack entry field 'binding' must be a string")
-        entries.append(PackEntry(ref=Path(ref).expanduser().resolve(), binding=binding))
+        entries.append(PackEntry(asset=resolve_asset_ref(ref), binding=binding))
     return entries
 
 
 def load_template(
     template_ref: str | Path,
-    pack_refs: str | Path | list[str | Path] | None = None,
+    pack_assets: list[ResolvedAsset] | None = None,
 ) -> TemplateSpec:
     ref_path = Path(template_ref)
     if ref_path.exists():
         root = ref_path.resolve()
+        pack_asset: ResolvedAsset | None = None
     else:
         candidates: list[Path] = []
-        for pack_root in normalize_pack_refs(pack_refs):
-            candidate = pack_root / "templates" / str(template_ref)
+        candidate_assets: list[ResolvedAsset] = []
+        for pack_asset in pack_assets or []:
+            candidate = pack_asset.root / "templates" / str(template_ref)
             if (candidate / "template.yaml").exists():
                 candidates.append(candidate)
+                candidate_assets.append(pack_asset)
         if not candidates:
             raise LinkarError(
                 f"Template not found: {template_ref}. Pass a template path or use --pack."
             )
         if len(candidates) > 1:
-            joined = ", ".join(str(path.parent.parent) for path in candidates)
+            joined = ", ".join(asset.ref for asset in candidate_assets)
             raise LinkarError(
                 f"Template '{template_ref}' is ambiguous across packs: {joined}"
             )
         root = candidates[0]
+        pack_asset = candidate_assets[0]
 
     spec_path = root / "template.yaml"
     if not spec_path.exists():
@@ -218,6 +212,8 @@ def load_template(
         run_entry=entry,
         run_mode=run.get("mode", "direct"),
         pack_root=root.parent.parent if root.parent.name == "templates" else None,
+        pack_ref=pack_asset.ref if pack_asset is not None else None,
+        pack_revision=pack_asset.revision if pack_asset is not None else None,
     )
 
 
@@ -272,10 +268,10 @@ def binding_asset_root(binding_ref: str | Path | None, pack_root: Path | None) -
         if not (pack_root / "binding.yaml").exists():
             raise LinkarError(f"Pack does not provide a default binding: {pack_root}")
         return pack_root
-    binding_path = Path(binding_ref).expanduser().resolve()
-    if not (binding_path / "binding.yaml").exists():
-        raise LinkarError(f"binding.yaml not found in {binding_path}")
-    return binding_path
+    binding_asset = resolve_asset_ref(binding_ref)
+    if not (binding_asset.root / "binding.yaml").exists():
+        raise LinkarError(f"binding.yaml not found in {binding_asset.root}")
+    return binding_asset.root
 
 
 def load_binding_config(binding_ref: str | Path | None, pack_root: Path | None) -> tuple[Path | None, dict[str, Any]]:
@@ -505,12 +501,12 @@ def run_template(
     else:
         project_obj = project
     project_entries = project_pack_entries(project_obj)
-    combined_pack_refs = normalize_pack_refs(pack_refs) + [entry.ref for entry in project_entries]
-    template = load_template(template_ref, pack_refs=combined_pack_refs)
+    combined_pack_assets = resolve_asset_refs(pack_refs) + [entry.asset for entry in project_entries]
+    template = load_template(template_ref, pack_assets=combined_pack_assets)
     selected_binding_ref = normalize_binding_ref(binding_ref)
     if selected_binding_ref is None and template.pack_root is not None:
         for entry in project_entries:
-            if entry.ref == template.pack_root:
+            if entry.asset.root == template.pack_root:
                 selected_binding_ref = normalize_binding_ref(entry.binding)
                 break
     resolved_params, param_provenance = resolve_params_detailed(
@@ -583,7 +579,11 @@ def run_template(
             "param_provenance": param_provenance,
             "outputs": outputs,
             "software": [{"name": "linkar", "version": __version__}],
-            "pack": {"ref": str(template.pack_root)} if template.pack_root is not None else None,
+            "pack": (
+                {"ref": template.pack_ref, "revision": template.pack_revision}
+                if template.pack_root is not None
+                else None
+            ),
             "binding": (
                 {"ref": str(selected_binding_ref)}
                 if selected_binding_ref is not None

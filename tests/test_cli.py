@@ -12,9 +12,11 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def run_cli(*args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
+def run_cli(*args: str, cwd: Path, env_extra: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env["PYTHONPATH"] = str(ROOT / "src")
+    if env_extra:
+        env.update(env_extra)
     return subprocess.run(
         [sys.executable, "-m", "linkar.cli", *args],
         cwd=cwd,
@@ -23,6 +25,26 @@ def run_cli(*args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         check=False,
     )
+
+
+def run_git(*args: str, cwd: Path) -> None:
+    completed = subprocess.run(
+        ["git", *args],
+        cwd=cwd,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+
+def create_git_repo(path: Path) -> str:
+    run_git("init", cwd=path)
+    run_git("config", "user.email", "test@example.com", cwd=path)
+    run_git("config", "user.name", "Test User", cwd=path)
+    run_git("add", ".", cwd=path)
+    run_git("commit", "-m", "initial", cwd=path)
+    return path.resolve().as_uri()
 
 
 def make_template(root: Path, template_id: str, params: str, body: str) -> Path:
@@ -478,3 +500,84 @@ printf '%s\n' "${GREETING}" > "${LINKAR_RESULTS_DIR}/greeting.txt"
     meta = json.loads((outdir / ".linkar" / "meta.json").read_text())
     assert meta["params"]["greeting"] == "hi"
     assert meta["param_provenance"]["greeting"]["source"] == "default"
+
+
+def test_git_pack_reference_is_cached_and_revision_is_recorded(tmp_path: Path) -> None:
+    pack_root = tmp_path / "remote_pack"
+    make_template(
+        pack_root / "templates",
+        "git_wave",
+        "  name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'Git wave, %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/wave.txt"
+""",
+    )
+    git_url = f"git+{create_git_repo(pack_root)}"
+    linkar_home = tmp_path / "linkar_home"
+    linkar_home.mkdir()
+
+    completed = run_cli(
+        "run",
+        "git_wave",
+        "--pack",
+        git_url,
+        "--param",
+        "name=Linkar",
+        cwd=tmp_path,
+        env_extra={"LINKAR_HOME": str(linkar_home)},
+    )
+    assert completed.returncode == 0, completed.stderr
+
+    outdir = Path(completed.stdout.strip())
+    meta = json.loads((outdir / ".linkar" / "meta.json").read_text())
+    assert meta["pack"]["ref"] == git_url
+    assert meta["pack"]["revision"]
+    cache_root = linkar_home / "assets"
+    assert cache_root.exists()
+
+
+def test_git_binding_reference_can_be_loaded_from_cache(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    make_template(
+        pack_root / "templates",
+        "git_bound",
+        "  source_dir:\n    type: path\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+cp "${SOURCE_DIR}/sample.txt" "${LINKAR_RESULTS_DIR}/copied.txt"
+""",
+    )
+    source_dir = tmp_path / "git_source"
+    source_dir.mkdir()
+    (source_dir / "sample.txt").write_text("REMOTE")
+    binding_root = make_binding(
+        tmp_path / "remote_binding",
+        "git_bound",
+        "      source_dir:\n        from: function\n        name: locate_source",
+        function_name="locate_source",
+        function_body=f"""from pathlib import Path
+
+def resolve(ctx):
+    return str(Path({str(source_dir)!r}).resolve())
+""",
+    )
+    git_url = f"git+{create_git_repo(binding_root)}"
+    linkar_home = tmp_path / "linkar_home_binding"
+    linkar_home.mkdir()
+
+    completed = run_cli(
+        "run",
+        "git_bound",
+        "--pack",
+        str(pack_root),
+        "--binding",
+        git_url,
+        cwd=tmp_path,
+        env_extra={"LINKAR_HOME": str(linkar_home)},
+    )
+    assert completed.returncode == 0, completed.stderr
+    outdir = Path(completed.stdout.strip())
+    assert (outdir / "results" / "copied.txt").read_text().strip() == "REMOTE"
+    meta = json.loads((outdir / ".linkar" / "meta.json").read_text())
+    assert meta["binding"]["ref"] == git_url

@@ -114,6 +114,8 @@ The recommended meanings are:
 
 This avoids a separate ambiguous top-level binding list and makes binding choice reproducible.
 
+Pack and binding references may later resolve through Linkar's asset cache, but the project file should continue to record the original asset reference rather than an internal cache path.
+
 ## Template Instance Record
 Each item in `templates` represents one recorded template instance.
 

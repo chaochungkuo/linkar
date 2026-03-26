@@ -179,31 +179,31 @@ Strengthen reproducibility and traceability so Linkar artifacts are more durable
 Allow packs and bindings to be loaded from remote references while keeping the model simple.
 
 ### Scope Checklist
-- [ ] Support Git/GitHub-based asset references
-- [ ] Add local caching of fetched assets
-- [ ] Define asset resolution lifecycle
-- [ ] Capture pinning or revision information
+- [x] Support Git/GitHub-based asset references
+- [x] Add local caching of fetched assets
+- [x] Define asset resolution lifecycle
+- [x] Capture pinning or revision information
 
 ### Deliverables Checklist
-- [ ] Asset reference model
-- [ ] Path-or-Git loading support for packs
-- [ ] Path-or-Git loading support for bindings
-- [ ] Local cache location
-- [ ] Cache refresh behavior
-- [ ] Provenance capture for remote asset revision
+- [x] Asset reference model
+- [x] Path-or-Git loading support for packs
+- [x] Path-or-Git loading support for bindings
+- [x] Local cache location
+- [x] Cache refresh behavior
+- [x] Provenance capture for remote asset revision
 
 ### Validation Checklist
-- [ ] Users can configure packs by local path or GitHub reference
-- [ ] Users can configure bindings by local path or GitHub reference
-- [ ] Fetched assets are cached predictably
-- [ ] Metadata records enough information to make remote assets reproducible
+- [x] Users can configure packs by local path or GitHub reference
+- [x] Users can configure bindings by local path or GitHub reference
+- [x] Fetched assets are cached predictably
+- [x] Metadata records enough information to make remote assets reproducible
 
 ### Explicit Deferrals
 - [ ] Do not add registry account systems in this phase
 - [ ] Do not add Docker-like distribution in this phase
 
 ### Exit Criteria
-- [ ] Projects can reuse external packs and bindings reproducibly without repeated manual setup
+- [x] Projects can reuse external packs and bindings reproducibly without repeated manual setup
 
 ## Phase 6: Inspection and Utility Layer
 ### Objective

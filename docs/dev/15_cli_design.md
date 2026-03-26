@@ -94,6 +94,7 @@ Examples of ad hoc use:
 
 ```bash
 linkar run rnaseq --pack github:org/genomics-pack
+linkar run rnaseq --pack git+https://github.com/org/genomics-pack.git
 linkar run rnaseq --pack github:org/genomics-pack --binding github:facility/core-binding
 ```
 

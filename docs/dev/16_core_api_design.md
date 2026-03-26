@@ -81,6 +81,12 @@ Loads and validates a template definition from either:
 
 For simplicity, the core should support a search-path style pack model before introducing more complex registry behavior.
 
+Those pack references may come from:
+
+- local paths
+- cached Git/GitHub-backed assets
+- future registry-backed assets
+
 ## `resolve_params(...)`
 Resolves and validates the final parameter set before execution.
 

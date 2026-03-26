@@ -91,6 +91,9 @@ Examples:
 
 - `/opt/linkar/packs/genomics-pack`
 - `github:org/genomics-pack`
+- `git+https://github.com/org/genomics-pack.git`
+
+Remote references should resolve through Linkar's asset cache rather than being unpacked directly into the project directory.
 
 ## Pack Responsibilities
 A pack is responsible for:
