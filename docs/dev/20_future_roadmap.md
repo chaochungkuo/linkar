@@ -1,0 +1,366 @@
+# Development Roadmap
+
+This document is the practical development roadmap for Linkar.
+
+It is intended to guide implementation and also serve as a progress tracker. Checkboxes should be updated as work is completed.
+
+## Guiding Rule
+Development should proceed from semantic foundations outward.
+
+The order should be:
+
+1. Make execution correct.
+2. Make reuse and provenance strong.
+3. Make inspection and intelligence useful.
+4. Add product surfaces last.
+
+## Phase 0: Spec Freeze and Development Baseline
+### Objective
+Turn the current design docs into a stable baseline for implementation.
+
+### Checklist
+- [x] Complete and align core design docs under `docs/dev`
+- [x] Define the MVP boundary
+- [x] Align terminology across vision, concepts, architecture, template, project, pack, binding, CLI, and API docs
+- [ ] Define repository development conventions
+- [ ] Add minimal example assets specifically intended for spec validation
+
+### Exit Criteria
+- [x] No major contradictions across the core docs
+- [x] Implementation can begin without unresolved ambiguity in the MVP scope
+
+## Phase 1: Core Runtime MVP
+### Objective
+Build the smallest correct Linkar that can execute templates reliably in project mode and ephemeral mode.
+
+### Scope Checklist
+- [x] Support local template loading by explicit path
+- [x] Implement project initialization
+- [x] Implement current-directory project discovery
+- [x] Implement parameter parsing and validation
+- [x] Implement parameter resolution from explicit input
+- [x] Implement parameter resolution from project outputs
+- [x] Implement parameter resolution from defaults
+- [x] Support direct execution mode
+- [x] Prepare run directory layout automatically
+- [x] Capture runtime information in `.linkar/runtime.json`
+- [x] Capture metadata in `.linkar/meta.json`
+- [x] Index successful runs in `project.yaml`
+- [x] Support ephemeral execution under `.linkar/runs/`
+
+### Deliverables Checklist
+- [x] `linkar project init`
+- [x] `linkar run`
+- [x] `init_project`
+- [x] `load_project`
+- [x] `load_template`
+- [x] `resolve_params`
+- [x] `run_template`
+- [x] Template validation
+- [x] Project validation
+
+### Validation Checklist
+- [x] A standalone template can run with explicit params only
+- [x] A project can record multiple instances
+- [x] Project recency-based output reuse works
+- [x] Failed runs preserve runtime diagnostics
+- [x] CLI behavior matches core semantics
+
+### Explicit Deferrals
+- [ ] Do not add binding support in this phase
+- [ ] Do not add pack loading by URL in this phase
+- [ ] Do not add registry support in this phase
+- [ ] Do not add API server behavior in this phase
+- [ ] Do not add methods generation in this phase
+
+### Exit Criteria
+- [x] Linkar can run a small local multi-step workflow correctly using only local templates and project state
+
+## Phase 2: Local Pack Loading
+### Objective
+Make reusable template collections practical without increasing semantic complexity.
+
+### Scope Checklist
+- [ ] Support pack loading from local filesystem paths
+- [ ] Support template lookup by template id across one or more pack roots
+- [ ] Support optional project-level `packs:` configuration
+
+### Deliverables Checklist
+- [ ] Pack search-path behavior in the core
+- [ ] CLI support for ad hoc `--pack`
+- [ ] Project-level `packs:` support in `project.yaml`
+- [ ] Clear error behavior when templates are missing across packs
+- [ ] Clear error behavior when templates are ambiguous across packs
+
+### Validation Checklist
+- [ ] A template can be loaded by explicit path
+- [ ] A template can be loaded by template id via pack lookup
+- [ ] Project-level pack configuration removes the need for repeated `--pack`
+- [ ] Template loading remains deterministic
+
+### Explicit Deferrals
+- [ ] Do not add GitHub fetching in this phase
+- [ ] Do not add binding overlays in this phase
+- [ ] Do not add caching in this phase
+- [ ] Do not add registry behavior in this phase
+
+### Exit Criteria
+- [ ] Users can configure packs once and run templates from them repeatedly in a project
+
+## Phase 3: Binding MVP
+### Objective
+Add the smallest useful binding system without breaking template portability.
+
+### Scope Checklist
+- [ ] Define `binding.yaml`
+- [ ] Implement pack-provided default binding
+- [ ] Implement optional ad hoc binding selection
+- [ ] Implement project-level per-pack binding choice
+- [ ] Implement function-backed parameter resolution
+
+### Deliverables Checklist
+- [ ] Binding specification document
+- [ ] Binding parser
+- [ ] Binding validator
+- [ ] Function loading mechanism
+- [ ] Resolution support for explicit caller input
+- [ ] Resolution support for selected binding
+- [ ] Resolution support for project outputs
+- [ ] Resolution support for defaults
+- [ ] CLI support for ad hoc `--binding`
+- [ ] Project config support for per-pack binding choice
+
+### Validation Checklist
+- [ ] Templates remain runnable without binding when explicit params are supplied
+- [ ] A pack can ship a default binding
+- [ ] A project can override that default binding
+- [ ] Binding behavior remains deterministic
+- [ ] Binding behavior remains inspectable
+
+### Explicit Deferrals
+- [ ] Do not add side-effect-heavy lifecycle hooks in this phase
+- [ ] Do not add a general plugin system in this phase
+- [ ] Do not add remote binding registry behavior in this phase
+
+### Exit Criteria
+- [ ] One pack can be used with either its default binding or a project-selected override without changing the templates
+
+## Phase 4: Provenance Upgrade
+### Objective
+Strengthen reproducibility and traceability so Linkar artifacts are more durable and explainable.
+
+### Scope Checklist
+- [ ] Enrich metadata design
+- [ ] Clarify output exposure discipline
+- [ ] Capture parameter provenance
+- [ ] Capture pack identity/version where available
+- [ ] Improve runtime records
+
+### Deliverables Checklist
+- [ ] Enhanced `meta.json`
+- [ ] Parameter provenance model
+- [ ] Pack reference capture in metadata
+- [ ] Clear distinction between files present in `results/` and named outputs exposed for chaining
+
+### Validation Checklist
+- [ ] Users can explain where each important parameter came from
+- [ ] Runs are easier to inspect and compare
+- [ ] Pack usage is visible in provenance
+
+### Explicit Deferrals
+- [ ] Do not add full environment manager integration in this phase
+- [ ] Do not add heavyweight metadata schema versioning in this phase
+
+### Exit Criteria
+- [ ] Linkar artifacts are strong enough to support reproducibility discussions and later methods generation
+
+## Phase 5: Remote Asset Loading
+### Objective
+Allow packs and bindings to be loaded from remote references while keeping the model simple.
+
+### Scope Checklist
+- [ ] Support Git/GitHub-based asset references
+- [ ] Add local caching of fetched assets
+- [ ] Define asset resolution lifecycle
+- [ ] Capture pinning or revision information
+
+### Deliverables Checklist
+- [ ] Asset reference model
+- [ ] Path-or-Git loading support for packs
+- [ ] Path-or-Git loading support for bindings
+- [ ] Local cache location
+- [ ] Cache refresh behavior
+- [ ] Provenance capture for remote asset revision
+
+### Validation Checklist
+- [ ] Users can configure packs by local path or GitHub reference
+- [ ] Users can configure bindings by local path or GitHub reference
+- [ ] Fetched assets are cached predictably
+- [ ] Metadata records enough information to make remote assets reproducible
+
+### Explicit Deferrals
+- [ ] Do not add registry account systems in this phase
+- [ ] Do not add Docker-like distribution in this phase
+
+### Exit Criteria
+- [ ] Projects can reuse external packs and bindings reproducibly without repeated manual setup
+
+## Phase 6: Inspection and Utility Layer
+### Objective
+Make Linkar easier to inspect and operate once the runtime semantics are stable.
+
+### Scope Checklist
+- [ ] Add project inspection helpers
+- [ ] Add template inspection helpers
+- [ ] Add metadata inspection tools
+- [ ] Add output browsing and traceability helpers
+
+### Deliverables Checklist
+- [ ] Ability to list project runs
+- [ ] Ability to inspect run metadata
+- [ ] Ability to inspect resolved outputs
+- [ ] Ability to inspect available templates from configured packs
+
+### Validation Checklist
+- [ ] Users can answer common inspection questions without manually opening YAML and JSON files each time
+- [ ] Inspection helpers remain thin over the core data model
+
+### Explicit Deferrals
+- [ ] Do not add web UI in this phase
+- [ ] Do not add authenticated API server behavior in this phase
+
+### Exit Criteria
+- [ ] Linkar is operationally inspectable without adding product-level complexity
+
+## Phase 7: Methods Generation
+### Objective
+Turn structured provenance into useful narrative outputs.
+
+### Scope Checklist
+- [ ] Aggregate `meta.json` across a project
+- [ ] Extract methods-oriented tool/version/parameter facts
+- [ ] Produce editable narrative output
+
+### Deliverables Checklist
+- [ ] Methods generation command or core helper
+- [ ] Ordered run aggregation logic
+- [ ] Grounded methods text generation from metadata
+
+### Validation Checklist
+- [ ] Generated methods text is traceable back to metadata
+- [ ] Metadata gaps remain visible instead of being hallucinated away
+
+### Explicit Deferrals
+- [ ] Do not build a generic free-form report writer in this phase
+- [ ] Do not replace metadata with prose in this phase
+
+### Exit Criteria
+- [ ] A project can generate a useful first-pass methods summary from recorded runs
+
+## Phase 8: API and Agent Readiness
+### Objective
+Make the core robust enough to support non-CLI consumers cleanly.
+
+### Scope Checklist
+- [ ] Strengthen structured core return values
+- [ ] Standardize error types
+- [ ] Add inspection-oriented API helpers
+- [ ] Plan a thin external API/server direction
+
+### Deliverables Checklist
+- [ ] Stable core API contract
+- [ ] Clearer error model
+- [ ] `list_templates(...)` or equivalent helper
+- [ ] `inspect_run(...)` or equivalent helper
+- [ ] `resolve_project_assets(...)` or equivalent helper
+- [ ] Separate future API/server direction doc if needed
+
+### Validation Checklist
+- [ ] An AI agent can use the core without shell scraping
+- [ ] The CLI remains a frontend over the same semantics
+
+### Explicit Deferrals
+- [ ] Do not build a multi-user system in this phase
+- [ ] Do not build auth/authz infrastructure in this phase
+- [ ] Do not build job queue behavior in this phase
+
+### Exit Criteria
+- [ ] The core is ready to be wrapped by an API server without semantic redesign
+
+## Phase 9: Registry and Product Layer
+### Objective
+Add broader distribution and richer user-facing surfaces after the core is proven.
+
+### Scope Checklist
+- [ ] Define template or asset registry architecture
+- [ ] Add richer pack discovery
+- [ ] Add web dashboard direction
+- [ ] Add collaboration-oriented product features
+
+### Deliverables Checklist
+- [ ] Registry architecture
+- [ ] Discovery UX
+- [ ] UI or service features built on top of the stable core
+
+### Validation Checklist
+- [ ] Product layers mirror core semantics rather than redefining them
+- [ ] Distributed assets remain reproducible and inspectable
+
+### Explicit Deferrals
+- [ ] Do not reinvent the execution model in this phase
+- [ ] Do not push domain logic into a service layer in this phase
+
+### Exit Criteria
+- [ ] Product surfaces add convenience without introducing conceptual instability
+
+## Cross-Cutting Workstreams
+### Testing
+- [ ] Add unit tests for parsers and resolution logic
+- [ ] Add integration tests for template execution
+- [ ] Add project-mode coverage
+- [ ] Add ephemeral-mode coverage
+- [ ] Add pack selection tests once pack support exists
+- [ ] Add binding selection tests once binding support exists
+
+### Documentation
+- [ ] Keep `docs/dev` aligned with implementation
+- [ ] Maintain example templates and packs
+- [ ] Write minimal user-facing quickstarts when behavior stabilizes
+
+### Example Assets
+- [ ] Maintain one minimal standalone template
+- [ ] Maintain one small multi-step pack
+- [ ] Maintain one example binding setup showing default vs override behavior
+
+### Error Quality
+- [ ] Improve early validation errors
+- [ ] Improve deterministic ambiguity handling
+- [ ] Improve missing asset error messages
+- [ ] Improve missing parameter error messages
+- [ ] Improve failed run error messages
+
+## Recommended Immediate Build Order
+- [ ] Finish Phase 1 completely before adding richer reuse layers
+- [ ] Add only local path-based pack loading from Phase 2 first
+- [ ] Define `binding.yaml` before implementing runtime binding behavior
+- [ ] Add the smallest binding MVP from Phase 3
+- [ ] Strengthen provenance before remote asset loading
+- [ ] Add Git/GitHub asset loading only after the above are stable
+
+## Explicit Long-Term Deferrals
+- [ ] Defer registry or Docker-Hub-like distribution until later
+- [ ] Defer API server implementation until the core is ready
+- [ ] Defer web UI until the core is ready
+- [ ] Defer remote execution until much later
+- [ ] Defer distributed scheduling
+- [ ] Defer large plugin surfaces
+- [ ] Defer complicated workflow syntax
+
+## Definition of Success
+- [ ] Linkar remains conceptually small
+- [ ] Templates remain standalone and portable
+- [ ] Packs improve reuse without reducing portability
+- [ ] Bindings improve convenience without becoming hidden magic
+- [ ] Project state stays transparent
+- [ ] Metadata becomes trustworthy enough for reproducibility and methods generation
+- [ ] Future APIs and UIs can be layered on without changing core semantics

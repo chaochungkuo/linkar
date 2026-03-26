@@ -1,0 +1,8 @@
+id: hello
+params:
+  name:
+    type: str
+    required: true
+run:
+  entry: run.sh
+  mode: direct
