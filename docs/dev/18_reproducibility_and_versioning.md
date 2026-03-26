@@ -19,6 +19,7 @@ At minimum, Linkar should capture:
 - template identity
 - instance identity
 - resolved parameters
+- parameter provenance
 - output locations
 - execution command
 - timestamp
@@ -42,6 +43,7 @@ Version capture should include, where practical:
 
 - Linkar version
 - key tool versions used by the template
+- pack reference and version or revision when available
 - environment identifiers or manager metadata in future versions
 
 This does not mean Linkar becomes an environment manager. It means the run record should preserve enough context to interpret results later.
@@ -63,6 +65,7 @@ Different layers may have different version identities:
 - Linkar version
 - pack version or Git revision
 - template version as implied by its source tree state
+- binding reference or revision when relevant
 - underlying domain tool versions
 
 Later versions of the spec may define stronger conventions here, especially for packs.
@@ -79,6 +82,7 @@ Reproducibility support should:
 Linkar reproducibility depends on disciplined metadata capture:
 
 - capture the run facts
+- capture where resolved values came from
 - capture the relevant versions
 - keep the record local to the artifact
 - make later inspection straightforward

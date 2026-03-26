@@ -150,29 +150,29 @@ Add the smallest useful binding system without breaking template portability.
 Strengthen reproducibility and traceability so Linkar artifacts are more durable and explainable.
 
 ### Scope Checklist
-- [ ] Enrich metadata design
-- [ ] Clarify output exposure discipline
-- [ ] Capture parameter provenance
-- [ ] Capture pack identity/version where available
-- [ ] Improve runtime records
+- [x] Enrich metadata design
+- [x] Clarify output exposure discipline
+- [x] Capture parameter provenance
+- [x] Capture pack identity/version where available
+- [x] Improve runtime records
 
 ### Deliverables Checklist
-- [ ] Enhanced `meta.json`
-- [ ] Parameter provenance model
-- [ ] Pack reference capture in metadata
-- [ ] Clear distinction between files present in `results/` and named outputs exposed for chaining
+- [x] Enhanced `meta.json`
+- [x] Parameter provenance model
+- [x] Pack reference capture in metadata
+- [x] Clear distinction between files present in `results/` and named outputs exposed for chaining
 
 ### Validation Checklist
-- [ ] Users can explain where each important parameter came from
-- [ ] Runs are easier to inspect and compare
-- [ ] Pack usage is visible in provenance
+- [x] Users can explain where each important parameter came from
+- [x] Runs are easier to inspect and compare
+- [x] Pack usage is visible in provenance
 
 ### Explicit Deferrals
 - [ ] Do not add full environment manager integration in this phase
 - [ ] Do not add heavyweight metadata schema versioning in this phase
 
 ### Exit Criteria
-- [ ] Linkar artifacts are strong enough to support reproducibility discussions and later methods generation
+- [x] Linkar artifacts are strong enough to support reproducibility discussions and later methods generation
 
 ## Phase 5: Remote Asset Loading
 ### Objective

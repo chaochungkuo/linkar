@@ -35,8 +35,11 @@ At minimum, `meta.json` should capture:
 - `template`
 - `instance_id`
 - `params`
+- `param_provenance`
 - `outputs`
 - `software`
+- `pack` when applicable
+- `binding` when applicable
 - `command`
 - `timestamp`
 
@@ -64,6 +67,18 @@ The resolved parameter values actually used for execution.
 
 These should be post-resolution values, not partial inputs.
 
+### `param_provenance`
+The origin of each resolved parameter value.
+
+Typical provenance sources include:
+
+- `explicit`
+- `binding`
+- `project`
+- `default`
+
+This field is important because it explains not just what value was used, but why that value was selected.
+
 ### `outputs`
 The outputs intentionally exposed by the run for downstream use.
 
@@ -77,6 +92,20 @@ This may include:
 - Linkar version
 - template-specific tool versions
 - environment identifiers in future versions
+
+### `pack`
+The selected pack reference when the template was loaded from a pack.
+
+In early versions this may be a local path. Later versions may include richer asset identity such as Git revision or registry reference.
+
+### `binding`
+The selected binding reference when a binding was used.
+
+This may be:
+
+- `default`
+- a local path
+- a richer remote or registry reference in later versions
 
 ### `command`
 The executed command or entrypoint description.
@@ -109,6 +138,12 @@ Example shape:
   "params": {
     "fastq_dir": "./bclconvert_001/results/fastq"
   },
+  "param_provenance": {
+    "fastq_dir": {
+      "source": "project",
+      "key": "fastq_dir"
+    }
+  },
   "outputs": {
     "report_dir": "./results"
   },
@@ -116,6 +151,10 @@ Example shape:
     {"name": "linkar", "version": "0.1.0"},
     {"name": "fastqc", "version": "0.12.1"}
   ],
+  "pack": {
+    "ref": "/opt/linkar/packs/genomics-pack"
+  },
+  "binding": null,
   "command": ["run.sh"],
   "timestamp": "2026-03-26T15:30:00Z"
 }
@@ -143,6 +182,7 @@ This implies:
 - predictable paths
 - stable keys
 - clear parameter and output naming
+- explicit parameter provenance
 - minimal ambiguous free text
 
 AI-readability should come from structure, not from trying to make metadata conversational.

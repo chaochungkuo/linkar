@@ -92,6 +92,8 @@ The core should capture runtime facts such as:
 - command executed
 - working directory
 - start and finish timestamps
+- success/failure status
+- duration when practical
 - return code
 - stdout/stderr when appropriate
 

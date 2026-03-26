@@ -106,6 +106,7 @@ def test_run_template_updates_project(tmp_path: Path) -> None:
     meta = json.loads((project_dir / instance["meta"]).read_text())
     assert meta["template"] == "hello"
     assert meta["params"]["name"] == "Linkar"
+    assert meta["param_provenance"]["name"]["source"] == "explicit"
 
 
 def test_run_discovers_project_from_current_directory(tmp_path: Path) -> None:
@@ -171,6 +172,9 @@ cp "${RESULTS_DIR}/fastq/sample.txt" "${LINKAR_RESULTS_DIR}/consumed.txt"
     assert [entry["id"] for entry in project["templates"]] == ["produce_fastq", "consume_fastq"]
     consumed = project_dir / project["templates"][1]["path"] / "results" / "consumed.txt"
     assert consumed.read_text().strip() == "S1"
+
+    consume_meta = json.loads((project_dir / project["templates"][1]["meta"]).read_text())
+    assert consume_meta["param_provenance"]["results_dir"]["source"] == "project"
 
 
 def test_ephemeral_run_uses_linkar_runs(tmp_path: Path) -> None:
@@ -311,6 +315,7 @@ exit 7
     assert len(run_dirs) == 1
     runtime = json.loads((run_dirs[0] / ".linkar" / "runtime.json").read_text())
     assert runtime["returncode"] == 7
+    assert runtime["success"] is False
     assert "boom" in runtime["stderr"]
 
 
@@ -363,6 +368,11 @@ cp "${SOURCE_DIR}/dataset/sample.txt" "${LINKAR_RESULTS_DIR}/consumed.txt"
     assert consume.returncode == 0, consume.stderr
     outdir = Path(consume.stdout.strip())
     assert (outdir / "results" / "consumed.txt").read_text().strip() == "S1"
+    meta = json.loads((outdir / ".linkar" / "meta.json").read_text())
+    assert meta["param_provenance"]["source_dir"]["source"] == "binding"
+    assert meta["param_provenance"]["source_dir"]["binding_source"] == "output"
+    assert meta["pack"]["ref"] == str(pack_root.resolve())
+    assert meta["binding"]["ref"] == "default"
 
 
 def test_ad_hoc_binding_override_can_use_external_function(tmp_path: Path) -> None:
@@ -403,6 +413,9 @@ def resolve(ctx):
     assert completed.returncode == 0, completed.stderr
     outdir = Path(completed.stdout.strip())
     assert (outdir / "results" / "copied.txt").read_text().strip() == "BOUND"
+    meta = json.loads((outdir / ".linkar" / "meta.json").read_text())
+    assert meta["param_provenance"]["source_dir"]["binding_source"] == "function"
+    assert meta["binding"]["ref"] == str(binding_root.resolve())
 
 
 def test_project_binding_choice_overrides_pack_default(tmp_path: Path) -> None:
@@ -443,3 +456,25 @@ cp "${SOURCE_DIR}/sample.txt" "${LINKAR_RESULTS_DIR}/override.txt"
     assert completed.returncode == 0, completed.stderr
     outdir = Path(completed.stdout.strip())
     assert (outdir / "results" / "override.txt").read_text().strip() == "OVERRIDE"
+    meta = json.loads((outdir / ".linkar" / "meta.json").read_text())
+    assert meta["param_provenance"]["source_dir"]["binding_source"] == "value"
+    assert meta["binding"]["ref"] == str(override_binding.resolve())
+
+
+def test_default_parameter_provenance_is_recorded(tmp_path: Path) -> None:
+    template = make_template(
+        tmp_path / "templates",
+        "with_default",
+        "  greeting:\n    type: str\n    default: hi",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "${GREETING}" > "${LINKAR_RESULTS_DIR}/greeting.txt"
+""",
+    )
+
+    completed = run_cli("run", str(template), cwd=tmp_path)
+    assert completed.returncode == 0, completed.stderr
+    outdir = Path(completed.stdout.strip())
+    meta = json.loads((outdir / ".linkar" / "meta.json").read_text())
+    assert meta["params"]["greeting"] == "hi"
+    assert meta["param_provenance"]["greeting"]["source"] == "default"

@@ -314,7 +314,7 @@ def resolve_bound_value(
     binding_data: dict[str, Any],
     project: Project | None,
     resolved_params: dict[str, Any],
-) -> tuple[bool, Any]:
+) -> tuple[bool, Any, dict[str, Any] | None]:
     templates = binding_data.get("templates") or {}
     template_binding = templates.get(template.id) or {}
     if not isinstance(template_binding, dict):
@@ -323,7 +323,7 @@ def resolve_bound_value(
     if not isinstance(params, dict):
         raise LinkarError(f"binding.yaml params entry must be a mapping for '{template.id}'")
     if key not in params:
-        return False, None
+        return False, None, None
 
     rule = params[key] or {}
     if not isinstance(rule, dict):
@@ -338,7 +338,11 @@ def resolve_bound_value(
             raise LinkarError(
                 f"Binding could not resolve output '{output_key}' for '{template.id}.{key}'"
             )
-        return True, value
+        return True, value, {
+            "source": "binding",
+            "binding_source": "output",
+            "key": str(output_key),
+        }
     if source == "function":
         function_name = rule.get("name")
         if not function_name or not isinstance(function_name, str):
@@ -353,32 +357,41 @@ def resolve_bound_value(
             raise LinkarError(
                 f"Binding function returned no value for '{template.id}.{key}'"
             )
-        return True, value
+        return True, value, {
+            "source": "binding",
+            "binding_source": "function",
+            "name": function_name,
+        }
     if source == "value":
         if "value" not in rule:
             raise LinkarError(f"Binding literal value is required for '{template.id}.{key}'")
-        return True, rule["value"]
+        return True, rule["value"], {
+            "source": "binding",
+            "binding_source": "value",
+        }
 
     raise LinkarError(f"Unsupported binding source '{source}' for '{template.id}.{key}'")
 
 
-def resolve_params(
+def resolve_params_detailed(
     template: TemplateSpec,
     cli_params: dict[str, Any] | None = None,
     project: Project | None = None,
     binding_ref: str | Path | None = None,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
     cli_params = cli_params or {}
     binding_root, binding_data = load_binding_config(binding_ref, template.pack_root)
     resolved: dict[str, Any] = {}
+    provenance: dict[str, dict[str, Any]] = {}
 
     for key, raw_spec in template.params.items():
         spec = raw_spec or {}
         param_type = spec.get("type", "str")
         if key in cli_params:
             raw_value = cli_params[key]
+            raw_provenance = {"source": "explicit"}
         else:
-            has_bound_value, bound_value = resolve_bound_value(
+            has_bound_value, bound_value, bound_provenance = resolve_bound_value(
                 template=template,
                 key=key,
                 binding_root=binding_root,
@@ -389,17 +402,36 @@ def resolve_params(
             project_value = latest_project_output(project, key)
             if has_bound_value:
                 raw_value = bound_value
+                raw_provenance = bound_provenance or {"source": "binding"}
             elif project_value is not None:
                 raw_value = project_value
+                raw_provenance = {"source": "project", "key": key}
             elif "default" in spec:
                 raw_value = spec["default"]
+                raw_provenance = {"source": "default"}
             elif spec.get("required"):
                 raise LinkarError(f"Missing required param: {key}")
             else:
                 continue
 
         resolved[key] = parse_param_value(raw_value, param_type)
+        provenance[key] = raw_provenance
 
+    return resolved, provenance
+
+
+def resolve_params(
+    template: TemplateSpec,
+    cli_params: dict[str, Any] | None = None,
+    project: Project | None = None,
+    binding_ref: str | Path | None = None,
+) -> dict[str, Any]:
+    resolved, _ = resolve_params_detailed(
+        template,
+        cli_params=cli_params,
+        project=project,
+        binding_ref=binding_ref,
+    )
     return resolved
 
 
@@ -481,7 +513,7 @@ def run_template(
             if entry.ref == template.pack_root:
                 selected_binding_ref = normalize_binding_ref(entry.binding)
                 break
-    resolved_params = resolve_params(
+    resolved_params, param_provenance = resolve_params_detailed(
         template,
         cli_params=params,
         project=project_obj,
@@ -525,8 +557,10 @@ def run_template(
             "command": command,
             "cwd": str(output_dir),
             "returncode": completed.returncode,
+            "success": completed.returncode == 0,
             "started_at": started_at.isoformat(),
             "finished_at": finished_at.isoformat(),
+            "duration_seconds": (finished_at - started_at).total_seconds(),
             "stdout": completed.stdout,
             "stderr": completed.stderr,
         },
@@ -546,8 +580,15 @@ def run_template(
             "template": template.id,
             "instance_id": instance_id,
             "params": resolved_params,
+            "param_provenance": param_provenance,
             "outputs": outputs,
             "software": [{"name": "linkar", "version": __version__}],
+            "pack": {"ref": str(template.pack_root)} if template.pack_root is not None else None,
+            "binding": (
+                {"ref": str(selected_binding_ref)}
+                if selected_binding_ref is not None
+                else None
+            ),
             "command": command,
             "timestamp": finished_at.isoformat(),
         },
