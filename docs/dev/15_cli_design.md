@@ -136,6 +136,7 @@ Examples of the inspection layer:
 linkar project runs
 linkar templates
 linkar inspect run hello_001
+linkar methods
 ```
 
 ## Summary

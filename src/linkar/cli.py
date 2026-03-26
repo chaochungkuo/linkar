@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from linkar.core import (
+    generate_methods,
     LinkarError,
     init_project,
     inspect_run,
@@ -58,6 +59,9 @@ def build_parser() -> argparse.ArgumentParser:
     inspect_run_parser = inspect_subparsers.add_parser("run")
     inspect_run_parser.add_argument("run_ref")
     inspect_run_parser.add_argument("--project")
+
+    methods_parser = subparsers.add_parser("methods")
+    methods_parser.add_argument("--project")
     return parser
 
 
@@ -98,6 +102,10 @@ def main() -> int:
         if args.command == "inspect" and args.inspect_command == "run":
             metadata = inspect_run(args.run_ref, project=args.project)
             print(json.dumps(metadata, indent=2, sort_keys=True))
+            return 0
+
+        if args.command == "methods":
+            print(generate_methods(project=args.project))
             return 0
 
         parser.error("Unknown command")

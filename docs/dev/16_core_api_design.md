@@ -32,6 +32,7 @@ resolve_params(template, cli_params=None, project=None)
 list_project_runs(project=None)
 list_templates(pack_refs=None, project=None)
 inspect_run(run_ref, project=None)
+generate_methods(project=None)
 ```
 
 These exact names may evolve, but the shape should remain similar.
@@ -107,6 +108,7 @@ Representative helpers:
 - `list_project_runs(...)`
 - `list_templates(...)`
 - `inspect_run(...)`
+- `generate_methods(...)`
 
 These should remain data access helpers over the existing model, not a second semantic layer.
 

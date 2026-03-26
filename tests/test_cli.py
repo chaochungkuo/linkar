@@ -650,3 +650,42 @@ def test_inspect_run_command_returns_metadata_json(tmp_path: Path) -> None:
     metadata = json.loads(inspected.stdout)
     assert metadata["template"] == "hello"
     assert metadata["params"]["name"] == "Inspect"
+
+
+def test_methods_command_aggregates_runs_in_project_order(tmp_path: Path) -> None:
+    project_dir = tmp_path / "study"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    producer = make_template(
+        tmp_path / "templates",
+        "produce_fastq",
+        "  sample_name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p "${LINKAR_RESULTS_DIR}/fastq"
+printf '%s\n' "${SAMPLE_NAME}" > "${LINKAR_RESULTS_DIR}/fastq/sample.txt"
+""",
+    )
+    consumer = make_template(
+        tmp_path / "templates",
+        "consume_fastq",
+        "  results_dir:\n    type: path\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+test -f "${RESULTS_DIR}/fastq/sample.txt"
+cp "${RESULTS_DIR}/fastq/sample.txt" "${LINKAR_RESULTS_DIR}/consumed.txt"
+""",
+    )
+
+    produce = run_cli("run", str(producer), "--param", "sample_name=S1", cwd=project_dir)
+    assert produce.returncode == 0, produce.stderr
+    consume = run_cli("run", str(consumer), cwd=project_dir)
+    assert consume.returncode == 0, consume.stderr
+
+    methods = run_cli("methods", cwd=project_dir)
+    assert methods.returncode == 0, methods.stderr
+    assert "Step 1: template 'produce_fastq'" in methods.stdout
+    assert "Step 2: template 'consume_fastq'" in methods.stdout
+    assert methods.stdout.index("produce_fastq") < methods.stdout.index("consume_fastq")
+    assert "sample_name=S1" in methods.stdout

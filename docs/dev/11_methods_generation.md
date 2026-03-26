@@ -27,6 +27,8 @@ The output may include:
 - step-by-step protocol descriptions
 - provenance summaries for internal documentation
 
+The MVP output should remain simple and clearly grounded in project order and recorded metadata. It is acceptable for the first version to produce a plain editable paragraph or ordered sequence of sentences rather than polished final prose.
+
 ## Non-Goal
 Methods generation should not become a substitute for metadata capture.
 
@@ -38,6 +40,8 @@ If metadata is weak, methods generation should expose that weakness rather than 
 3. Extract software versions, key parameters, and output context.
 4. Render a narrative description using template-aware phrasing rules.
 5. Present editable text to the user or downstream system.
+
+The first implementation may use deterministic sentence templates before adding richer phrasing.
 
 ## Example
 Example output:

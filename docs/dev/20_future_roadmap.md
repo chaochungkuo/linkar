@@ -237,25 +237,25 @@ Make Linkar easier to inspect and operate once the runtime semantics are stable.
 Turn structured provenance into useful narrative outputs.
 
 ### Scope Checklist
-- [ ] Aggregate `meta.json` across a project
-- [ ] Extract methods-oriented tool/version/parameter facts
-- [ ] Produce editable narrative output
+- [x] Aggregate `meta.json` across a project
+- [x] Extract methods-oriented tool/version/parameter facts
+- [x] Produce editable narrative output
 
 ### Deliverables Checklist
-- [ ] Methods generation command or core helper
-- [ ] Ordered run aggregation logic
-- [ ] Grounded methods text generation from metadata
+- [x] Methods generation command or core helper
+- [x] Ordered run aggregation logic
+- [x] Grounded methods text generation from metadata
 
 ### Validation Checklist
-- [ ] Generated methods text is traceable back to metadata
-- [ ] Metadata gaps remain visible instead of being hallucinated away
+- [x] Generated methods text is traceable back to metadata
+- [x] Metadata gaps remain visible instead of being hallucinated away
 
 ### Explicit Deferrals
 - [ ] Do not build a generic free-form report writer in this phase
 - [ ] Do not replace metadata with prose in this phase
 
 ### Exit Criteria
-- [ ] A project can generate a useful first-pass methods summary from recorded runs
+- [x] A project can generate a useful first-pass methods summary from recorded runs
 
 ## Phase 8: API and Agent Readiness
 ### Objective

@@ -566,6 +566,34 @@ def list_templates(
     return templates
 
 
+def generate_methods(project: str | Path | Project | None = None) -> str:
+    runs = list_project_runs(project=project)
+    if not runs:
+        raise LinkarError("No recorded runs found for methods generation")
+
+    fragments: list[str] = []
+    for index, run in enumerate(runs, start=1):
+        metadata = inspect_run(run["instance_id"], project=project)
+        template = metadata["template"]
+        software = metadata.get("software") or []
+        software_text = ", ".join(
+            f"{item['name']} {item.get('version', 'unknown')}"
+            for item in software
+            if isinstance(item, dict) and item.get("name")
+        )
+        params = metadata.get("params") or {}
+        params_text = ", ".join(f"{key}={value}" for key, value in sorted(params.items()))
+
+        sentence = f"Step {index}: template '{template}' was run"
+        if software_text:
+            sentence += f" using {software_text}"
+        if params_text:
+            sentence += f" with parameters {params_text}"
+        sentence += "."
+        fragments.append(sentence)
+    return " ".join(fragments)
+
+
 def run_template(
     template_ref: str | Path,
     params: dict[str, Any] | None = None,
