@@ -6,6 +6,7 @@ import re
 import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import importlib.util
 from pathlib import Path
 from typing import Any
 
@@ -25,12 +26,29 @@ class TemplateSpec:
     params: dict[str, dict[str, Any]]
     run_entry: str
     run_mode: str
+    pack_root: Path | None = None
 
 
 @dataclass
 class Project:
     root: Path
     data: dict[str, Any]
+
+
+@dataclass
+class PackEntry:
+    ref: Path
+    binding: str | None = None
+
+
+@dataclass
+class BindingContext:
+    template: TemplateSpec
+    project: Project | None
+    resolved_params: dict[str, Any]
+
+    def latest_output(self, key: str) -> Any | None:
+        return latest_project_output(self.project, key)
 
 
 def utc_now() -> datetime:
@@ -98,6 +116,14 @@ def discover_project(start: str | Path | None = None) -> Project | None:
     return None
 
 
+def normalize_binding_ref(binding_ref: str | Path | None) -> str | Path | None:
+    if binding_ref is None:
+        return None
+    if isinstance(binding_ref, Path):
+        return binding_ref.expanduser().resolve()
+    return binding_ref
+
+
 def normalize_pack_refs(pack_refs: str | Path | list[str | Path] | None) -> list[Path]:
     if pack_refs is None:
         return []
@@ -111,21 +137,24 @@ def normalize_pack_refs(pack_refs: str | Path | list[str | Path] | None) -> list
     return normalized
 
 
-def project_pack_refs(project: Project | None) -> list[Path]:
+def project_pack_entries(project: Project | None) -> list[PackEntry]:
     if project is None:
         return []
-    refs: list[Path] = []
+    entries: list[PackEntry] = []
     for item in project.data.get("packs", []):
         if isinstance(item, str):
-            refs.append(Path(item).expanduser().resolve())
+            entries.append(PackEntry(ref=Path(item).expanduser().resolve()))
             continue
         if not isinstance(item, dict):
             raise LinkarError("project.yaml pack entries must be strings or mappings")
         ref = item.get("ref")
         if not ref or not isinstance(ref, str):
             raise LinkarError("project.yaml pack entry field 'ref' is required")
-        refs.append(Path(ref).expanduser().resolve())
-    return refs
+        binding = item.get("binding")
+        if binding is not None and not isinstance(binding, str):
+            raise LinkarError("project.yaml pack entry field 'binding' must be a string")
+        entries.append(PackEntry(ref=Path(ref).expanduser().resolve(), binding=binding))
+    return entries
 
 
 def load_template(
@@ -188,6 +217,7 @@ def load_template(
         params=params,
         run_entry=entry,
         run_mode=run.get("mode", "direct"),
+        pack_root=root.parent.parent if root.parent.name == "templates" else None,
     )
 
 
@@ -233,12 +263,113 @@ def latest_project_output(project: Project | None, key: str) -> Any | None:
     return None
 
 
+def binding_asset_root(binding_ref: str | Path | None, pack_root: Path | None) -> Path | None:
+    if binding_ref is None:
+        return None
+    if binding_ref == "default":
+        if pack_root is None:
+            raise LinkarError("Binding 'default' requires a selected pack")
+        if not (pack_root / "binding.yaml").exists():
+            raise LinkarError(f"Pack does not provide a default binding: {pack_root}")
+        return pack_root
+    binding_path = Path(binding_ref).expanduser().resolve()
+    if not (binding_path / "binding.yaml").exists():
+        raise LinkarError(f"binding.yaml not found in {binding_path}")
+    return binding_path
+
+
+def load_binding_config(binding_ref: str | Path | None, pack_root: Path | None) -> tuple[Path | None, dict[str, Any]]:
+    root = binding_asset_root(binding_ref, pack_root)
+    if root is None:
+        return None, {}
+    data = load_yaml(root / "binding.yaml")
+    templates = data.get("templates") or {}
+    if not isinstance(templates, dict):
+        raise LinkarError("binding.yaml field 'templates' must be a mapping")
+    return root, data
+
+
+def resolve_binding_function(name: str, search_roots: list[Path]) -> Any:
+    for root in search_roots:
+        candidate = root / "functions" / f"{name}.py"
+        if not candidate.exists():
+            continue
+        module_name = f"linkar_binding_{candidate.stem}_{abs(hash(str(candidate)))}"
+        spec = importlib.util.spec_from_file_location(module_name, candidate)
+        if spec is None or spec.loader is None:
+            raise LinkarError(f"Unable to load binding function: {candidate}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        resolve = getattr(module, "resolve", None)
+        if not callable(resolve):
+            raise LinkarError(f"Binding function file must define resolve(ctx): {candidate}")
+        return resolve
+    raise LinkarError(f"Binding function not found: {name}")
+
+
+def resolve_bound_value(
+    template: TemplateSpec,
+    key: str,
+    binding_root: Path | None,
+    binding_data: dict[str, Any],
+    project: Project | None,
+    resolved_params: dict[str, Any],
+) -> tuple[bool, Any]:
+    templates = binding_data.get("templates") or {}
+    template_binding = templates.get(template.id) or {}
+    if not isinstance(template_binding, dict):
+        raise LinkarError(f"binding.yaml template entry must be a mapping for '{template.id}'")
+    params = template_binding.get("params") or {}
+    if not isinstance(params, dict):
+        raise LinkarError(f"binding.yaml params entry must be a mapping for '{template.id}'")
+    if key not in params:
+        return False, None
+
+    rule = params[key] or {}
+    if not isinstance(rule, dict):
+        raise LinkarError(f"binding.yaml param rule must be a mapping for '{template.id}.{key}'")
+    source = rule.get("from")
+    ctx = BindingContext(template=template, project=project, resolved_params=dict(resolved_params))
+
+    if source == "output":
+        output_key = rule.get("key", key)
+        value = ctx.latest_output(str(output_key))
+        if value is None:
+            raise LinkarError(
+                f"Binding could not resolve output '{output_key}' for '{template.id}.{key}'"
+            )
+        return True, value
+    if source == "function":
+        function_name = rule.get("name")
+        if not function_name or not isinstance(function_name, str):
+            raise LinkarError(f"Binding function name is required for '{template.id}.{key}'")
+        search_roots = []
+        if binding_root is not None:
+            search_roots.append(binding_root)
+        if template.pack_root is not None and template.pack_root not in search_roots:
+            search_roots.append(template.pack_root)
+        value = resolve_binding_function(function_name, search_roots)(ctx)
+        if value is None:
+            raise LinkarError(
+                f"Binding function returned no value for '{template.id}.{key}'"
+            )
+        return True, value
+    if source == "value":
+        if "value" not in rule:
+            raise LinkarError(f"Binding literal value is required for '{template.id}.{key}'")
+        return True, rule["value"]
+
+    raise LinkarError(f"Unsupported binding source '{source}' for '{template.id}.{key}'")
+
+
 def resolve_params(
     template: TemplateSpec,
     cli_params: dict[str, Any] | None = None,
     project: Project | None = None,
+    binding_ref: str | Path | None = None,
 ) -> dict[str, Any]:
     cli_params = cli_params or {}
+    binding_root, binding_data = load_binding_config(binding_ref, template.pack_root)
     resolved: dict[str, Any] = {}
 
     for key, raw_spec in template.params.items():
@@ -247,8 +378,18 @@ def resolve_params(
         if key in cli_params:
             raw_value = cli_params[key]
         else:
+            has_bound_value, bound_value = resolve_bound_value(
+                template=template,
+                key=key,
+                binding_root=binding_root,
+                binding_data=binding_data,
+                project=project,
+                resolved_params=resolved,
+            )
             project_value = latest_project_output(project, key)
-            if project_value is not None:
+            if has_bound_value:
+                raw_value = bound_value
+            elif project_value is not None:
                 raw_value = project_value
             elif "default" in spec:
                 raw_value = spec["default"]
@@ -323,6 +464,7 @@ def run_template(
     project: str | Path | Project | None = None,
     outdir: str | Path | None = None,
     pack_refs: str | Path | list[str | Path] | None = None,
+    binding_ref: str | Path | None = None,
 ) -> dict[str, Any]:
     if isinstance(project, (str, Path)):
         project_obj = load_project(project)
@@ -330,9 +472,21 @@ def run_template(
         project_obj = discover_project()
     else:
         project_obj = project
-    combined_pack_refs = normalize_pack_refs(pack_refs) + project_pack_refs(project_obj)
+    project_entries = project_pack_entries(project_obj)
+    combined_pack_refs = normalize_pack_refs(pack_refs) + [entry.ref for entry in project_entries]
     template = load_template(template_ref, pack_refs=combined_pack_refs)
-    resolved_params = resolve_params(template, cli_params=params, project=project_obj)
+    selected_binding_ref = normalize_binding_ref(binding_ref)
+    if selected_binding_ref is None and template.pack_root is not None:
+        for entry in project_entries:
+            if entry.ref == template.pack_root:
+                selected_binding_ref = normalize_binding_ref(entry.binding)
+                break
+    resolved_params = resolve_params(
+        template,
+        cli_params=params,
+        project=project_obj,
+        binding_ref=selected_binding_ref,
+    )
     instance_id = next_instance_id(template.id, project_obj)
     output_dir = determine_outdir(template, project_obj, outdir, instance_id)
     output_dir.mkdir(parents=True, exist_ok=True)

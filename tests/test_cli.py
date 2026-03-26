@@ -47,6 +47,26 @@ def make_template(root: Path, template_id: str, params: str, body: str) -> Path:
     return template_dir
 
 
+def make_binding(root: Path, template_id: str, rules: str, function_name: str | None = None, function_body: str | None = None) -> Path:
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "binding.yaml").write_text(
+        "\n".join(
+            [
+                "templates:",
+                f"  {template_id}:",
+                "    params:",
+                rules,
+                "",
+            ]
+        )
+    )
+    if function_name is not None and function_body is not None:
+        functions_dir = root / "functions"
+        functions_dir.mkdir(exist_ok=True)
+        (functions_dir / f"{function_name}.py").write_text(function_body)
+    return root
+
+
 def test_project_init(tmp_path: Path) -> None:
     target = tmp_path / "demo"
     completed = run_cli("project", "init", str(target), "--id", "project_001", cwd=tmp_path)
@@ -292,3 +312,134 @@ exit 7
     runtime = json.loads((run_dirs[0] / ".linkar" / "runtime.json").read_text())
     assert runtime["returncode"] == 7
     assert "boom" in runtime["stderr"]
+
+
+def test_pack_default_binding_can_resolve_param_from_named_output(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    make_template(
+        pack_root / "templates",
+        "produce_data",
+        "  sample_name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p "${LINKAR_RESULTS_DIR}/dataset"
+printf '%s\n' "${SAMPLE_NAME}" > "${LINKAR_RESULTS_DIR}/dataset/sample.txt"
+""",
+    )
+    make_template(
+        pack_root / "templates",
+        "consume_data",
+        "  source_dir:\n    type: path\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+cp "${SOURCE_DIR}/dataset/sample.txt" "${LINKAR_RESULTS_DIR}/consumed.txt"
+""",
+    )
+    make_binding(
+        pack_root,
+        "consume_data",
+        "      source_dir:\n        from: output\n        key: results_dir",
+    )
+
+    project_dir = tmp_path / "study"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    project_file = project_dir / "project.yaml"
+    project = yaml.safe_load(project_file.read_text())
+    project["packs"] = [{"ref": str(pack_root), "binding": "default"}]
+    project_file.write_text(yaml.safe_dump(project, sort_keys=False))
+
+    produce = run_cli(
+        "run",
+        "produce_data",
+        "--param",
+        "sample_name=S1",
+        cwd=project_dir,
+    )
+    assert produce.returncode == 0, produce.stderr
+
+    consume = run_cli("run", "consume_data", cwd=project_dir)
+    assert consume.returncode == 0, consume.stderr
+    outdir = Path(consume.stdout.strip())
+    assert (outdir / "results" / "consumed.txt").read_text().strip() == "S1"
+
+
+def test_ad_hoc_binding_override_can_use_external_function(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    make_template(
+        pack_root / "templates",
+        "consume_literal",
+        "  source_dir:\n    type: path\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+cp "${SOURCE_DIR}/sample.txt" "${LINKAR_RESULTS_DIR}/copied.txt"
+""",
+    )
+    source_dir = tmp_path / "source"
+    source_dir.mkdir()
+    (source_dir / "sample.txt").write_text("BOUND")
+    binding_root = make_binding(
+        tmp_path / "binding",
+        "consume_literal",
+        "      source_dir:\n        from: function\n        name: pick_source",
+        function_name="pick_source",
+        function_body=f"""from pathlib import Path
+
+def resolve(ctx):
+    return str(Path({str(source_dir)!r}).resolve())
+""",
+    )
+
+    completed = run_cli(
+        "run",
+        "consume_literal",
+        "--pack",
+        str(pack_root),
+        "--binding",
+        str(binding_root),
+        cwd=tmp_path,
+    )
+    assert completed.returncode == 0, completed.stderr
+    outdir = Path(completed.stdout.strip())
+    assert (outdir / "results" / "copied.txt").read_text().strip() == "BOUND"
+
+
+def test_project_binding_choice_overrides_pack_default(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    make_template(
+        pack_root / "templates",
+        "consume_override",
+        "  source_dir:\n    type: path\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+cp "${SOURCE_DIR}/sample.txt" "${LINKAR_RESULTS_DIR}/override.txt"
+""",
+    )
+    make_binding(
+        pack_root,
+        "consume_override",
+        "      source_dir:\n        from: value\n        value: /definitely/missing",
+    )
+    source_dir = tmp_path / "real_source"
+    source_dir.mkdir()
+    (source_dir / "sample.txt").write_text("OVERRIDE")
+    override_binding = make_binding(
+        tmp_path / "override_binding",
+        "consume_override",
+        f"      source_dir:\n        from: value\n        value: {str(source_dir)!r}",
+    )
+
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    project_file = project_dir / "project.yaml"
+    project = yaml.safe_load(project_file.read_text())
+    project["packs"] = [{"ref": str(pack_root), "binding": str(override_binding)}]
+    project_file.write_text(yaml.safe_dump(project, sort_keys=False))
+
+    completed = run_cli("run", "consume_override", cwd=project_dir)
+    assert completed.returncode == 0, completed.stderr
+    outdir = Path(completed.stdout.strip())
+    assert (outdir / "results" / "override.txt").read_text().strip() == "OVERRIDE"

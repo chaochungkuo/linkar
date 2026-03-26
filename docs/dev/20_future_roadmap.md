@@ -112,30 +112,30 @@ Make reusable template collections practical without increasing semantic complex
 Add the smallest useful binding system without breaking template portability.
 
 ### Scope Checklist
-- [ ] Define `binding.yaml`
-- [ ] Implement pack-provided default binding
-- [ ] Implement optional ad hoc binding selection
-- [ ] Implement project-level per-pack binding choice
-- [ ] Implement function-backed parameter resolution
+- [x] Define `binding.yaml`
+- [x] Implement pack-provided default binding
+- [x] Implement optional ad hoc binding selection
+- [x] Implement project-level per-pack binding choice
+- [x] Implement function-backed parameter resolution
 
 ### Deliverables Checklist
-- [ ] Binding specification document
-- [ ] Binding parser
-- [ ] Binding validator
-- [ ] Function loading mechanism
-- [ ] Resolution support for explicit caller input
-- [ ] Resolution support for selected binding
-- [ ] Resolution support for project outputs
-- [ ] Resolution support for defaults
-- [ ] CLI support for ad hoc `--binding`
-- [ ] Project config support for per-pack binding choice
+- [x] Binding specification document
+- [x] Binding parser
+- [x] Binding validator
+- [x] Function loading mechanism
+- [x] Resolution support for explicit caller input
+- [x] Resolution support for selected binding
+- [x] Resolution support for project outputs
+- [x] Resolution support for defaults
+- [x] CLI support for ad hoc `--binding`
+- [x] Project config support for per-pack binding choice
 
 ### Validation Checklist
-- [ ] Templates remain runnable without binding when explicit params are supplied
-- [ ] A pack can ship a default binding
-- [ ] A project can override that default binding
-- [ ] Binding behavior remains deterministic
-- [ ] Binding behavior remains inspectable
+- [x] Templates remain runnable without binding when explicit params are supplied
+- [x] A pack can ship a default binding
+- [x] A project can override that default binding
+- [x] Binding behavior remains deterministic
+- [x] Binding behavior remains inspectable
 
 ### Explicit Deferrals
 - [ ] Do not add side-effect-heavy lifecycle hooks in this phase
@@ -143,7 +143,7 @@ Add the smallest useful binding system without breaking template portability.
 - [ ] Do not add remote binding registry behavior in this phase
 
 ### Exit Criteria
-- [ ] One pack can be used with either its default binding or a project-selected override without changing the templates
+- [x] One pack can be used with either its default binding or a project-selected override without changing the templates
 
 ## Phase 4: Provenance Upgrade
 ### Objective

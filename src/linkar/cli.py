@@ -28,6 +28,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser = subparsers.add_parser("run")
     run_parser.add_argument("template")
     run_parser.add_argument("--pack", action="append", default=[])
+    run_parser.add_argument("--binding")
     run_parser.add_argument("--project")
     run_parser.add_argument("--outdir")
     run_parser.add_argument(
@@ -58,6 +59,7 @@ def main() -> int:
                 project=args.project,
                 outdir=args.outdir,
                 pack_refs=args.pack,
+                binding_ref=args.binding,
             )
             print(result["outdir"])
             return 0
