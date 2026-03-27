@@ -11,5 +11,5 @@ params:
 outputs:
   results_dir: {}
 run:
-  entry: run.sh
+  entry: run.py
   mode: direct

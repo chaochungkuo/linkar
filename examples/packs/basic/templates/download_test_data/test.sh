@@ -7,7 +7,7 @@ export LINKAR_RESULTS_DIR="./.tmp-test/results"
 
 mkdir -p "${LINKAR_RESULTS_DIR}"
 
-./run.sh
+./run.py
 
 test -f "${LINKAR_RESULTS_DIR}/fetched.txt"
 grep -q "downloaded through Linkar" "${LINKAR_RESULTS_DIR}/fetched.txt"
