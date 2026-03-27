@@ -42,7 +42,13 @@ if hasattr(click, "rich_click"):
     click.rich_click.STYLE_OPTION_DEFAULT = "dim"
     click.rich_click.STYLE_REQUIRED_SHORT = "bold red"
     click.rich_click.ERRORS_SUGGESTION = "Use [bold cyan]-h[/bold cyan] or [bold cyan]--help[/bold cyan] for more details."
-    click.rich_click.FOOTER_TEXT = "Linkar keeps the CLI thin over the core runtime semantics."
+    click.rich_click.FOOTER_TEXT = (
+        "Examples:\n"
+        "  linkar project init --name study\n"
+        "  linkar run raw hello --pack ./examples/packs/basic --param name=Linkar\n"
+        "  linkar run hello --name Linkar\n\n"
+        "Linkar keeps the CLI thin over the core runtime semantics."
+    )
 
 
 def parse_key_value(value: str) -> tuple[str, str]:
@@ -217,12 +223,6 @@ def resolve_project_init_target(path: str | None, name: str | None) -> tuple[str
 @click.group(
     context_settings={"help_option_names": ["-h", "--help"]},
     invoke_without_command=True,
-    epilog=(
-        "Examples:\n"
-        "  linkar project init --name study\n"
-        "  linkar run raw hello --pack ./examples/packs/basic --param name=Linkar\n"
-        "  linkar run hello --name Linkar\n"
-    ),
 )
 @click.version_option(__version__, prog_name="linkar")
 @click.pass_context
