@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://linkar.dev/schemas/linkar-project.schema.json",
+  "title": "Linkar Project",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "packs", "templates"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "active_pack": {
+      "type": ["string", "null"]
+    },
+    "packs": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["ref"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "binding": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        ]
+      }
+    },
+    "templates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["id", "instance_id", "path", "params", "outputs", "meta"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "template_version": {
+            "type": ["string", "null"]
+          },
+          "instance_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "params": {
+            "type": "object"
+          },
+          "outputs": {
+            "type": "object"
+          },
+          "meta": {
+            "type": "string",
+            "minLength": 1
+          },
+          "pack": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "ref"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "revision": {
+                "type": ["string", "null"]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

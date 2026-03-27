@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://linkar.dev/schemas/linkar-binding.schema.json",
+  "title": "Linkar Binding",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["templates"],
+  "properties": {
+    "templates": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["params"],
+        "properties": {
+          "params": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["from"],
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "enum": ["output", "function", "value"]
+                },
+                "key": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "value": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
