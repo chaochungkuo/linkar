@@ -69,6 +69,9 @@ class CliUI:
     def plain_error(self, value: str) -> None:
         print(value, file=sys.stderr)
 
+    def print_text(self, value: str) -> None:
+        self.plain_print(value)
+
     def status(self, message: str):
         if not self.rich_enabled:
             return nullcontext()
@@ -191,3 +194,28 @@ class CliUI:
                 box=box.ROUNDED,
             )
         )
+
+    def print_usage_error(self, message: str, help_text: str, hint: str | None = None) -> None:
+        if not self.rich_enabled:
+            self.plain_error(f"Error: {message}")
+            self.plain_error("")
+            self.plain_error(help_text.rstrip())
+            if hint:
+                self.plain_error("")
+                self.plain_error(hint)
+            return
+
+        body = Text()
+        body.append(message, style="error")
+        if hint:
+            body.append("\n")
+            body.append(hint, style="muted")
+        self.error_console.print(
+            Panel(
+                body,
+                title="[error]Usage Error[/error]",
+                border_style="error",
+                box=box.ROUNDED,
+            )
+        )
+        self.error_console.print(help_text.rstrip())

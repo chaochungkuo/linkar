@@ -122,6 +122,22 @@ def test_help_output_is_clean_and_descriptive(tmp_path: Path) -> None:
     assert "default:" not in run_help.stdout.lower()
 
 
+def test_bare_cli_shows_helpful_guidance(tmp_path: Path) -> None:
+    completed = run_cli(cwd=tmp_path)
+    assert completed.returncode == 1
+    assert "Run reusable computational templates" in completed.stdout
+    assert "Try 'linkar run --help'" in completed.stdout
+    assert "the following arguments are required" not in completed.stderr
+
+
+def test_parser_errors_show_contextual_help(tmp_path: Path) -> None:
+    completed = run_cli("run", cwd=tmp_path)
+    assert completed.returncode == 2
+    assert "Error: the following arguments are required: TEMPLATE" in completed.stderr
+    assert "usage: linkar run" in completed.stderr
+    assert "Use '--help' on the command you are trying to run" in completed.stderr
+
+
 def test_run_template_updates_project(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
     init = run_cli("project", "init", str(project_dir), cwd=tmp_path)

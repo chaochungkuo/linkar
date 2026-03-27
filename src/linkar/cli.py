@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from linkar import __version__
@@ -21,6 +22,18 @@ class HelpFormatter(argparse.RawDescriptionHelpFormatter):
     pass
 
 
+class ParserUsageError(Exception):
+    def __init__(self, parser: argparse.ArgumentParser, message: str):
+        super().__init__(message)
+        self.parser = parser
+        self.message = message
+
+
+class LinkarArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:
+        raise ParserUsageError(self, message)
+
+
 def parse_key_value(value: str) -> tuple[str, str]:
     if "=" not in value:
         raise argparse.ArgumentTypeError("Expected KEY=VALUE")
@@ -31,7 +44,7 @@ def parse_key_value(value: str) -> tuple[str, str]:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
+    parser = LinkarArgumentParser(
         prog="linkar",
         description="Run reusable computational templates with transparent project state and provenance.",
         epilog=(
@@ -203,10 +216,25 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
-    args = parser.parse_args()
     ui = CliUI()
+    raw_args = sys.argv[1:] if argv is None else argv
+
+    if not raw_args:
+        ui.print_text(parser.format_help().rstrip())
+        ui.print_text("Try 'linkar run --help' for a focused command example.")
+        return 1
+
+    try:
+        args = parser.parse_args(raw_args)
+    except ParserUsageError as exc:
+        ui.print_usage_error(
+            exc.message,
+            exc.parser.format_help(),
+            "Use '--help' on the command you are trying to run for examples and options.",
+        )
+        return 2
 
     try:
         if args.command == "project" and args.project_command == "init":
@@ -252,11 +280,10 @@ def main() -> int:
             serve(host=args.host, port=args.port)
             return 0
 
-        parser.error("Unknown command")
-        return 2
+        raise ParserUsageError(parser, "unknown command")
     except LinkarError as exc:
         ui.print_error(str(exc))
-        parser.exit(1)
+        return 1
 
 
 if __name__ == "__main__":
