@@ -125,6 +125,10 @@ h1 {
   letter-spacing: -0.03em;
 }
 
+.hero-title {
+  font-size: clamp(1.05rem, 2.2vw, 1.9rem);
+}
+
 h2 {
   font-size: clamp(2rem, 4vw, 3.6rem);
   max-width: 12ch;
