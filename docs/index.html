@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Linkar</title>
+    <meta
+      name="description"
+      content="Linkar is a lightweight execution engine for reusable computational templates with transparent project state and provenance."
+    />
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <nav class="topbar">
+          <div class="brand">linkar</div>
+          <div class="nav-links">
+            <a href="#why">Why</a>
+            <a href="#quickstart">Quickstart</a>
+            <a href="#workflow">Workflow</a>
+            <a href="#tutorials">Tutorials</a>
+            <a href="#docs">Docs</a>
+          </div>
+        </nav>
+
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">Filesystem-first template runtime</p>
+            <h1>Reusable analysis templates, with transparent runs.</h1>
+            <p class="lede">
+              Linkar sits between ad hoc scripts and heavyweight workflow systems. It gives you
+              reusable templates, portable run artifacts, project-aware chaining, and metadata that
+              humans and agents can inspect.
+            </p>
+            <div class="hero-actions">
+              <a class="button button-primary" href="#quickstart">Start Here</a>
+              <a class="button button-secondary" href="#tutorials">Browse Tutorials</a>
+            </div>
+          </div>
+
+          <div class="hero-panel">
+            <div class="terminal-window">
+              <div class="terminal-bar">
+                <span></span><span></span><span></span>
+              </div>
+              <pre><code>linkar project init --name study
+cd study
+
+linkar config pack add ~/github/izkf_genomics_pack
+linkar run fastqc --input sample.fastq.gz
+linkar run multiqc
+linkar methods</code></pre>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section id="why" class="section">
+          <div class="section-heading">
+            <p class="eyebrow">Why Linkar</p>
+            <h2>Keep the execution model small.</h2>
+          </div>
+
+          <div class="card-grid three-up">
+            <article class="feature-card">
+              <h3>Templates stay standalone</h3>
+              <p>
+                Each template is just a normal directory with a small YAML interface and a runnable
+                entrypoint. Template authors can still test their source scripts directly.
+              </p>
+            </article>
+            <article class="feature-card">
+              <h3>Projects stay readable</h3>
+              <p>
+                <code>project.yaml</code> records pack choices and run history without becoming a
+                hidden workflow engine or database.
+              </p>
+            </article>
+            <article class="feature-card">
+              <h3>Artifacts stay inspectable</h3>
+              <p>
+                Every run lives in a normal directory with <code>results/</code>,
+                <code>.linkar/meta.json</code>, and runtime details that can be inspected later.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section id="quickstart" class="section section-alt">
+          <div class="section-heading">
+            <p class="eyebrow">Quickstart</p>
+            <h2>The shortest useful path.</h2>
+          </div>
+
+          <div class="split-grid">
+            <div class="content-card">
+              <h3>1. Install and test</h3>
+              <pre><code>pixi run test
+pixi run cli-help</code></pre>
+            </div>
+
+            <div class="content-card">
+              <h3>2. Start a project</h3>
+              <pre><code>linkar project init --name demo
+cd demo</code></pre>
+            </div>
+
+            <div class="content-card">
+              <h3>3. Add a pack</h3>
+              <pre><code>linkar config pack add ~/github/izkf_genomics_pack
+linkar templates</code></pre>
+            </div>
+
+            <div class="content-card">
+              <h3>4. Run a template</h3>
+              <pre><code>linkar run fastqc --input sample.fastq.gz
+linkar project runs
+linkar inspect run fastqc_001</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <section id="workflow" class="section">
+          <div class="section-heading">
+            <p class="eyebrow">Mental Model</p>
+            <h2>Three layers, one direction.</h2>
+          </div>
+
+          <div class="workflow-strip">
+            <div class="workflow-step">
+              <span class="step-index">01</span>
+              <h3>Template</h3>
+              <p>Atomic reusable unit with a declared interface and a runnable entrypoint.</p>
+            </div>
+            <div class="workflow-step">
+              <span class="step-index">02</span>
+              <h3>Pack</h3>
+              <p>Purposeful collection of templates and optional binding defaults.</p>
+            </div>
+            <div class="workflow-step">
+              <span class="step-index">03</span>
+              <h3>Project</h3>
+              <p>Local run index that tracks outputs, provenance, and active pack choices.</p>
+            </div>
+          </div>
+
+          <div class="terminal-window workflow-terminal">
+            <div class="terminal-bar">
+              <span></span><span></span><span></span>
+            </div>
+            <pre><code>study/
+  project.yaml
+  fastqc_001/
+    run.sh
+    script.sh
+    results/
+    .linkar/
+      meta.json
+      runtime.json</code></pre>
+          </div>
+        </section>
+
+        <section id="tutorials" class="section section-alt">
+          <div class="section-heading">
+            <p class="eyebrow">Tutorials</p>
+            <h2>What this site should eventually contain.</h2>
+          </div>
+
+          <div class="card-grid two-up">
+            <article class="tutorial-card">
+              <h3>Getting started with a local project</h3>
+              <p>Create a project, add a pack, run your first template, and inspect the result.</p>
+              <span class="status-tag">Draft</span>
+            </article>
+
+            <article class="tutorial-card">
+              <h3>Using global packs vs project packs</h3>
+              <p>Understand lookup precedence and how to keep reproducibility strong.</p>
+              <span class="status-tag">Draft</span>
+            </article>
+
+            <article class="tutorial-card">
+              <h3>Authoring a template with <code>script.sh</code></h3>
+              <p>Develop a source script, let Linkar render <code>run.sh</code>, and keep runs rerunnable.</p>
+              <span class="status-tag">Draft</span>
+            </article>
+
+            <article class="tutorial-card">
+              <h3>Building a genomics pack</h3>
+              <p>Organize templates, bindings, and test fixtures in a real pack repo.</p>
+              <span class="status-tag">Draft</span>
+            </article>
+
+            <article class="tutorial-card">
+              <h3>Inspecting provenance and generating methods text</h3>
+              <p>Use metadata and methods generation to make runs easier to explain and share.</p>
+              <span class="status-tag">Draft</span>
+            </article>
+
+            <article class="tutorial-card">
+              <h3>Wrapping an external pipeline</h3>
+              <p>Turn an existing script or external repo into a Linkar template without copying all its code.</p>
+              <span class="status-tag">Draft</span>
+            </article>
+          </div>
+        </section>
+
+        <section id="docs" class="section">
+          <div class="section-heading">
+            <p class="eyebrow">Reference</p>
+            <h2>Core docs to link from the demo site.</h2>
+          </div>
+
+          <div class="doc-grid">
+            <a class="doc-card" href="./dev/01_vision_and_philosophy.md">
+              <h3>Vision</h3>
+              <p>Problem statement, product thesis, and philosophy.</p>
+            </a>
+            <a class="doc-card" href="./dev/04_template_specification.md">
+              <h3>Template Spec</h3>
+              <p>Template contract, metadata, and source-file conventions.</p>
+            </a>
+            <a class="doc-card" href="./dev/05_project_specification.md">
+              <h3>Project Spec</h3>
+              <p>Project structure, pack selection, and run indexing.</p>
+            </a>
+            <a class="doc-card" href="./dev/15_cli_design.md">
+              <h3>CLI Design</h3>
+              <p>CLI principles, pack scopes, and command behavior.</p>
+            </a>
+            <a class="doc-card" href="./dev/19_example_workflows.md">
+              <h3>Example Workflows</h3>
+              <p>Concrete workflows to turn into end-user tutorials.</p>
+            </a>
+            <a class="doc-card" href="./dev/20_future_roadmap.md">
+              <h3>Roadmap</h3>
+              <p>Development phases and implementation progress.</p>
+            </a>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
