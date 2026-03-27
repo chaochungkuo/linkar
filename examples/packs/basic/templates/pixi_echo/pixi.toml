@@ -1,0 +1,8 @@
+[workspace]
+name = "pixi_echo"
+version = "0.1.0"
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "osx-64", "linux-64"]
+
+[dependencies]
+python = "3.11.*"

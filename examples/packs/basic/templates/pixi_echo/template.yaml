@@ -1,0 +1,12 @@
+id: pixi_echo
+version: 0.1.0
+description: Write a greeting text file by running a tiny Python helper through pixi.
+params:
+  name:
+    type: str
+    required: true
+outputs:
+  greeting_file: {}
+run:
+  entry: run.sh
+  mode: direct
