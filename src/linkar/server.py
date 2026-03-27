@@ -143,5 +143,4 @@ def make_app() -> WSGIApp:
 def serve(host: str = "127.0.0.1", port: int = 8000) -> None:
     app = make_app()
     with make_server(host, port, app) as httpd:
-        print(f"Serving Linkar API on http://{host}:{port}")
         httpd.serve_forever()

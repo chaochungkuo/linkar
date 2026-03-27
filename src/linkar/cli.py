@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 
 from linkar.core import (
@@ -14,6 +13,7 @@ from linkar.core import (
     run_template,
 )
 from linkar.server import serve
+from linkar.ui import CliUI
 
 
 def parse_key_value(value: str) -> tuple[str, str]:
@@ -73,54 +73,57 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
+    ui = CliUI()
 
     try:
         if args.command == "project" and args.project_command == "init":
             project_path = init_project(args.path, project_id=args.project_id)
-            print(project_path)
+            project_id = args.project_id or Path(args.path).resolve().name
+            ui.print_project_created(project_path, project_id)
             return 0
         if args.command == "project" and args.project_command == "runs":
             runs = list_project_runs(project=args.project)
-            for run in runs:
-                print(f"{run['instance_id']}\t{run['id']}\t{run['path']}")
+            ui.print_runs(runs)
             return 0
 
         if args.command == "run":
             params = dict(args.param)
-            result = run_template(
-                args.template,
-                params=params,
-                project=args.project,
-                outdir=args.outdir,
-                pack_refs=args.pack,
-                binding_ref=args.binding,
-            )
-            print(result["outdir"])
+            with ui.status("Running template"):
+                result = run_template(
+                    args.template,
+                    params=params,
+                    project=args.project,
+                    outdir=args.outdir,
+                    pack_refs=args.pack,
+                    binding_ref=args.binding,
+                )
+            ui.print_run_completed(result)
             return 0
 
         if args.command == "templates":
             templates = list_templates(pack_refs=args.pack, project=args.project)
-            for template in templates:
-                print(f"{template['id']}\t{template['pack_ref']}")
+            ui.print_templates(templates)
             return 0
 
         if args.command == "inspect" and args.inspect_command == "run":
             metadata = inspect_run(args.run_ref, project=args.project)
-            print(json.dumps(metadata, indent=2, sort_keys=True))
+            ui.print_metadata(metadata)
             return 0
 
         if args.command == "methods":
-            print(generate_methods(project=args.project))
+            ui.print_methods(generate_methods(project=args.project))
             return 0
 
         if args.command == "serve":
+            ui.print_server_banner(args.host, args.port)
             serve(host=args.host, port=args.port)
             return 0
 
         parser.error("Unknown command")
         return 2
     except LinkarError as exc:
-        parser.exit(1, f"{exc}\n")
+        ui.print_error(str(exc))
+        parser.exit(1)
 
 
 if __name__ == "__main__":
