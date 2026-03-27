@@ -1,0 +1,15 @@
+id: download_test_data
+version: 0.1.0
+description: Download a small file from a URL into the run results directory.
+params:
+  source_url:
+    type: str
+    required: true
+  output_name:
+    type: str
+    default: downloaded.txt
+outputs:
+  results_dir: {}
+run:
+  entry: run.sh
+  mode: direct

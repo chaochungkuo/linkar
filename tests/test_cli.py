@@ -512,6 +512,59 @@ def test_pixi_pytest_can_run_as_real_template(tmp_path: Path) -> None:
     assert 'failures="0"' in report_text
 
 
+def test_basic_example_templates_are_valid(tmp_path: Path) -> None:
+    pack_root = ROOT / "examples" / "packs" / "basic"
+
+    for template_id in [
+        "simple_echo",
+        "simple_file_input",
+        "simple_boolean_flag",
+        "download_test_data",
+        "fastq_stats",
+        "pixi_echo",
+        "pixi_pytest",
+    ]:
+        completed = run_cli("test", template_id, "--pack", str(pack_root), cwd=tmp_path)
+        assert completed.returncode == 0, completed.stderr
+
+
+def test_chaining_example_pack_can_resolve_default_binding(tmp_path: Path) -> None:
+    pack_root = ROOT / "examples" / "packs" / "chaining"
+    project_dir = tmp_path / "project"
+
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    added = run_cli("pack", "add", str(pack_root), "--id", "chaining", "--binding", "default", cwd=project_dir)
+    assert added.returncode == 0, added.stderr
+
+    produce = run_cli("run", "produce_message", "--message", "hello chain", cwd=project_dir)
+    assert produce.returncode == 0, produce.stderr
+
+    consume = run_cli("run", "consume_message", cwd=project_dir)
+    assert consume.returncode == 0, consume.stderr
+
+    outdir = Path(consume.stdout.strip())
+    assert (outdir / "results" / "consumed.txt").read_text().strip() == "consumed: hello chain"
+
+
+def test_pack_management_examples_follow_active_pack_selection(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    pack_one = ROOT / "examples" / "packs" / "pack_management" / "pack_one"
+    pack_two = ROOT / "examples" / "packs" / "pack_management" / "pack_two"
+
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+    assert run_cli("pack", "add", str(pack_one), "--id", "pack_one", cwd=project_dir).returncode == 0
+    assert run_cli("pack", "add", str(pack_two), "--id", "pack_two", "--activate", cwd=project_dir).returncode == 0
+
+    completed = run_cli("run", "dup", "--name", "Example", cwd=project_dir)
+    assert completed.returncode == 0, completed.stderr
+
+    outdir = Path(completed.stdout.strip())
+    assert (outdir / "results" / "out.txt").read_text().strip() == "pack two: Example"
+
+
 def test_project_pack_configuration_is_used_for_template_lookup(tmp_path: Path) -> None:
     pack_root = tmp_path / "pack"
     hello_template = ROOT / "examples" / "packs" / "basic" / "templates" / "simple_echo"

@@ -1,0 +1,12 @@
+id: produce_message
+version: 0.1.0
+description: Produce a text message in the run results directory.
+params:
+  message:
+    type: str
+    required: true
+outputs:
+  results_dir: {}
+run:
+  entry: run.sh
+  mode: direct

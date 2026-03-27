@@ -1,0 +1,12 @@
+id: consume_message
+version: 0.1.0
+description: Consume the previous produce_message results directory and create a transformed message.
+params:
+  results_dir:
+    type: path
+    required: true
+outputs:
+  results_dir: {}
+run:
+  entry: run.sh
+  mode: direct

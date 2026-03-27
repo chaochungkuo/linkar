@@ -1,0 +1,12 @@
+id: remote_wave
+version: 0.1.0
+description: Minimal template intended for remote pack demonstrations.
+params:
+  name:
+    type: str
+    required: true
+outputs:
+  results_dir: {}
+run:
+  entry: run.sh
+  mode: direct

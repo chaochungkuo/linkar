@@ -1,0 +1,15 @@
+id: simple_boolean_flag
+version: 0.1.0
+description: Demonstrate explicit boolean defaults without render-time conditionals.
+params:
+  name:
+    type: str
+    required: true
+  excited:
+    type: bool
+    default: false
+outputs:
+  results_dir: {}
+run:
+  entry: run.sh
+  mode: direct

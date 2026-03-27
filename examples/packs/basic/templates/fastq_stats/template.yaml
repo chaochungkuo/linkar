@@ -1,0 +1,15 @@
+id: fastq_stats
+version: 0.1.0
+description: Count reads in a single FASTQ file and write a small summary report.
+params:
+  input_fastq:
+    type: path
+    required: true
+  sample_name:
+    type: str
+    default: unknown
+outputs:
+  results_dir: {}
+run:
+  entry: run.sh
+  mode: direct

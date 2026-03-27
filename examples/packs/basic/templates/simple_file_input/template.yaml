@@ -1,0 +1,12 @@
+id: simple_file_input
+version: 0.1.0
+description: Copy a declared input file into the run results directory.
+params:
+  input_file:
+    type: path
+    required: true
+outputs:
+  results_dir: {}
+run:
+  entry: run.sh
+  mode: direct

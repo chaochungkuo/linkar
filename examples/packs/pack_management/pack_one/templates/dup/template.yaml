@@ -1,0 +1,12 @@
+id: dup
+version: 0.1.0
+description: Duplicate-id example from pack one.
+params:
+  name:
+    type: str
+    required: true
+outputs:
+  results_dir: {}
+run:
+  entry: run.sh
+  mode: direct
