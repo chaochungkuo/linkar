@@ -1294,6 +1294,41 @@ printf '%s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/name.txt"
     assert "listed_template\tTemplate used for listing tests\tname\tresults_dir,name_file\t1.2.3" in completed.stdout
 
 
+def test_run_metadata_collects_declared_outputs_from_default_results_subpaths(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    make_template(
+        pack_root / "templates",
+        "declared_outputs",
+        "  name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p "${LINKAR_RESULTS_DIR}/output" "${LINKAR_RESULTS_DIR}/reports"
+printf '%s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/output/name.txt"
+printf '<html>%s</html>\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/reports/report.html"
+""",
+        outputs="  results_dir: {}\n  output_dir: {}\n  report_html:\n    path: reports/report.html",
+    )
+
+    completed = run_cli(
+        "run",
+        "declared_outputs",
+        "--pack",
+        str(pack_root),
+        "--param",
+        "name=Linkar",
+        cwd=tmp_path,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+    outdir = Path(completed.stdout.strip())
+    meta = json.loads((outdir / ".linkar" / "meta.json").read_text())
+    assert meta["outputs"] == {
+        "results_dir": str((outdir / "results").resolve()),
+        "output_dir": str((outdir / "results" / "output").resolve()),
+        "report_html": str((outdir / "results" / "reports" / "report.html").resolve()),
+    }
+
+
 def test_inspect_run_command_returns_metadata_json(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
     init = run_cli("project", "init", str(project_dir), cwd=tmp_path)

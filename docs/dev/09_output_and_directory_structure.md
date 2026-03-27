@@ -144,6 +144,26 @@ The system should distinguish between:
 
 This distinction keeps downstream chaining predictable.
 
+When a template declares outputs in `template.yaml`, Linkar resolves them relative to `results/` by default:
+
+- `results_dir` -> `results/`
+- `*_dir` -> `results/<name without _dir>`
+- other names -> `results/<output name>`
+
+Templates may override that relative location with `path` in the output spec.
+
+Example:
+
+```yaml
+outputs:
+  results_dir: {}
+  output_dir: {}
+  report_html:
+    path: reports/report.html
+```
+
+After the run, Linkar records only the declared outputs whose resolved path actually exists. This keeps metadata explicit without forcing every possible path to be present.
+
 ## Design Constraints
 The directory structure should remain:
 

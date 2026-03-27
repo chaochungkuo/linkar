@@ -71,9 +71,39 @@ def determine_test_dir(
     return (Path.cwd() / ".linkar" / "tests" / f"{template.id}_{stamp}").resolve()
 
 
-def collect_outputs(outdir: Path) -> dict[str, str]:
-    outputs: dict[str, str] = {}
+def default_output_relative_path(output_name: str) -> Path:
+    if output_name == "results_dir":
+        return Path(".")
+    if output_name.endswith("_dir"):
+        return Path(output_name.removesuffix("_dir"))
+    return Path(output_name)
+
+
+def resolve_declared_output_path(output_name: str, spec: dict[str, Any], outdir: Path) -> Path:
     results_dir = outdir / "results"
+    relative_path = spec.get("path")
+    if relative_path is None:
+        relative = default_output_relative_path(output_name)
+    elif isinstance(relative_path, str) and relative_path.strip():
+        relative = Path(relative_path)
+    else:
+        raise TemplateValidationError(
+            f"Output '{output_name}' path must be a non-empty string when provided"
+        )
+    return (results_dir / relative).resolve()
+
+
+def collect_outputs(template: TemplateSpec, outdir: Path) -> dict[str, str]:
+    outputs: dict[str, str] = {}
+    results_dir = (outdir / "results").resolve()
+    declared_outputs = template.outputs or {}
+    if declared_outputs:
+        for output_name, spec in declared_outputs.items():
+            output_path = resolve_declared_output_path(output_name, spec, outdir)
+            if output_path.exists():
+                outputs[output_name] = str(output_path)
+        return outputs
+
     if results_dir.exists():
         outputs["results_dir"] = str(results_dir)
     return outputs
@@ -469,7 +499,7 @@ def run_template(
             f"See {runtime_path}"
         )
 
-    outputs = collect_outputs(output_dir)
+    outputs = collect_outputs(template, output_dir)
     meta_path = linkar_dir / "meta.json"
     write_json(
         meta_path,

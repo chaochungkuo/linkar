@@ -4,9 +4,12 @@ from pathlib import Path
 
 from linkar.runtime.projects import init_project, load_project
 from linkar.runtime.runs import (
+    collect_outputs,
+    default_output_relative_path,
     determine_outdir,
     determine_test_dir,
     next_instance_id,
+    resolve_declared_output_path,
     should_exclude_runtime_path,
     should_render_shell_wrapper,
     stage_runtime_bundle,
@@ -119,3 +122,64 @@ def test_runtime_bundle_exclusion_helper_matches_current_policy() -> None:
     assert should_exclude_runtime_path(Path(".pixi")) is True
     assert should_exclude_runtime_path(Path("run.sh")) is False
     assert should_exclude_runtime_path(Path("pixi.toml")) is False
+
+
+def test_default_output_relative_path_uses_results_dir_conventions() -> None:
+    assert default_output_relative_path("results_dir") == Path(".")
+    assert default_output_relative_path("fastqc_dir") == Path("fastqc")
+    assert default_output_relative_path("output_dir") == Path("output")
+    assert default_output_relative_path("report_html") == Path("report_html")
+
+
+def test_resolve_declared_output_path_supports_default_and_explicit_paths(tmp_path: Path) -> None:
+    outdir = tmp_path / "demo_001"
+    outdir.mkdir()
+
+    assert resolve_declared_output_path("fastqc_dir", {}, outdir) == (outdir / "results" / "fastqc").resolve()
+    assert resolve_declared_output_path(
+        "report_html",
+        {"path": "reports/report.html"},
+        outdir,
+    ) == (outdir / "results" / "reports" / "report.html").resolve()
+
+
+def test_collect_outputs_uses_declared_relative_paths_when_present(tmp_path: Path) -> None:
+    template_dir = make_template(tmp_path / "templates", "outputs_demo", "#!/usr/bin/env bash\n")
+    (template_dir / "template.yaml").write_text(
+        "\n".join(
+            [
+                "id: outputs_demo",
+                "outputs:",
+                "  results_dir: {}",
+                "  output_dir: {}",
+                "  report_html:",
+                "    path: reports/report.html",
+                "run:",
+                "  entry: run.sh",
+                "  mode: direct",
+                "",
+            ]
+        )
+    )
+    template = load_template(template_dir)
+    outdir = tmp_path / "run"
+    (outdir / "results" / "output").mkdir(parents=True)
+    (outdir / "results" / "reports").mkdir(parents=True)
+    (outdir / "results" / "reports" / "report.html").write_text("<html></html>\n")
+
+    outputs = collect_outputs(template, outdir)
+
+    assert outputs == {
+        "results_dir": str((outdir / "results").resolve()),
+        "output_dir": str((outdir / "results" / "output").resolve()),
+        "report_html": str((outdir / "results" / "reports" / "report.html").resolve()),
+    }
+
+
+def test_collect_outputs_falls_back_to_results_dir_for_legacy_templates(tmp_path: Path) -> None:
+    template_dir = make_template(tmp_path / "templates", "legacy_demo", "#!/usr/bin/env bash\n")
+    template = load_template(template_dir)
+    outdir = tmp_path / "run"
+    (outdir / "results").mkdir(parents=True)
+
+    assert collect_outputs(template, outdir) == {"results_dir": str((outdir / "results").resolve())}

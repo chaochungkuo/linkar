@@ -150,6 +150,33 @@ outputs:
   report_html: {}
 ```
 
+By default, Linkar resolves declared outputs relative to the run's `results/` directory and records only the ones that actually exist after execution.
+
+Default conventions:
+
+- `results_dir` -> `results/`
+- names ending in `_dir` -> `results/<name without _dir>`
+- all other names -> `results/<output name>`
+
+Examples:
+
+- `fastqc_dir` -> `results/fastqc`
+- `output_dir` -> `results/output`
+- `report_html` -> `results/report_html`
+
+If a template needs a different relative location, the output spec may declare `path`.
+
+Example:
+
+```yaml
+outputs:
+  results_dir: {}
+  report_html:
+    path: reports/report.html
+```
+
+In that case, Linkar resolves `report_html` to `results/reports/report.html`.
+
 ## Parameter Specification
 Each parameter entry may define:
 

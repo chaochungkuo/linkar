@@ -84,6 +84,8 @@ The outputs intentionally exposed by the run for downstream use.
 
 This is the key bridge between execution and chaining.
 
+When a template declares outputs, Linkar resolves those names against the run directory and records the ones that exist after execution. For most templates this means named paths under `results/`, with optional per-output `path` overrides in `template.yaml`.
+
 ### `software`
 Software/version information relevant to reproducibility.
 
