@@ -1,0 +1,22 @@
+[workspace]
+name = "linkar"
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-64", "osx-arm64"]
+
+[dependencies]
+python = "3.11.*"
+pip = "*"
+
+[pypi-dependencies]
+linkar = { path = ".", editable = true }
+
+[feature.dev.dependencies]
+pytest = ">=8,<9"
+
+[environments]
+default = ["dev"]
+
+[tasks]
+test = "pytest"
+cli-help = "python -m linkar.cli --help"
+serve = "python -m linkar.cli serve"

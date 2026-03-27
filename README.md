@@ -16,6 +16,14 @@ pip install -e '.[dev]'
 pytest
 ```
 
+Or with `pixi`:
+
+```bash
+pixi run test
+pixi run cli-help
+pixi run serve
+```
+
 Initialize a project:
 
 ```bash
