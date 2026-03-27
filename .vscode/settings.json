@@ -1,0 +1,9 @@
+{
+  "yaml.schemas": {
+    "./schemas/linkar-template.schema.json": [
+      "examples/packs/basic/templates/*/template.yaml",
+      "examples/packs/chaining/templates/*/template.yaml",
+      "examples/packs/remote/templates/*/template.yaml"
+    ]
+  }
+}
