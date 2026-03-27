@@ -117,6 +117,28 @@ class CliUI:
             )
         )
 
+    def print_test_completed(self, result: dict[str, Any]) -> None:
+        outdir = Path(result["outdir"])
+        if not self.rich_enabled:
+            self.plain_print(f"PASS {result['template']}\t{outdir}")
+            return
+        body = Text()
+        body.append("Template", style="label")
+        body.append(": ", style="muted")
+        body.append(str(result["template"]), style="accent")
+        body.append("\n")
+        body.append("Workspace", style="label")
+        body.append(": ", style="muted")
+        body.append(str(outdir), style="value")
+        self.console.print(
+            Panel(
+                body,
+                title="[ok]Test Passed[/ok]",
+                border_style="ok",
+                box=box.ROUNDED,
+            )
+        )
+
     def print_runs(self, runs: list[dict[str, Any]]) -> None:
         if not self.rich_enabled:
             for run in runs:

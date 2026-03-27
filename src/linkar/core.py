@@ -478,6 +478,19 @@ def determine_outdir(
     return (Path.cwd() / ".linkar" / "runs" / instance_id).resolve()
 
 
+def determine_test_dir(
+    template: TemplateSpec,
+    project: Project | None,
+    outdir: str | Path | None,
+) -> Path:
+    if outdir is not None:
+        return Path(outdir).resolve()
+    stamp = utc_now().strftime("%Y%m%d_%H%M%S")
+    if project is not None:
+        return (project.root / ".linkar" / "tests" / f"{template.id}_{stamp}").resolve()
+    return (Path.cwd() / ".linkar" / "tests" / f"{template.id}_{stamp}").resolve()
+
+
 def write_json(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as handle:
@@ -636,6 +649,85 @@ def generate_methods(project: str | Path | Project | None = None) -> str:
         sentence += "."
         fragments.append(sentence)
     return " ".join(fragments)
+
+
+def test_template(
+    template_ref: str | Path,
+    project: str | Path | Project | None = None,
+    outdir: str | Path | None = None,
+    pack_refs: str | Path | list[str | Path] | None = None,
+) -> dict[str, Any]:
+    if isinstance(project, (str, Path)):
+        project_obj = load_project(project)
+    elif project is None:
+        project_obj = discover_project()
+    else:
+        project_obj = project
+
+    project_entries = project_pack_entries(project_obj)
+    combined_pack_assets = resolve_asset_refs(pack_refs) + [entry.asset for entry in project_entries]
+    template = load_template(template_ref, pack_assets=combined_pack_assets)
+
+    test_script = template.root / "test.sh"
+    if not test_script.exists():
+        raise TemplateValidationError(f"test.sh not found in {template.root}")
+
+    test_dir = determine_test_dir(template, project_obj, outdir)
+    test_dir.mkdir(parents=True, exist_ok=True)
+    results_dir = test_dir / "results"
+    results_dir.mkdir(exist_ok=True)
+    linkar_dir = test_dir / ".linkar"
+    linkar_dir.mkdir(exist_ok=True)
+
+    env = os.environ.copy()
+    env["LINKAR_TEMPLATE_DIR"] = str(template.root)
+    env["LINKAR_TEMPLATE_ID"] = template.id
+    env["LINKAR_TEST_DIR"] = str(test_dir)
+    env["LINKAR_RESULTS_DIR"] = str(results_dir)
+    env["LINKAR_TESTDATA_DIR"] = str((template.root / "testdata").resolve())
+    if template.pack_root is not None:
+        env["LINKAR_PACK_ROOT"] = str(template.pack_root)
+    if project_obj is not None:
+        env["LINKAR_PROJECT_DIR"] = str(project_obj.root)
+
+    command = [str(test_script.resolve())]
+    started_at = utc_now()
+    completed = subprocess.run(
+        command,
+        cwd=template.root,
+        env=env,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+    finished_at = utc_now()
+
+    runtime_path = linkar_dir / "runtime.json"
+    write_json(
+        runtime_path,
+        {
+            "command": command,
+            "cwd": str(template.root),
+            "returncode": completed.returncode,
+            "success": completed.returncode == 0,
+            "started_at": started_at.isoformat(),
+            "finished_at": finished_at.isoformat(),
+            "duration_seconds": (finished_at - started_at).total_seconds(),
+            "stdout": completed.stdout,
+            "stderr": completed.stderr,
+        },
+    )
+
+    if completed.returncode != 0:
+        raise ExecutionError(
+            f"Template test failed with exit code {completed.returncode}. See {runtime_path}"
+        )
+
+    return {
+        "template": template.id,
+        "outdir": str(test_dir),
+        "runtime": str(runtime_path),
+    }
 
 
 def run_template(

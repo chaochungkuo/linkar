@@ -347,6 +347,82 @@ printf '%s\n' "${THREADS}" > "${LINKAR_RESULTS_DIR}/threads.txt"
     assert "--threads INT" in completed.stdout
 
 
+def test_template_test_command_runs_template_local_test_script(tmp_path: Path) -> None:
+    template = make_template(
+        tmp_path / "templates",
+        "self_tested",
+        "  name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/name.txt"
+""",
+    )
+    testdata = template / "testdata"
+    testdata.mkdir()
+    (testdata / "fixture.txt").write_text("fixture")
+    test_script = template / "test.sh"
+    test_script.write_text(
+        """#!/usr/bin/env bash
+set -euo pipefail
+test -d "${LINKAR_TEST_DIR}"
+test -d "${LINKAR_RESULTS_DIR}"
+test -d "${LINKAR_TESTDATA_DIR}"
+cp "${LINKAR_TESTDATA_DIR}/fixture.txt" "${LINKAR_RESULTS_DIR}/copied.txt"
+"""
+    )
+    test_script.chmod(0o755)
+
+    completed = run_cli("test", str(template), cwd=tmp_path)
+    assert completed.returncode == 0, completed.stderr
+    assert "PASS self_tested" in completed.stdout
+
+    workspace = Path(completed.stdout.strip().split("\t", 1)[1])
+    assert (workspace / "results" / "copied.txt").read_text().strip() == "fixture"
+    runtime = json.loads((workspace / ".linkar" / "runtime.json").read_text())
+    assert runtime["success"] is True
+
+
+def test_template_test_command_can_resolve_template_from_pack(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    template = make_template(
+        pack_root / "templates",
+        "pack_tested",
+        "  value:\n    type: str\n    default: ok",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "${VALUE}" > "${LINKAR_RESULTS_DIR}/value.txt"
+""",
+    )
+    test_script = template / "test.sh"
+    test_script.write_text(
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'pack test\n' > "${LINKAR_RESULTS_DIR}/result.txt"
+"""
+    )
+    test_script.chmod(0o755)
+
+    completed = run_cli("test", "pack_tested", "--pack", str(pack_root), cwd=tmp_path)
+    assert completed.returncode == 0, completed.stderr
+    assert "PASS pack_tested" in completed.stdout
+
+
+def test_template_test_command_fails_cleanly_without_test_script(tmp_path: Path) -> None:
+    template = make_template(
+        tmp_path / "templates",
+        "missing_test",
+        "  value:\n    type: str\n    default: ok",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "${VALUE}" > "${LINKAR_RESULTS_DIR}/value.txt"
+""",
+    )
+
+    completed = run_cli("test", str(template), cwd=tmp_path)
+    assert completed.returncode == 1
+    assert "test.sh not found" in completed.stderr
+
+
 def test_multiple_pack_flags_are_searched_in_order(tmp_path: Path) -> None:
     pack_one = tmp_path / "pack_one"
     pack_two = tmp_path / "pack_two"

@@ -23,6 +23,7 @@ from linkar.core import (
     load_project,
     load_template,
     project_pack_entries,
+    test_template,
     run_template,
 )
 from linkar.errors import LinkarError, ParameterResolutionError, ProjectValidationError
@@ -46,7 +47,8 @@ if hasattr(click, "rich_click"):
         "Examples:\n"
         "  linkar project init --name study\n"
         "  linkar run raw hello --pack ./examples/packs/basic --param name=Linkar\n"
-        "  linkar run hello --name Linkar\n\n"
+        "  linkar run hello --name Linkar\n"
+        "  linkar test fastqc --pack /path/to/pack\n\n"
         "Linkar keeps the CLI thin over the core runtime semantics."
     )
 
@@ -505,6 +507,47 @@ raw_run_command = click.Command(
 def templates_command(pack: tuple[str, ...], project: str | None, ui: CliUI) -> None:
     """List templates visible from explicit packs and the active project configuration."""
     ui.print_templates(list_templates(pack_refs=list(pack), project=project))
+
+
+@app.command("test")
+@click.argument("template", shell_complete=shell_complete_template_ref)
+@click.option(
+    "--pack",
+    multiple=True,
+    type=str,
+    shell_complete=shell_complete_filesystem_ref,
+    help="Pack path or asset reference to search for the template. Repeat to add more than one.",
+    show_default=False,
+)
+@click.option(
+    "--project",
+    type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+    help="Project directory or project.yaml path. Defaults to the current directory.",
+    show_default=False,
+)
+@click.option(
+    "--outdir",
+    type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+    help="Write test artifacts to a specific directory instead of the default test workspace.",
+    show_default=False,
+)
+@handle_linkar_errors
+def test_command(
+    template: str,
+    pack: tuple[str, ...],
+    project: str | None,
+    outdir: str | None,
+    ui: CliUI,
+) -> None:
+    """Run a template-local test.sh if the template provides one."""
+    with ui.status("Testing template"):
+        result = test_template(
+            template,
+            project=project,
+            outdir=outdir,
+            pack_refs=list(pack),
+        )
+    ui.print_test_completed(result)
 
 
 @app.group("inspect")
