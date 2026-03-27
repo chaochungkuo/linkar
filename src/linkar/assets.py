@@ -82,6 +82,8 @@ def ensure_remote_asset(ref: str) -> ResolvedAsset:
 def resolve_asset_ref(ref: str | Path) -> ResolvedAsset:
     if isinstance(ref, Path):
         root = ref.expanduser().resolve()
+        if not root.exists():
+            raise AssetResolutionError(f"Asset not found: {root}")
         return ResolvedAsset(ref=str(root), root=root)
 
     if is_remote_asset_ref(ref):
@@ -92,8 +94,7 @@ def resolve_asset_ref(ref: str | Path) -> ResolvedAsset:
         root = path.resolve()
         return ResolvedAsset(ref=str(root), root=root)
 
-    root = path.resolve()
-    return ResolvedAsset(ref=str(root), root=root)
+    raise AssetResolutionError(f"Asset not found: {path.resolve()}")
 
 
 def resolve_asset_refs(refs: str | Path | list[str | Path] | None) -> list[ResolvedAsset]:

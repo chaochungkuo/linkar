@@ -770,6 +770,6 @@ cp "${SOURCE_DIR}/sample.txt" "${LINKAR_RESULTS_DIR}/copied.txt"
         )
     except AssetResolutionError as exc:
         assert exc.code == "asset_resolution_error"
-        assert "binding.yaml not found" in str(exc)
+        assert "Asset not found" in str(exc)
     else:
         raise AssertionError("Expected AssetResolutionError")

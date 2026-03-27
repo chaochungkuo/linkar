@@ -13,6 +13,7 @@ from linkar.core import (
     list_templates,
     run_template,
 )
+from linkar.server import serve
 
 
 def parse_key_value(value: str) -> tuple[str, str]:
@@ -62,6 +63,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     methods_parser = subparsers.add_parser("methods")
     methods_parser.add_argument("--project")
+
+    serve_parser = subparsers.add_parser("serve")
+    serve_parser.add_argument("--host", default="127.0.0.1")
+    serve_parser.add_argument("--port", default=8000, type=int)
     return parser
 
 
@@ -106,6 +111,10 @@ def main() -> int:
 
         if args.command == "methods":
             print(generate_methods(project=args.project))
+            return 0
+
+        if args.command == "serve":
+            serve(host=args.host, port=args.port)
             return 0
 
         parser.error("Unknown command")

@@ -1,8 +1,8 @@
 # API Server Direction
 
-This document describes the intended direction for a future Linkar API server.
+This document describes the intended direction for the Linkar API server.
 
-The purpose is to define boundaries early enough that the core can be shaped correctly, without prematurely building a service layer before the execution model is mature.
+The purpose is to keep the server thin over the core now that the execution model is mature enough to expose locally.
 
 ## Primary Rule
 The external API must mirror core semantics.
@@ -17,7 +17,7 @@ It should not invent:
 The API server should be a transport layer over the core, just as the CLI is.
 
 ## Purpose
-A future API server may provide:
+The first API server should provide:
 
 - programmatic project inspection
 - template discovery
@@ -38,7 +38,7 @@ The first API layer should not attempt to solve:
 These can be considered later if the core remains stable.
 
 ## Canonical Resources
-The future API should likely expose resources corresponding to existing core concepts:
+The API should expose resources corresponding to existing core concepts:
 
 - `projects`
 - `templates`
@@ -48,17 +48,18 @@ The future API should likely expose resources corresponding to existing core con
 
 These should map directly to the filesystem-centered and metadata-centered design already defined in the core docs.
 
-## Likely Operations
-Representative operations include:
+## MVP Operations
+The first local API server should expose:
 
-- inspect project state
-- list available templates
-- resolve project assets
-- run a template
-- inspect a run
-- generate methods text
+- `GET /health`
+- `GET /templates`
+- `GET /projects/runs`
+- `GET /projects/assets`
+- `GET /runs/<run_ref>`
+- `GET /methods`
+- `POST /run`
 
-These operations already exist or are emerging in the core API and should remain the semantic source of truth.
+These operations already exist in the core API and should remain the semantic source of truth.
 
 ## Error Model
 The API server should map typed core errors to stable machine-facing responses.
@@ -71,6 +72,13 @@ Because of this, the core should continue to prefer:
 
 This is more important than building HTTP endpoints early.
 
+## Response and Error Shape
+The local API should:
+
+- return JSON only
+- map typed core errors to stable machine-facing error codes
+- avoid server-only response semantics that are not grounded in the core
+
 ## Why This Doc Exists
 The purpose of this direction doc is to prevent two common mistakes:
 
@@ -78,7 +86,7 @@ The purpose of this direction doc is to prevent two common mistakes:
 2. shaping the core around imagined server behavior instead of stable runtime semantics
 
 ## Summary
-The future API server should be:
+The API server should be:
 
 - thin over the core
 - resource-oriented
