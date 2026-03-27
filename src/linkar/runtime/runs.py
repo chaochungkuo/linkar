@@ -79,6 +79,37 @@ def collect_outputs(outdir: Path) -> dict[str, str]:
     return outputs
 
 
+RUNTIME_BUNDLE_EXCLUDES = {
+    ".git",
+    ".pixi",
+    ".pytest_cache",
+    "__pycache__",
+    "test.sh",
+    "test.py",
+    "testdata",
+}
+
+
+def should_exclude_runtime_path(path: Path) -> bool:
+    return path.name in RUNTIME_BUNDLE_EXCLUDES
+
+
+def stage_runtime_bundle(template: TemplateSpec, output_dir: Path) -> None:
+    for child in template.root.iterdir():
+        if should_exclude_runtime_path(child):
+            continue
+        destination = output_dir / child.name
+        if child.is_dir():
+            shutil.copytree(
+                child,
+                destination,
+                dirs_exist_ok=True,
+                ignore=shutil.ignore_patterns(*RUNTIME_BUNDLE_EXCLUDES),
+            )
+        else:
+            shutil.copy2(child, destination)
+
+
 def should_render_shell_wrapper(template: TemplateSpec) -> bool:
     return Path(template.run_entry).name == "script.sh"
 
@@ -90,10 +121,6 @@ def render_shell_wrapper(
     instance_id: str,
     project_obj: Project | None,
 ) -> Path:
-    source_script = (template.root / template.run_entry).resolve()
-    copied_script = output_dir / "script.sh"
-    shutil.copy2(source_script, copied_script)
-
     launcher = output_dir / "run.sh"
     lines = [
         "#!/usr/bin/env bash",
@@ -393,6 +420,8 @@ def run_template(
     if project_obj is not None:
         env["LINKAR_PROJECT_DIR"] = str(project_obj.root)
 
+    stage_runtime_bundle(template, output_dir)
+
     if should_render_shell_wrapper(template):
         command = [
             str(
@@ -406,7 +435,7 @@ def run_template(
             )
         ]
     else:
-        command = [str((template.root / template.run_entry).resolve())]
+        command = [str((output_dir / template.run_entry).resolve())]
     started_at = utc_now()
     completed = subprocess.run(
         command,

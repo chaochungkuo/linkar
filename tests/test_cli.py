@@ -474,6 +474,44 @@ def test_ephemeral_run_uses_linkar_runs(tmp_path: Path) -> None:
     assert (outdir / "greeting.txt").read_text().strip() == "Hello, Ephemeral"
 
 
+def test_pixi_echo_can_run_as_real_template(tmp_path: Path) -> None:
+    completed = run_cli(
+        "run",
+        "pixi_echo",
+        "--pack",
+        str(ROOT / "examples" / "packs" / "basic"),
+        "--param",
+        "name=PixiRuntime",
+        cwd=tmp_path,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+    outdir = Path(completed.stdout.strip())
+    assert (outdir / "pixi.toml").is_file()
+    assert (outdir / "write_greeting.py").is_file()
+    assert (outdir / "greeting.txt").read_text().strip() == "Hello from pixi, PixiRuntime"
+
+
+def test_pixi_pytest_can_run_as_real_template(tmp_path: Path) -> None:
+    completed = run_cli(
+        "run",
+        "pixi_pytest",
+        "--pack",
+        str(ROOT / "examples" / "packs" / "basic"),
+        "--param",
+        "name=PytestRuntime",
+        cwd=tmp_path,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+    outdir = Path(completed.stdout.strip())
+    assert (outdir / "pixi.toml").is_file()
+    assert (outdir / "test_greeting.py").is_file()
+    report_text = (outdir / "pytest-report.xml").read_text()
+    assert 'tests="1"' in report_text
+    assert 'failures="0"' in report_text
+
+
 def test_project_pack_configuration_is_used_for_template_lookup(tmp_path: Path) -> None:
     pack_root = tmp_path / "pack"
     hello_template = ROOT / "examples" / "packs" / "basic" / "templates" / "simple_echo"
