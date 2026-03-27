@@ -45,6 +45,13 @@ The initial CLI surface should stay small:
 
 Pack and binding selection may start with explicit path or URL references and later move into project-level configuration once reuse matters more than one-off invocation.
 
+The CLI should preserve a clear distinction between:
+
+- ad hoc execution, where a template is run directly by path or explicit `--pack`
+- project-scoped configuration, where packs are saved in `project.yaml`
+
+If a future global/user config layer is added, it should be secondary to explicit invocation and project configuration.
+
 ## `linkar project init`
 Purpose:
 
@@ -109,6 +116,13 @@ The important implementation rule is:
 
 - ad hoc `--binding` applies to the selected pack for that invocation
 - project configuration should record binding choice alongside the relevant pack entry
+- future global packs, if added, should be a convenience fallback rather than the primary source of truth
+
+Recommended precedence:
+
+1. explicit `--pack`
+2. project-configured packs
+3. future global/user-configured packs
 
 ## Error Handling
 The CLI should:
@@ -127,6 +141,7 @@ Future versions may add commands for:
 - metadata inspection
 - methods generation
 - pack discovery
+- user/global config management
 
 Once the core behavior is well-defined, thin inspection commands are appropriate.
 

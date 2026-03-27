@@ -254,7 +254,7 @@ def app(ctx: click.Context) -> None:
 
 @app.group("pack")
 def pack_group() -> None:
-    """Manage packs configured in the current project."""
+    """Manage packs saved in the active project configuration."""
 
 
 @pack_group.command("add")
@@ -291,7 +291,7 @@ def pack_add_command(
 )
 @handle_linkar_errors
 def pack_list_command(project: str | None, ui: CliUI) -> None:
-    """List packs configured in the project."""
+    """List packs saved in the project configuration."""
     ui.print_packs(list_configured_packs(project=project))
 
 

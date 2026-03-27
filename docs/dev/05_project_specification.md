@@ -86,6 +86,8 @@ Optional in the earliest versions, but likely to become a standard project field
 
 This lists the packs that the project makes available for template discovery.
 
+This field is specifically project-scoped. It should not be confused with ad hoc pack selection on a single command invocation.
+
 To keep implementation simple and explicit, each pack entry should be able to declare:
 
 - the pack reference
@@ -115,6 +117,8 @@ The recommended meanings are:
 This avoids a separate ambiguous top-level binding list and makes binding choice reproducible.
 
 Pack and binding references may later resolve through Linkar's asset cache, but the project file should continue to record the original asset reference rather than an internal cache path.
+
+If Linkar later supports user/global pack configuration, that layer should remain secondary to the project file. The project file is the reproducible source of truth for repeated work in a specific project.
 
 ## Template Instance Record
 Each item in `templates` represents one recorded template instance.
