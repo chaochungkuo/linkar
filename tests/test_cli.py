@@ -245,7 +245,7 @@ def test_help_output_is_clean_and_descriptive(tmp_path: Path) -> None:
     assert root_help.returncode == 0, root_help.stderr
     assert "Run reusable computational templates" in root_help.stdout
     assert "Commands" in root_help.stdout
-    assert "linkar run raw hello --pack" in root_help.stdout
+    assert "linkar run raw simple_echo --pack" in root_help.stdout
 
     run_help = run_cli("run", "--help", cwd=tmp_path)
     assert run_help.returncode == 0, run_help.stderr
@@ -290,7 +290,7 @@ def test_run_template_updates_project(tmp_path: Path) -> None:
     completed = run_cli(
         "run",
         "raw",
-        "hello",
+        "simple_echo",
         "--pack",
         str(ROOT / "examples" / "packs" / "basic"),
         "--project",
@@ -304,12 +304,12 @@ def test_run_template_updates_project(tmp_path: Path) -> None:
     project = yaml.safe_load((project_dir / "project.yaml").read_text())
     assert len(project["templates"]) == 1
     instance = project["templates"][0]
-    assert instance["id"] == "hello"
-    results_file = project_dir / instance["path"] / "results" / "greeting.txt"
+    assert instance["id"] == "simple_echo"
+    results_file = project_dir / instance["path"] / "greeting.txt"
     assert results_file.read_text().strip() == "Hello, Linkar"
 
     meta = json.loads((project_dir / instance["meta"]).read_text())
-    assert meta["template"] == "hello"
+    assert meta["template"] == "simple_echo"
     assert meta["template_version"] == "0.1.0"
     assert meta["params"]["name"] == "Linkar"
     assert meta["param_provenance"]["name"]["source"] == "explicit"
@@ -400,7 +400,7 @@ def test_run_discovers_project_from_current_directory(tmp_path: Path) -> None:
     completed = run_cli(
         "run",
         "raw",
-        "hello",
+        "simple_echo",
         "--pack",
         str(ROOT / "examples" / "packs" / "basic"),
         "--param",
@@ -411,7 +411,7 @@ def test_run_discovers_project_from_current_directory(tmp_path: Path) -> None:
 
     project = yaml.safe_load((project_dir / "project.yaml").read_text())
     assert len(project["templates"]) == 1
-    assert project["templates"][0]["id"] == "hello"
+    assert project["templates"][0]["id"] == "simple_echo"
 
 
 def test_local_templates_can_chain_without_pack(tmp_path: Path) -> None:
@@ -466,7 +466,7 @@ def test_ephemeral_run_uses_linkar_runs(tmp_path: Path) -> None:
     completed = run_cli(
         "run",
         "raw",
-        "hello",
+        "simple_echo",
         "--pack",
         str(ROOT / "examples" / "packs" / "basic"),
         "--param",
@@ -478,13 +478,13 @@ def test_ephemeral_run_uses_linkar_runs(tmp_path: Path) -> None:
     outdir = Path(completed.stdout.strip())
     assert outdir.parent.name == "runs"
     assert outdir.parent.parent.name == ".linkar"
-    assert (outdir / "results" / "greeting.txt").read_text().strip() == "Hello, Ephemeral"
+    assert (outdir / "greeting.txt").read_text().strip() == "Hello, Ephemeral"
 
 
 def test_project_pack_configuration_is_used_for_template_lookup(tmp_path: Path) -> None:
     pack_root = tmp_path / "pack"
-    hello_template = ROOT / "examples" / "packs" / "basic" / "templates" / "hello"
-    target_template = pack_root / "templates" / "hello"
+    hello_template = ROOT / "examples" / "packs" / "basic" / "templates" / "simple_echo"
+    target_template = pack_root / "templates" / "simple_echo"
     target_template.mkdir(parents=True)
     (target_template / "template.yaml").write_text((hello_template / "template.yaml").read_text())
     run_script = target_template / "run.sh"
@@ -502,7 +502,7 @@ def test_project_pack_configuration_is_used_for_template_lookup(tmp_path: Path) 
 
     completed = run_cli(
         "run",
-        "hello",
+        "simple_echo",
         "--name",
         "ConfiguredPack",
         cwd=project_dir,
@@ -510,7 +510,7 @@ def test_project_pack_configuration_is_used_for_template_lookup(tmp_path: Path) 
     assert completed.returncode == 0, completed.stderr
 
     indexed = yaml.safe_load(project_file.read_text())
-    assert indexed["templates"][0]["id"] == "hello"
+    assert indexed["templates"][0]["id"] == "simple_echo"
     assert indexed["templates"][0]["pack"]["id"] == "pack"
 
 
@@ -518,8 +518,8 @@ def test_global_pack_configuration_is_used_for_template_lookup(tmp_path: Path) -
     home = tmp_path / "home"
     env = {"LINKAR_HOME": str(home)}
     pack_root = tmp_path / "pack"
-    hello_template = ROOT / "examples" / "packs" / "basic" / "templates" / "hello"
-    target_template = pack_root / "templates" / "hello"
+    hello_template = ROOT / "examples" / "packs" / "basic" / "templates" / "simple_echo"
+    target_template = pack_root / "templates" / "simple_echo"
     target_template.mkdir(parents=True)
     (target_template / "template.yaml").write_text((hello_template / "template.yaml").read_text())
     run_script = target_template / "run.sh"
@@ -529,11 +529,11 @@ def test_global_pack_configuration_is_used_for_template_lookup(tmp_path: Path) -
     added = run_cli("config", "pack", "add", str(pack_root), "--id", "global_pack", cwd=tmp_path, env_extra=env)
     assert added.returncode == 0, added.stderr
 
-    completed = run_cli("run", "hello", "--name", "GlobalPack", cwd=tmp_path, env_extra=env)
+    completed = run_cli("run", "simple_echo", "--name", "GlobalPack", cwd=tmp_path, env_extra=env)
     assert completed.returncode == 0, completed.stderr
 
     outdir = Path(completed.stdout.strip())
-    assert (outdir / "results" / "greeting.txt").read_text().strip() == "Hello, GlobalPack"
+    assert (outdir / "greeting.txt").read_text().strip() == "Hello, GlobalPack"
 
 
 def test_project_pack_takes_precedence_over_global_pack(tmp_path: Path) -> None:
@@ -1064,7 +1064,7 @@ def test_project_runs_command_lists_indexed_runs(tmp_path: Path) -> None:
     completed = run_cli(
         "run",
         "raw",
-        "hello",
+        "simple_echo",
         "--pack",
         str(ROOT / "examples" / "packs" / "basic"),
         "--param",
@@ -1075,7 +1075,7 @@ def test_project_runs_command_lists_indexed_runs(tmp_path: Path) -> None:
 
     runs = run_cli("project", "runs", cwd=project_dir)
     assert runs.returncode == 0, runs.stderr
-    assert "hello_001\thello\t" in runs.stdout
+    assert "simple_echo_001\tsimple_echo\t" in runs.stdout
 
 
 def test_templates_command_lists_templates_from_configured_project_packs(tmp_path: Path) -> None:
@@ -1115,7 +1115,7 @@ def test_inspect_run_command_returns_metadata_json(tmp_path: Path) -> None:
     completed = run_cli(
         "run",
         "raw",
-        "hello",
+        "simple_echo",
         "--pack",
         str(ROOT / "examples" / "packs" / "basic"),
         "--param",
@@ -1124,10 +1124,10 @@ def test_inspect_run_command_returns_metadata_json(tmp_path: Path) -> None:
     )
     assert completed.returncode == 0, completed.stderr
 
-    inspected = run_cli("inspect", "run", "hello_001", cwd=project_dir)
+    inspected = run_cli("inspect", "run", "simple_echo_001", cwd=project_dir)
     assert inspected.returncode == 0, inspected.stderr
     metadata = json.loads(inspected.stdout)
-    assert metadata["template"] == "hello"
+    assert metadata["template"] == "simple_echo"
     assert metadata["params"]["name"] == "Inspect"
 
 

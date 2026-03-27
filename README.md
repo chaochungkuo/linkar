@@ -33,7 +33,7 @@ linkar project init --name demo
 Run the example template ad hoc from the bundled pack, without creating or using a project:
 
 ```bash
-linkar run raw hello \
+linkar run raw simple_echo \
   --pack ./examples/packs/basic \
   --param name=Linkar
 ```
@@ -42,7 +42,7 @@ If a pack is saved in `project.yaml`, Linkar exposes template parameters as real
 
 ```bash
 linkar pack add ./examples/packs/basic --id basic
-linkar run hello --name Linkar
+linkar run simple_echo --name Linkar
 ```
 
 In project mode, Linkar creates an instance directory in the project, writes results to `results/`, and records metadata in `.linkar/meta.json`.

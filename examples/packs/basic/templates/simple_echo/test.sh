@@ -9,4 +9,4 @@ test -f "greeting.txt"
 grep -q "Hello, Linkar" "greeting.txt"
 
 rm -f "greeting.txt"
-printf 'hello template test passed\n'
+printf 'simple_echo template test passed\n'

@@ -69,7 +69,7 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
         path="/run",
         body=json.dumps(
             {
-                "template": "hello",
+                "template": "simple_echo",
                 "project": str(project_dir),
                 "params": {"name": "Server"},
             }
@@ -78,7 +78,7 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
 
     assert status == "200 OK"
     outdir = Path(payload["outdir"])
-    assert (outdir / "results" / "greeting.txt").read_text().strip() == "Hello, Server"
+    assert (outdir / "greeting.txt").read_text().strip() == "Hello, Server"
 
     status, _, runs_payload = call_app(
         app,
@@ -97,7 +97,7 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
-    assert inspect_payload["template"] == "hello"
+    assert inspect_payload["template"] == "simple_echo"
     assert inspect_payload["params"]["name"] == "Server"
 
     status, _, templates_payload = call_app(
@@ -107,7 +107,7 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
-    assert templates_payload["templates"][0]["id"] == "hello"
+    assert templates_payload["templates"][0]["id"] == "simple_echo"
 
     status, _, assets_payload = call_app(
         app,
@@ -125,7 +125,7 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
-    assert "hello" in methods_payload["text"]
+    assert "simple_echo" in methods_payload["text"]
 
 
 def test_server_returns_typed_error_payloads(tmp_path: Path) -> None:
@@ -167,7 +167,7 @@ def test_server_run_endpoint_supports_ephemeral_mode() -> None:
         path="/run",
         body=json.dumps(
             {
-                "template": "hello",
+                "template": "simple_echo",
                 "pack_refs": [str(ROOT / "examples" / "packs" / "basic")],
                 "params": {"name": "EphemeralServer"},
             }
@@ -177,4 +177,4 @@ def test_server_run_endpoint_supports_ephemeral_mode() -> None:
     assert status == "200 OK"
     outdir = Path(payload["outdir"])
     assert outdir.parent.name == "runs"
-    assert (outdir / "results" / "greeting.txt").read_text().strip() == "Hello, EphemeralServer"
+    assert (outdir / "greeting.txt").read_text().strip() == "Hello, EphemeralServer"

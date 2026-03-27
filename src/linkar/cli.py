@@ -61,7 +61,7 @@ if hasattr(click, "rich_click"):
         "  linkar config pack add ~/github/izkf_genomics_pack\n"
         "  linkar pack add /path/to/project-pack\n"
         "  linkar run fastqc --input sample.fastq.gz\n"
-        "  linkar run raw hello --pack ./examples/packs/basic --param name=Linkar\n"
+        "  linkar run raw simple_echo --pack ./examples/packs/basic --param name=Linkar\n"
         "  linkar test fastqc\n\n"
         "Linkar keeps the CLI thin over the core runtime semantics."
     )
