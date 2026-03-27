@@ -62,6 +62,7 @@ The current minimal structure is:
 ```yaml
 id: bclconvert_qc
 version: 0.1.0
+description: Convert BCL run folders into FASTQ files.
 params:
   bcl_dir:
     type: path
@@ -126,6 +127,28 @@ Current expected fields:
 
 - `entry`: relative path to the executable entrypoint
 - `mode`: execution mode, typically `direct`
+
+### `description`
+Optional.
+
+This is a short human-readable summary of what the template does.
+
+It is especially useful for template discovery surfaces such as `linkar templates`.
+
+### `outputs`
+Optional.
+
+This declares the named outputs a template expects to expose after a successful run.
+
+These names are used for discovery, documentation, and downstream resolution. They do not replace the actual runtime validation of produced files or directories.
+
+Example:
+
+```yaml
+outputs:
+  results_dir: {}
+  report_html: {}
+```
 
 ## Parameter Specification
 Each parameter entry may define:

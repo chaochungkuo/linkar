@@ -85,6 +85,9 @@ def load_template(
     template_version = data.get("version")
     if template_version is not None and not isinstance(template_version, str):
         raise TemplateValidationError(f"Template version must be a string in {spec_path}")
+    description = data.get("description")
+    if description is not None and not isinstance(description, str):
+        raise TemplateValidationError(f"Template description must be a string in {spec_path}")
 
     run = data.get("run") or {}
     entry = run.get("entry")
@@ -113,11 +116,27 @@ def load_template(
                 f"Unsupported param type '{param_type}' for '{key}' in {spec_path}"
             )
 
+    outputs = data.get("outputs") or {}
+    if not isinstance(outputs, dict):
+        raise TemplateValidationError(f"Template outputs must be a mapping in {spec_path}")
+    for key, raw_spec in outputs.items():
+        if not isinstance(key, str) or not key:
+            raise TemplateValidationError(
+                f"Template output names must be non-empty strings in {spec_path}"
+            )
+        spec = raw_spec or {}
+        if not isinstance(spec, dict):
+            raise TemplateValidationError(
+                f"Template output spec must be a mapping for '{key}' in {spec_path}"
+            )
+
     return TemplateSpec(
         id=template_id,
         version=template_version,
+        description=description,
         root=root,
         params=params,
+        outputs=outputs,
         run_entry=entry,
         run_mode=run.get("mode", "direct"),
         pack_root=root.parent.parent if root.parent.name == "templates" else None,
@@ -158,9 +177,16 @@ def list_templates(
             templates.append(
                 {
                     "id": template_id,
+                    "description": spec.get("description"),
                     "version": spec.get("version"),
                     "pack_ref": asset.ref,
                     "pack_revision": asset.revision,
+                    "required_inputs": [
+                        name
+                        for name, raw_spec in (spec.get("params") or {}).items()
+                        if isinstance(raw_spec, dict) and raw_spec.get("required")
+                    ],
+                    "expected_outputs": list((spec.get("outputs") or {}).keys()) or ["results_dir"],
                     "path": str(child.resolve()),
                 }
             )

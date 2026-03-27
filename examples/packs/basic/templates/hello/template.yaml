@@ -1,9 +1,13 @@
 id: hello
 version: 0.1.0
+description: Write a greeting text file into the run results directory.
 params:
   name:
     type: str
     required: true
+outputs:
+  results_dir: {}
+  greeting_file: {}
 run:
   entry: run.sh
   mode: direct

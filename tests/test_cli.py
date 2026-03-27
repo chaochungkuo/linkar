@@ -61,18 +61,24 @@ def make_template(
     body: str,
     *,
     version: str | None = None,
+    description: str | None = None,
+    outputs: str | None = None,
 ) -> Path:
     template_dir = root / template_id
     template_dir.mkdir(parents=True)
     header = [f"id: {template_id}"]
     if version is not None:
         header.append(f"version: {version}")
+    if description is not None:
+        header.append(f"description: {description}")
     (template_dir / "template.yaml").write_text(
         "\n".join(
             header
             + [
                 "params:",
                 params,
+                "outputs:",
+                outputs or "  results_dir: {}",
                 "run:",
                 "  entry: run.sh",
                 "  mode: direct",
@@ -1038,6 +1044,9 @@ def test_templates_command_lists_templates_from_configured_project_packs(tmp_pat
 set -euo pipefail
 printf '%s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/name.txt"
 """,
+        version="1.2.3",
+        description="Template used for listing tests",
+        outputs="  results_dir: {}\n  name_file: {}",
     )
     project_dir = tmp_path / "project"
     init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
@@ -1050,7 +1059,8 @@ printf '%s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/name.txt"
 
     completed = run_cli("templates", cwd=project_dir)
     assert completed.returncode == 0, completed.stderr
-    assert f"listed_template\t{pack_root.resolve()}" in completed.stdout
+    assert f"PACK\t{pack_root.resolve()}" in completed.stdout
+    assert "listed_template\tTemplate used for listing tests\tname\tresults_dir,name_file\t1.2.3" in completed.stdout
 
 
 def test_inspect_run_command_returns_metadata_json(tmp_path: Path) -> None:

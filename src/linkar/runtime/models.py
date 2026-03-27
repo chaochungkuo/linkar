@@ -11,8 +11,10 @@ from linkar.assets import ResolvedAsset
 class TemplateSpec:
     id: str
     version: str | None
+    description: str | None
     root: Path
     params: dict[str, dict[str, Any]]
+    outputs: dict[str, dict[str, Any]]
     run_entry: str
     run_mode: str
     pack_root: Path | None = None
@@ -43,4 +45,3 @@ class BindingContext:
         from linkar.runtime.projects import latest_project_output
 
         return latest_project_output(self.project, key)
-

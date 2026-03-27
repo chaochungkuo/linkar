@@ -153,16 +153,46 @@ class CliUI:
         self.console.print(table)
 
     def print_templates(self, templates: list[dict[str, Any]]) -> None:
-        if not self.rich_enabled:
-            for template in templates:
-                self.plain_print(f"{template['id']}\t{template['pack_ref']}")
-            return
-        table = Table(box=box.SIMPLE_HEAVY, header_style="accent")
-        table.add_column("Template")
-        table.add_column("Pack", style="value")
+        grouped: dict[str, list[dict[str, Any]]] = {}
         for template in templates:
-            table.add_row(template["id"], template["pack_ref"])
-        self.console.print(table)
+            grouped.setdefault(template["pack_ref"], []).append(template)
+        if not self.rich_enabled:
+            first_group = True
+            for pack_ref, pack_templates in grouped.items():
+                if not first_group:
+                    self.plain_print("")
+                first_group = False
+                self.plain_print(f"PACK\t{pack_ref}")
+                for template in pack_templates:
+                    description = template.get("description") or "-"
+                    required_inputs = ",".join(template.get("required_inputs") or []) or "-"
+                    expected_outputs = ",".join(template.get("expected_outputs") or []) or "-"
+                    version = template.get("version") or "-"
+                    self.plain_print(
+                        f"{template['id']}\t{description}\t{required_inputs}\t{expected_outputs}\t{version}"
+                    )
+            return
+        first_group = True
+        for pack_ref, pack_templates in grouped.items():
+            if not first_group:
+                self.console.print()
+            first_group = False
+            self.console.print(f"[label]Pack:[/label] [value]{pack_ref}[/value]")
+            table = Table(box=box.SIMPLE_HEAVY, header_style="accent")
+            table.add_column("Template")
+            table.add_column("Description", style="value")
+            table.add_column("Required Inputs", style="value")
+            table.add_column("Expected Outputs", style="value")
+            table.add_column("Version", style="value")
+            for template in pack_templates:
+                table.add_row(
+                    template["id"],
+                    template.get("description") or "-",
+                    ", ".join(template.get("required_inputs") or []) or "-",
+                    ", ".join(template.get("expected_outputs") or []) or "-",
+                    template.get("version") or "-",
+                )
+            self.console.print(table)
 
     def print_packs(self, packs: list[dict[str, Any]]) -> None:
         if not self.rich_enabled:
