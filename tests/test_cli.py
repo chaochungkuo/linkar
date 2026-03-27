@@ -714,7 +714,59 @@ printf '%s\n' "${VALUE}" > "${LINKAR_RESULTS_DIR}/value.txt"
 
     completed = run_cli("test", str(template), cwd=tmp_path)
     assert completed.returncode == 1
-    assert "test.sh not found" in completed.stderr
+    assert "test.sh or test.py not found" in completed.stderr
+
+
+def test_template_test_command_supports_python_entrypoint(tmp_path: Path) -> None:
+    template = make_template(
+        tmp_path / "templates",
+        "python_tested",
+        "  value:\n    type: str\n    default: ok",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "${VALUE}" > "${LINKAR_RESULTS_DIR}/value.txt"
+""",
+    )
+    test_python = template / "test.py"
+    test_python.write_text(
+        """from __future__ import annotations
+
+import os
+import subprocess
+from pathlib import Path
+
+os.environ.setdefault("VALUE", "ok")
+os.environ.setdefault("LINKAR_RESULTS_DIR", "./.tmp-test/results")
+Path(os.environ["LINKAR_RESULTS_DIR"]).mkdir(parents=True, exist_ok=True)
+subprocess.run(["./run.sh"], check=True)
+results_dir = Path(os.environ["LINKAR_RESULTS_DIR"])
+assert (results_dir / "value.txt").read_text().strip() == "ok"
+"""
+    )
+
+    completed = run_cli("test", str(template), cwd=tmp_path)
+    assert completed.returncode == 0, completed.stderr
+    assert "PASS python_tested" in completed.stdout
+
+
+def test_template_test_command_rejects_multiple_test_entrypoints(tmp_path: Path) -> None:
+    template = make_template(
+        tmp_path / "templates",
+        "confused_test",
+        "  value:\n    type: str\n    default: ok",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "${VALUE}" > "${LINKAR_RESULTS_DIR}/value.txt"
+""",
+    )
+    test_shell = template / "test.sh"
+    test_shell.write_text("#!/usr/bin/env bash\nset -euo pipefail\n")
+    test_shell.chmod(0o755)
+    (template / "test.py").write_text("print('noop')\n")
+
+    completed = run_cli("test", str(template), cwd=tmp_path)
+    assert completed.returncode == 1
+    assert "Both test.sh and test.py exist" in completed.stderr
 
 
 def test_multiple_pack_flags_are_searched_in_order(tmp_path: Path) -> None:

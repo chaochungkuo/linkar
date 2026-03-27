@@ -17,7 +17,6 @@ Each template instance should produce a directory like:
 ```text
 outdir/
   run.sh
-  script.sh
   results/
   .linkar/
     meta.json
@@ -30,12 +29,9 @@ The root directory of the template instance.
 
 This is the primary artifact for the run.
 
-For shell-based templates that use the recommended `script.sh` source convention:
+For shell-based templates, `run.sh` is the runtime entrypoint recorded with the run artifact.
 
-- `script.sh` is the copied template logic snapshot
-- `run.sh` is the frozen launcher with resolved parameters
-
-That makes the run directory self-contained and rerunnable without Linkar.
+Test-only files such as `test.sh`, `test.py`, and `testdata/` should remain in the source template directory and should not be copied into recorded run artifacts.
 
 ### `outdir/results/`
 The main location for user-facing outputs produced by the template.

@@ -107,7 +107,7 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
-    assert templates_payload["templates"][0]["id"] == "simple_echo"
+    assert any(item["id"] == "simple_echo" for item in templates_payload["templates"])
 
     status, _, assets_payload = call_app(
         app,

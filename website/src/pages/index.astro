@@ -33,7 +33,7 @@ const docs = [
             <h3>Templates stay standalone</h3>
             <p>
               Each template is a normal directory with a small YAML interface and a runnable source
-              script. Template authors can still test <code>script.sh</code> directly.
+              script. Template authors can validate templates through <code>test.sh</code> or <code>test.py</code>.
             </p>
           </article>
           <article class="feature-card">
@@ -119,7 +119,6 @@ linkar inspect run fastqc_001</code></pre>
   project.yaml
   fastqc_001/
     run.sh
-    script.sh
     results/
     .linkar/
       meta.json

@@ -23,7 +23,7 @@ Minimum expected structure:
 ```text
 my_template/
   template.yaml
-  script.sh
+  run.sh
 ```
 
 Other supporting files may also exist:
@@ -31,9 +31,9 @@ Other supporting files may also exist:
 ```text
 my_template/
   template.yaml
-  script.sh
-  scripts/
-  assets/
+  run.sh
+  test.sh or test.py
+  supporting files...
   README.md
 ```
 
@@ -50,7 +50,7 @@ The template must define a runnable entrypoint in `template.yaml`.
 
 Typical examples:
 
-- `script.sh`
+- `run.sh`
 - `run.py`
 - `bin/execute`
 
@@ -71,7 +71,7 @@ params:
     type: int
     default: 8
 run:
-  entry: script.sh
+  entry: run.sh
   mode: direct
 ```
 
@@ -214,10 +214,11 @@ This means:
 
 For shell-based templates, the preferred convention is:
 
-- author the template logic in `script.sh`
-- let Linkar render a `run.sh` launcher in the run directory
+- author the runtime logic in `run.sh`
+- keep template-local testing in either `test.sh` or `test.py`
+- let `run.sh` assume it runs beside any support files the template needs
 
-This keeps the source script easy to test during development while producing a frozen user-facing launcher in each run artifact.
+This keeps the runtime contract small and keeps template authoring close to a normal directory-based tool layout.
 
 ## Execution Modes
 ### `direct`
@@ -332,7 +333,7 @@ Example template:
 ```text
 bclconvert/
   template.yaml
-  script.sh
+  run.sh
 ```
 
 ```yaml
@@ -345,7 +346,7 @@ params:
     type: int
     default: 8
 run:
-  entry: script.sh
+  entry: run.sh
   mode: direct
 ```
 

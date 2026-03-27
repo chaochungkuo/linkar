@@ -1,13 +1,13 @@
 ---
-title: Authoring a template with script.sh
-description: Develop a source script, let Linkar render run.sh, and keep runs rerunnable.
+title: Authoring a template with run.sh
+description: Keep templates small with a real run.sh and either test.sh or test.py for local validation.
 order: 3
 status: draft
 ---
 
-Template authors work on `script.sh` directly. Linkar resolves parameters, copies `script.sh` into the run directory, then generates `run.sh` as the runnable entrypoint with frozen values.
+Template authors work on a real `run.sh` directly. Linkar resolves parameters and executes that runtime entrypoint during normal runs.
 
 That gives you both:
 
-- a developer-friendly source script
-- a self-contained rendered run directory
+- a developer-friendly runtime script
+- a small test contract through `test.sh` or `test.py`

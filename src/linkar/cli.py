@@ -332,7 +332,7 @@ def test_command(
     outdir: str | None,
     ui: CliUI,
 ) -> None:
-    """Run a template-local test.sh if the template provides one."""
+    """Run a template-local test.sh or test.py if the template provides one."""
     with ui.status("Testing template"):
         result = test_template(
             template,

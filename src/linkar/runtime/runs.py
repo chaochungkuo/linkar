@@ -5,6 +5,7 @@ import os
 import shlex
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -266,9 +267,18 @@ def test_template(
         preferred_pack_ref=preferred_pack_ref,
     )
 
-    test_script = template.root / "test.sh"
-    if not test_script.exists():
-        raise TemplateValidationError(f"test.sh not found in {template.root}")
+    test_shell = template.root / "test.sh"
+    test_python = template.root / "test.py"
+    if test_shell.exists() and test_python.exists():
+        raise TemplateValidationError(
+            f"Both test.sh and test.py exist in {template.root}; keep only one test entrypoint"
+        )
+    if test_shell.exists():
+        command = [str(test_shell.resolve())]
+    elif test_python.exists():
+        command = [sys.executable, str(test_python.resolve())]
+    else:
+        raise TemplateValidationError(f"test.sh or test.py not found in {template.root}")
 
     test_dir = determine_test_dir(template, project_obj, outdir)
     test_dir.mkdir(parents=True, exist_ok=True)
@@ -288,7 +298,6 @@ def test_template(
     if project_obj is not None:
         env["LINKAR_PROJECT_DIR"] = str(project_obj.root)
 
-    command = [str(test_script.resolve())]
     started_at = utc_now()
     completed = subprocess.run(
         command,
