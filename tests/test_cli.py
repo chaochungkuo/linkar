@@ -177,6 +177,17 @@ def test_pack_commands_manage_project_configuration(tmp_path: Path) -> None:
     assert project["packs"][0]["id"] == "pack_one"
 
 
+def test_pack_add_without_project_shows_actionable_error(tmp_path: Path) -> None:
+    pack_dir = tmp_path / "pack"
+    pack_dir.mkdir()
+
+    completed = run_cli("pack", "add", str(pack_dir), cwd=tmp_path)
+    assert completed.returncode == 1
+    assert "Adding a pack requires an active project." in completed.stderr
+    assert "pass --project PATH" in completed.stderr
+    assert "linkar project init --name demo" in completed.stderr
+
+
 def test_project_init_rejects_path_and_name_together(tmp_path: Path) -> None:
     completed = run_cli("project", "init", "demo", "--name", "PROJECT1", cwd=tmp_path)
     assert completed.returncode == 1

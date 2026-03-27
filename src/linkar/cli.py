@@ -32,6 +32,7 @@ from linkar.core import (
     test_template,
 )
 from linkar.errors import ProjectValidationError
+from linkar.runtime.projects import missing_project_error
 from linkar.server import serve
 from linkar.ui import CliUI
 
@@ -155,7 +156,7 @@ def pack_show_command(project: str | None, ui: CliUI) -> None:
     """Show the active/default pack for the project."""
     project_obj = load_project_or_discover(project)
     if project_obj is None:
-        raise ProjectValidationError("No active project found")
+        raise missing_project_error("Showing the active pack")
     active_entry = get_active_pack_entry(project_obj)
     if active_entry is None:
         raise ProjectValidationError("No active pack configured")

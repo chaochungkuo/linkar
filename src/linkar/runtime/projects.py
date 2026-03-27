@@ -9,6 +9,13 @@ from linkar.runtime.models import PackEntry, Project
 from linkar.runtime.shared import derive_pack_id, load_yaml, pack_entry_to_data, project_file, save_yaml
 
 
+def missing_project_error(action: str = "This command") -> ProjectValidationError:
+    return ProjectValidationError(
+        f"{action} requires an active project. Run it inside a directory containing project.yaml, "
+        "pass --project PATH, or create one with 'linkar project init --name demo'."
+    )
+
+
 def load_project(path: str | Path) -> Project:
     root_path = Path(path).resolve()
     file_path = project_file(root_path)
@@ -114,7 +121,7 @@ def list_configured_packs(project: str | Path | Project | None = None) -> list[d
     else:
         project_obj = project
     if project_obj is None:
-        raise ProjectValidationError("No active project found")
+        raise missing_project_error("Listing configured packs")
     active = project_obj.data.get("active_pack")
     return [
         {
@@ -143,7 +150,7 @@ def add_project_pack(
     else:
         project_obj = project
     if project_obj is None:
-        raise ProjectValidationError("No active project found")
+        raise missing_project_error("Adding a pack")
     asset = resolve_asset_ref(ref)
     resolved_id = pack_id or derive_pack_id(asset.ref)
     for entry in project_pack_entries(project_obj):
@@ -176,7 +183,7 @@ def set_active_pack(
     else:
         project_obj = project
     if project_obj is None:
-        raise ProjectValidationError("No active project found")
+        raise missing_project_error("Selecting an active pack")
     entry = find_project_pack_entry(project_obj, identifier)
     if entry is None:
         raise ProjectValidationError(f"Pack not found in project: {identifier}")
@@ -202,7 +209,7 @@ def remove_project_pack(
     else:
         project_obj = project
     if project_obj is None:
-        raise ProjectValidationError("No active project found")
+        raise missing_project_error("Removing a pack")
     entry = find_project_pack_entry(project_obj, identifier)
     if entry is None:
         raise ProjectValidationError(f"Pack not found in project: {identifier}")
