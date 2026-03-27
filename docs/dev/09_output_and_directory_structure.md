@@ -16,6 +16,8 @@ Each template instance should produce a directory like:
 
 ```text
 outdir/
+  run.sh
+  script.sh
   results/
   .linkar/
     meta.json
@@ -27,6 +29,13 @@ outdir/
 The root directory of the template instance.
 
 This is the primary artifact for the run.
+
+For shell-based templates that use the recommended `script.sh` source convention:
+
+- `script.sh` is the copied template logic snapshot
+- `run.sh` is the frozen launcher with resolved parameters
+
+That makes the run directory self-contained and rerunnable without Linkar.
 
 ### `outdir/results/`
 The main location for user-facing outputs produced by the template.

@@ -63,6 +63,7 @@ def make_template(
     version: str | None = None,
     description: str | None = None,
     outputs: str | None = None,
+    entry_name: str = "run.sh",
 ) -> Path:
     template_dir = root / template_id
     template_dir.mkdir(parents=True)
@@ -80,13 +81,14 @@ def make_template(
                 "outputs:",
                 outputs or "  results_dir: {}",
                 "run:",
-                "  entry: run.sh",
+                f"  entry: {entry_name}",
                 "  mode: direct",
                 "",
             ]
         )
     )
-    run_script = template_dir / "run.sh"
+    run_script = template_dir / entry_name
+    run_script.parent.mkdir(parents=True, exist_ok=True)
     run_script.write_text(body)
     run_script.chmod(0o755)
     return template_dir
@@ -346,6 +348,48 @@ printf '%s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/name.txt"
 
     meta = json.loads((project_dir / entry["meta"]).read_text())
     assert meta["template_version"] == "1.2.3"
+
+
+def test_script_entry_renders_self_contained_run_launcher(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    template = make_template(
+        tmp_path / "templates",
+        "scripted_template",
+        "  name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/name.txt"
+""",
+        entry_name="script.sh",
+    )
+
+    completed = run_cli(
+        "run",
+        "raw",
+        str(template),
+        "--param",
+        "name=Rendered",
+        cwd=project_dir,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+    project = yaml.safe_load((project_dir / "project.yaml").read_text())
+    outdir = project_dir / project["templates"][0]["path"]
+    assert (outdir / "run.sh").is_file()
+    assert (outdir / "script.sh").is_file()
+    assert (outdir / "results" / "name.txt").read_text().strip() == "Rendered"
+
+    rerun = subprocess.run(
+        [str(outdir / "run.sh")],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert rerun.returncode == 0, rerun.stderr
+    assert (outdir / "results" / "name.txt").read_text().strip() == "Rendered"
 
 
 def test_run_discovers_project_from_current_directory(tmp_path: Path) -> None:

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -74,6 +76,41 @@ def collect_outputs(outdir: Path) -> dict[str, str]:
     if results_dir.exists():
         outputs["results_dir"] = str(results_dir)
     return outputs
+
+
+def should_render_shell_wrapper(template: TemplateSpec) -> bool:
+    return Path(template.run_entry).name == "script.sh"
+
+
+def render_shell_wrapper(
+    template: TemplateSpec,
+    output_dir: Path,
+    resolved_params: dict[str, Any],
+    instance_id: str,
+    project_obj: Project | None,
+) -> Path:
+    source_script = (template.root / template.run_entry).resolve()
+    copied_script = output_dir / "script.sh"
+    shutil.copy2(source_script, copied_script)
+
+    launcher = output_dir / "run.sh"
+    lines = [
+        "#!/usr/bin/env bash",
+        "set -euo pipefail",
+        '',
+        'script_dir="$(cd "$(dirname "$0")" && pwd)"',
+        'export LINKAR_OUTPUT_DIR="${script_dir}"',
+        'export LINKAR_RESULTS_DIR="${script_dir}/results"',
+        f"export LINKAR_INSTANCE_ID={shlex.quote(instance_id)}",
+    ]
+    if project_obj is not None:
+        lines.append(f"export LINKAR_PROJECT_DIR={shlex.quote(str(project_obj.root))}")
+    for key, value in sorted(resolved_params.items()):
+        lines.append(f"export {env_key(key)}={shlex.quote(format_env_value(value))}")
+    lines.append('exec "${script_dir}/script.sh"')
+    launcher.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    launcher.chmod(0o755)
+    return launcher
 
 
 def update_project(
@@ -347,7 +384,20 @@ def run_template(
     if project_obj is not None:
         env["LINKAR_PROJECT_DIR"] = str(project_obj.root)
 
-    command = [str((template.root / template.run_entry).resolve())]
+    if should_render_shell_wrapper(template):
+        command = [
+            str(
+                render_shell_wrapper(
+                    template,
+                    output_dir,
+                    resolved_params,
+                    instance_id,
+                    project_obj,
+                ).resolve()
+            )
+        ]
+    else:
+        command = [str((template.root / template.run_entry).resolve())]
     started_at = utc_now()
     completed = subprocess.run(
         command,
