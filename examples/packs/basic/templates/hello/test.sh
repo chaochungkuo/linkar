@@ -2,11 +2,11 @@
 set -euo pipefail
 
 export NAME="Linkar"
-export LINKAR_RESULTS_DIR="${LINKAR_RESULTS_DIR:-./.tmp-test/results}"
-
-mkdir -p "${LINKAR_RESULTS_DIR}"
 
 ./run.sh
 
-test -f "${LINKAR_RESULTS_DIR}/greeting.txt"
-grep -q "Hello, Linkar" "${LINKAR_RESULTS_DIR}/greeting.txt"
+test -f "greeting.txt"
+grep -q "Hello, Linkar" "greeting.txt"
+
+rm -f "greeting.txt"
+printf 'hello template test passed\n'
