@@ -13,15 +13,14 @@ except ImportError:
 from linkar.assets import resolve_asset_refs
 from linkar.core import (
     discover_project,
-    get_active_pack_entry,
     load_project,
     load_template,
     preferred_pack_ref_for_assets,
-    project_pack_entries,
     run_template,
     unique_assets,
 )
 from linkar.errors import LinkarError, ParameterResolutionError, ProjectValidationError
+from linkar.runtime.templates import combined_configured_pack_entries
 from linkar.ui import CliUI
 
 
@@ -51,14 +50,9 @@ def load_template_for_cli(
     pack_refs: list[str] | None = None,
 ):
     project_obj = load_project_or_discover(project)
-    project_entries = project_pack_entries(project_obj)
-    active_entry = get_active_pack_entry(project_obj)
+    configured_entries, active_entry = combined_configured_pack_entries(project_obj)
     explicit_pack_assets = resolve_asset_refs(pack_refs)
-    ordered_project_entries = sorted(
-        project_entries,
-        key=lambda entry: 0 if active_entry is not None and entry.id == active_entry.id else 1,
-    )
-    pack_assets = unique_assets(explicit_pack_assets + [entry.asset for entry in ordered_project_entries])
+    pack_assets = unique_assets(explicit_pack_assets + [entry.asset for entry in configured_entries])
     preferred_pack_ref = preferred_pack_ref_for_assets(explicit_pack_assets, active_entry)
     template = load_template(
         template_ref,

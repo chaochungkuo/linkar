@@ -8,7 +8,7 @@ try:
 except ImportError:
     import click
 
-from linkar.core import discover_project, get_active_pack_entry, list_templates, load_template
+from linkar.core import discover_project, get_active_global_pack_entry, get_active_pack_entry, list_templates, load_template
 from linkar.errors import LinkarError, ProjectValidationError
 from linkar.ui import CliUI
 from linkar.cli_support.common import (
@@ -143,7 +143,7 @@ class DynamicRunGroup(click.Group):
         try:
             templates = list_templates(project=None)
             project_obj = discover_project()
-            active_entry = get_active_pack_entry(project_obj)
+            active_entry = get_active_pack_entry(project_obj) or get_active_global_pack_entry()
             for template in templates:
                 by_id[template["id"]].append(template)
             for template_id, matches in by_id.items():
@@ -162,7 +162,7 @@ class DynamicRunGroup(click.Group):
 
         try:
             project_obj = discover_project()
-            active_entry = get_active_pack_entry(project_obj)
+            active_entry = get_active_pack_entry(project_obj) or get_active_global_pack_entry()
             visible = [template for template in list_templates(project=None) if template["id"] == cmd_name]
         except LinkarError:
             visible = []

@@ -5,9 +5,27 @@ from typing import Any
 
 from linkar.assets import ResolvedAsset, resolve_asset_refs
 from linkar.errors import AssetResolutionError, TemplateValidationError
-from linkar.runtime.models import Project, TemplateSpec
+from linkar.runtime.config import get_active_global_pack_entry, global_pack_entries
+from linkar.runtime.models import PackEntry, Project, TemplateSpec
 from linkar.runtime.projects import get_active_pack_entry, load_project, project_pack_entries, discover_project
 from linkar.runtime.shared import load_yaml, preferred_pack_ref_for_assets, unique_assets
+
+
+def combined_configured_pack_entries(project_obj: Project | None) -> tuple[list[PackEntry], PackEntry | None]:
+    project_entries = project_pack_entries(project_obj)
+    global_entries = global_pack_entries()
+    active_project_entry = get_active_pack_entry(project_obj)
+    active_global_entry = get_active_global_pack_entry()
+    ordered_project_entries = sorted(
+        project_entries,
+        key=lambda entry: 0 if active_project_entry is not None and entry.id == active_project_entry.id else 1,
+    )
+    project_refs = {entry.asset.ref for entry in ordered_project_entries}
+    ordered_global_entries = sorted(
+        [entry for entry in global_entries if entry.asset.ref not in project_refs],
+        key=lambda entry: 0 if active_global_entry is not None and entry.id == active_global_entry.id else 1,
+    )
+    return ordered_project_entries + ordered_global_entries, active_project_entry or active_global_entry
 
 
 def load_template(
@@ -118,14 +136,9 @@ def list_templates(
         project_obj = discover_project()
     else:
         project_obj = project
-    project_entries = project_pack_entries(project_obj)
-    active_entry = get_active_pack_entry(project_obj)
+    configured_entries, active_entry = combined_configured_pack_entries(project_obj)
     explicit_pack_assets = resolve_asset_refs(pack_refs)
-    ordered_project_entries = sorted(
-        project_entries,
-        key=lambda entry: 0 if active_entry is not None and entry.id == active_entry.id else 1,
-    )
-    pack_assets = unique_assets(explicit_pack_assets + [entry.asset for entry in ordered_project_entries])
+    pack_assets = unique_assets(explicit_pack_assets + [entry.asset for entry in configured_entries])
     seen: set[tuple[str, str]] = set()
     templates: list[dict[str, Any]] = []
     for asset in pack_assets:

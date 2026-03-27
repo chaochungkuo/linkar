@@ -14,7 +14,6 @@ from linkar.runtime.models import Project, TemplateSpec
 from linkar.runtime.projects import (
     discover_project,
     find_project_pack_entry,
-    get_active_pack_entry,
     load_project,
     project_pack_entries,
 )
@@ -28,7 +27,7 @@ from linkar.runtime.shared import (
     utc_now,
     write_json,
 )
-from linkar.runtime.templates import load_template
+from linkar.runtime.templates import combined_configured_pack_entries, load_template
 
 
 def next_instance_id(template_id: str, project: Project | None = None) -> str:
@@ -218,15 +217,10 @@ def test_template(
     else:
         project_obj = project
 
-    project_entries = project_pack_entries(project_obj)
-    active_entry = get_active_pack_entry(project_obj)
+    configured_entries, active_entry = combined_configured_pack_entries(project_obj)
     explicit_pack_assets = resolve_asset_refs(pack_refs)
-    ordered_project_entries = sorted(
-        project_entries,
-        key=lambda entry: 0 if active_entry is not None and entry.id == active_entry.id else 1,
-    )
     combined_pack_assets = unique_assets(
-        explicit_pack_assets + [entry.asset for entry in ordered_project_entries]
+        explicit_pack_assets + [entry.asset for entry in configured_entries]
     )
     preferred_pack_ref = preferred_pack_ref_for_assets(explicit_pack_assets, active_entry)
     template = load_template(
@@ -311,15 +305,10 @@ def run_template(
         project_obj = discover_project()
     else:
         project_obj = project
-    project_entries = project_pack_entries(project_obj)
-    active_entry = get_active_pack_entry(project_obj)
+    configured_entries, active_entry = combined_configured_pack_entries(project_obj)
     explicit_pack_assets = resolve_asset_refs(pack_refs)
-    ordered_project_entries = sorted(
-        project_entries,
-        key=lambda entry: 0 if active_entry is not None and entry.id == active_entry.id else 1,
-    )
     combined_pack_assets = unique_assets(
-        explicit_pack_assets + [entry.asset for entry in ordered_project_entries]
+        explicit_pack_assets + [entry.asset for entry in configured_entries]
     )
     preferred_pack_ref = preferred_pack_ref_for_assets(explicit_pack_assets, active_entry)
     template = load_template(
@@ -329,7 +318,7 @@ def run_template(
     )
     selected_binding_ref = normalize_binding_ref(binding_ref)
     if selected_binding_ref is None and template.pack_root is not None:
-        for entry in ordered_project_entries:
+        for entry in configured_entries:
             if entry.asset.root == template.pack_root:
                 selected_binding_ref = normalize_binding_ref(entry.binding)
                 break

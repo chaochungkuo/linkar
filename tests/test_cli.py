@@ -188,6 +188,44 @@ def test_pack_add_without_project_shows_actionable_error(tmp_path: Path) -> None
     assert "linkar project init --name demo" in completed.stderr
 
 
+def test_global_pack_commands_manage_user_config(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    pack_one = tmp_path / "pack_one"
+    pack_two = tmp_path / "pack_two"
+    pack_one.mkdir()
+    pack_two.mkdir()
+    env = {"LINKAR_HOME": str(home)}
+
+    added = run_cli("config", "pack", "add", str(pack_one), "--id", "pack_one", cwd=tmp_path, env_extra=env)
+    assert added.returncode == 0, added.stderr
+    assert "pack_one" in added.stdout
+
+    added_two = run_cli("config", "pack", "add", str(pack_two), "--id", "pack_two", "--activate", cwd=tmp_path, env_extra=env)
+    assert added_two.returncode == 0, added_two.stderr
+
+    listed = run_cli("config", "pack", "list", cwd=tmp_path, env_extra=env)
+    assert listed.returncode == 0, listed.stderr
+    assert "*\tpack_two\t" in listed.stdout
+    assert "-\tpack_one\t" in listed.stdout
+
+    shown = run_cli("config", "pack", "show", cwd=tmp_path, env_extra=env)
+    assert shown.returncode == 0, shown.stderr
+    assert "pack_two" in shown.stdout
+
+    used = run_cli("config", "pack", "use", "pack_one", cwd=tmp_path, env_extra=env)
+    assert used.returncode == 0, used.stderr
+
+    config = yaml.safe_load((home / "config.yaml").read_text())
+    assert config["active_pack"] == "pack_one"
+
+    removed = run_cli("config", "pack", "remove", "pack_two", cwd=tmp_path, env_extra=env)
+    assert removed.returncode == 0, removed.stderr
+
+    config = yaml.safe_load((home / "config.yaml").read_text())
+    assert len(config["packs"]) == 1
+    assert config["packs"][0]["id"] == "pack_one"
+
+
 def test_project_init_rejects_path_and_name_together(tmp_path: Path) -> None:
     completed = run_cli("project", "init", "demo", "--name", "PROJECT1", cwd=tmp_path)
     assert completed.returncode == 1
@@ -424,6 +462,69 @@ def test_project_pack_configuration_is_used_for_template_lookup(tmp_path: Path) 
     indexed = yaml.safe_load(project_file.read_text())
     assert indexed["templates"][0]["id"] == "hello"
     assert indexed["templates"][0]["pack"]["id"] == "pack"
+
+
+def test_global_pack_configuration_is_used_for_template_lookup(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    env = {"LINKAR_HOME": str(home)}
+    pack_root = tmp_path / "pack"
+    hello_template = ROOT / "examples" / "packs" / "basic" / "templates" / "hello"
+    target_template = pack_root / "templates" / "hello"
+    target_template.mkdir(parents=True)
+    (target_template / "template.yaml").write_text((hello_template / "template.yaml").read_text())
+    run_script = target_template / "run.sh"
+    run_script.write_text((hello_template / "run.sh").read_text())
+    run_script.chmod(0o755)
+
+    added = run_cli("config", "pack", "add", str(pack_root), "--id", "global_pack", cwd=tmp_path, env_extra=env)
+    assert added.returncode == 0, added.stderr
+
+    completed = run_cli("run", "hello", "--name", "GlobalPack", cwd=tmp_path, env_extra=env)
+    assert completed.returncode == 0, completed.stderr
+
+    outdir = Path(completed.stdout.strip())
+    assert (outdir / "results" / "greeting.txt").read_text().strip() == "Hello, GlobalPack"
+
+
+def test_project_pack_takes_precedence_over_global_pack(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    env = {"LINKAR_HOME": str(home)}
+    global_pack = tmp_path / "global_pack"
+    project_pack = tmp_path / "project_pack"
+    make_template(
+        global_pack / "templates",
+        "dup",
+        "  name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'global %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/out.txt"
+""",
+    )
+    make_template(
+        project_pack / "templates",
+        "dup",
+        "  name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'project %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/out.txt"
+""",
+    )
+
+    added = run_cli("config", "pack", "add", str(global_pack), "--id", "global_pack", cwd=tmp_path, env_extra=env)
+    assert added.returncode == 0, added.stderr
+
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path, env_extra=env)
+    assert init.returncode == 0, init.stderr
+    assert run_cli("pack", "add", str(project_pack), "--id", "project_pack", cwd=project_dir, env_extra=env).returncode == 0
+
+    completed = run_cli("run", "dup", "--name", "Chosen", cwd=project_dir, env_extra=env)
+    assert completed.returncode == 0, completed.stderr
+
+    project = yaml.safe_load((project_dir / "project.yaml").read_text())
+    outdir = project_dir / project["templates"][0]["path"]
+    assert (outdir / "results" / "out.txt").read_text().strip() == "project Chosen"
+    assert project["templates"][0]["pack"]["id"] == "project_pack"
 
 
 def test_active_pack_resolves_duplicate_template_ids(tmp_path: Path) -> None:

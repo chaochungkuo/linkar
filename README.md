@@ -51,6 +51,20 @@ Pack scope is intentionally project-first:
 
 - `linkar run raw ... --pack ...` is ad hoc and does not require a project
 - `linkar pack ...` manages packs saved in the current project's `project.yaml`
-- global/user pack configuration is a future convenience layer, not the default source of truth
+- `linkar config pack ...` manages global packs saved in user config
+
+Pack lookup precedence is:
+
+1. explicit `--pack`
+2. project-configured packs
+3. global/user-configured packs
+
+Example global setup:
+
+```bash
+linkar config pack add ~/github/izkf_genomics_pack --id izkf_genomics_pack
+linkar config pack list
+linkar run fastqc --input sample.fastq.gz
+```
 
 Use `linkar run raw ...` when you want the generic path-or-pack execution interface.

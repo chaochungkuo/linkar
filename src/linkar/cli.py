@@ -17,17 +17,23 @@ from linkar.cli_support.common import (
 )
 from linkar.cli_support.run_commands import DynamicRunGroup, raw_run_command
 from linkar.core import (
+    add_global_pack,
     add_project_pack,
     discover_project,
     generate_methods,
+    get_active_global_pack_entry,
     get_active_pack_entry,
+    global_config_path,
     init_project,
     inspect_run,
     list_configured_packs,
+    list_global_packs,
     list_project_runs,
     list_templates,
     load_project,
+    remove_global_pack,
     remove_project_pack,
+    set_active_global_pack,
     set_active_pack,
     test_template,
 )
@@ -75,6 +81,63 @@ def app(ctx: click.Context) -> None:
 @app.group("pack")
 def pack_group() -> None:
     """Manage packs saved in the active project configuration."""
+
+
+@app.group("config")
+def config_group() -> None:
+    """Manage user-level Linkar configuration."""
+
+
+@config_group.group("pack")
+def config_pack_group() -> None:
+    """Manage global packs saved in user config."""
+
+
+@config_pack_group.command("add")
+@click.argument("ref")
+@click.option("--id", "pack_id", metavar="PACK_ID", help="Stable pack id stored in the global config.")
+@click.option("--activate/--no-activate", default=True, show_default=True, help="Make this the active global pack after adding it.")
+@handle_linkar_errors
+def config_pack_add_command(ref: str, pack_id: str | None, activate: bool, ui: CliUI) -> None:
+    result = add_global_pack(ref, pack_id=pack_id, activate=activate)
+    ui.print_text(f"{result['id']}\t{result['ref']}")
+
+
+@config_pack_group.command("list")
+@handle_linkar_errors
+def config_pack_list_command(ui: CliUI) -> None:
+    """List global packs saved in user config."""
+    ui.print_packs(list_global_packs())
+
+
+@config_pack_group.command("use")
+@click.argument("identifier")
+@handle_linkar_errors
+def config_pack_use_command(identifier: str, ui: CliUI) -> None:
+    """Select the active global pack."""
+    result = set_active_global_pack(identifier)
+    ui.print_text(f"{result['id']}\t{result['ref']}")
+
+
+@config_pack_group.command("remove")
+@click.argument("identifier")
+@handle_linkar_errors
+def config_pack_remove_command(identifier: str, ui: CliUI) -> None:
+    """Remove a configured global pack."""
+    result = remove_global_pack(identifier)
+    ui.print_text(f"{result['id']}\t{result['ref']}")
+
+
+@config_pack_group.command("show")
+@handle_linkar_errors
+def config_pack_show_command(ui: CliUI) -> None:
+    """Show the active global pack."""
+    active_entry = get_active_global_pack_entry()
+    if active_entry is None:
+        raise ProjectValidationError(
+            f"No active global pack configured. Add one with 'linkar config pack add REF'. Config file: {global_config_path()}"
+        )
+    ui.print_text(f"{active_entry.id}\t{active_entry.asset.ref}")
 
 
 @pack_group.command("add")
