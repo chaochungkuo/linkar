@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from linkar import __version__
 from linkar.core import (
     generate_methods,
     LinkarError,
@@ -16,6 +17,10 @@ from linkar.server import serve
 from linkar.ui import CliUI
 
 
+class HelpFormatter(argparse.RawDescriptionHelpFormatter):
+    pass
+
+
 def parse_key_value(value: str) -> tuple[str, str]:
     if "=" not in value:
         raise argparse.ArgumentTypeError("Expected KEY=VALUE")
@@ -26,47 +31,175 @@ def parse_key_value(value: str) -> tuple[str, str]:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="linkar")
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    parser = argparse.ArgumentParser(
+        prog="linkar",
+        description="Run reusable computational templates with transparent project state and provenance.",
+        epilog=(
+            "Examples:\n"
+            "  linkar project init .\n"
+            "  linkar run hello --pack ./examples/packs/basic --param name=Linkar\n"
+            "  linkar project runs\n"
+            "  linkar inspect run hello_001\n"
+        ),
+        formatter_class=HelpFormatter,
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+        help="Show the installed Linkar version and exit.",
+    )
+    subparsers = parser.add_subparsers(
+        dest="command",
+        required=True,
+        title="commands",
+        metavar="COMMAND",
+    )
 
-    project_parser = subparsers.add_parser("project")
-    project_subparsers = project_parser.add_subparsers(dest="project_command", required=True)
-    project_init = project_subparsers.add_parser("init")
-    project_init.add_argument("path", nargs="?", default=".")
-    project_init.add_argument("--id", dest="project_id")
-    project_runs = project_subparsers.add_parser("runs")
-    project_runs.add_argument("--project")
+    project_parser = subparsers.add_parser(
+        "project",
+        help="Initialize a project or inspect indexed runs.",
+        description="Create a Linkar project or inspect run records stored in project.yaml.",
+        formatter_class=HelpFormatter,
+    )
+    project_subparsers = project_parser.add_subparsers(
+        dest="project_command",
+        required=True,
+        title="project commands",
+        metavar="PROJECT_COMMAND",
+    )
+    project_init = project_subparsers.add_parser(
+        "init",
+        help="Create a new project in a directory.",
+        description="Create project.yaml in the target directory.",
+        formatter_class=HelpFormatter,
+    )
+    project_init.add_argument("path", nargs="?", default=".", metavar="PATH", help="Directory to initialize as a Linkar project.")
+    project_init.add_argument(
+        "--id",
+        dest="project_id",
+        metavar="PROJECT_ID",
+        help="Project identifier to write into project.yaml. Defaults to the directory name.",
+    )
+    project_runs = project_subparsers.add_parser(
+        "runs",
+        help="List runs recorded in a project.",
+        description="Show template instances recorded in project.yaml.",
+        formatter_class=HelpFormatter,
+    )
+    project_runs.add_argument(
+        "--project",
+        metavar="PATH",
+        help="Project directory or project.yaml path. Defaults to the current directory.",
+    )
 
-    run_parser = subparsers.add_parser("run")
-    run_parser.add_argument("template")
-    run_parser.add_argument("--pack", action="append", default=[])
-    run_parser.add_argument("--binding")
-    run_parser.add_argument("--project")
-    run_parser.add_argument("--outdir")
+    run_parser = subparsers.add_parser(
+        "run",
+        help="Run a template once.",
+        description="Resolve parameters, execute a template, and record run metadata.",
+        formatter_class=HelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  linkar run hello --pack ./examples/packs/basic --param name=Linkar\n"
+            "  linkar run rnaseq --project ./study\n"
+        ),
+    )
+    run_parser.add_argument("template", metavar="TEMPLATE", help="Template id or path to a template directory.")
+    run_parser.add_argument(
+        "--pack",
+        action="append",
+        default=[],
+        metavar="REF",
+        help="Pack path or asset reference to search for the template. Repeat to add more than one.",
+    )
+    run_parser.add_argument(
+        "--binding",
+        metavar="REF",
+        help="Binding path or asset reference used to resolve parameters.",
+    )
+    run_parser.add_argument(
+        "--project",
+        metavar="PATH",
+        help="Project directory or project.yaml path. Defaults to the current directory.",
+    )
+    run_parser.add_argument(
+        "--outdir",
+        metavar="PATH",
+        help="Write run artifacts to a specific directory instead of the default location.",
+    )
     run_parser.add_argument(
         "--param",
         action="append",
         default=[],
         type=parse_key_value,
+        metavar="KEY=VALUE",
         help="Template parameter in KEY=VALUE form",
     )
 
-    templates_parser = subparsers.add_parser("templates")
-    templates_parser.add_argument("--pack", action="append", default=[])
-    templates_parser.add_argument("--project")
+    templates_parser = subparsers.add_parser(
+        "templates",
+        help="List available templates.",
+        description="List templates visible from explicit packs and the active project configuration.",
+        formatter_class=HelpFormatter,
+    )
+    templates_parser.add_argument(
+        "--pack",
+        action="append",
+        default=[],
+        metavar="REF",
+        help="Pack path or asset reference to include in the search. Repeat to add more than one.",
+    )
+    templates_parser.add_argument(
+        "--project",
+        metavar="PATH",
+        help="Project directory or project.yaml path. Defaults to the current directory.",
+    )
 
-    inspect_parser = subparsers.add_parser("inspect")
-    inspect_subparsers = inspect_parser.add_subparsers(dest="inspect_command", required=True)
-    inspect_run_parser = inspect_subparsers.add_parser("run")
-    inspect_run_parser.add_argument("run_ref")
-    inspect_run_parser.add_argument("--project")
+    inspect_parser = subparsers.add_parser(
+        "inspect",
+        help="Inspect recorded metadata.",
+        description="Inspect metadata for recorded Linkar runs.",
+        formatter_class=HelpFormatter,
+    )
+    inspect_subparsers = inspect_parser.add_subparsers(
+        dest="inspect_command",
+        required=True,
+        title="inspect commands",
+        metavar="INSPECT_COMMAND",
+    )
+    inspect_run_parser = inspect_subparsers.add_parser(
+        "run",
+        help="Show metadata for one run.",
+        description="Inspect run metadata by instance id or run directory path.",
+        formatter_class=HelpFormatter,
+    )
+    inspect_run_parser.add_argument("run_ref", metavar="RUN_REF", help="Run instance id or path to a run directory.")
+    inspect_run_parser.add_argument(
+        "--project",
+        metavar="PATH",
+        help="Project directory or project.yaml path. Defaults to the current directory.",
+    )
 
-    methods_parser = subparsers.add_parser("methods")
-    methods_parser.add_argument("--project")
+    methods_parser = subparsers.add_parser(
+        "methods",
+        help="Generate a methods draft from run metadata.",
+        description="Generate an editable methods summary from the runs recorded in a project.",
+        formatter_class=HelpFormatter,
+    )
+    methods_parser.add_argument(
+        "--project",
+        metavar="PATH",
+        help="Project directory or project.yaml path. Defaults to the current directory.",
+    )
 
-    serve_parser = subparsers.add_parser("serve")
-    serve_parser.add_argument("--host", default="127.0.0.1")
-    serve_parser.add_argument("--port", default=8000, type=int)
+    serve_parser = subparsers.add_parser(
+        "serve",
+        help="Start the local Linkar API server.",
+        description="Expose the local project/runtime API over HTTP for automation and agents.",
+        formatter_class=HelpFormatter,
+    )
+    serve_parser.add_argument("--host", default="127.0.0.1", metavar="HOST", help="Host interface to bind.")
+    serve_parser.add_argument("--port", default=8000, type=int, metavar="PORT", help="Port to listen on.")
     return parser
 
 

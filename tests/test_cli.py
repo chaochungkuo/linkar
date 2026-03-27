@@ -107,6 +107,21 @@ def test_project_init(tmp_path: Path) -> None:
     assert data["templates"] == []
 
 
+def test_help_output_is_clean_and_descriptive(tmp_path: Path) -> None:
+    root_help = run_cli("--help", cwd=tmp_path)
+    assert root_help.returncode == 0, root_help.stderr
+    assert "Run reusable computational templates" in root_help.stdout
+    assert "commands:" in root_help.stdout
+    assert "linkar run hello --pack" in root_help.stdout
+    assert "default:" not in root_help.stdout.lower()
+
+    run_help = run_cli("run", "--help", cwd=tmp_path)
+    assert run_help.returncode == 0, run_help.stderr
+    assert "Resolve parameters, execute a template" in run_help.stdout
+    assert "Template id or path to a template directory." in run_help.stdout
+    assert "default:" not in run_help.stdout.lower()
+
+
 def test_run_template_updates_project(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
     init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
