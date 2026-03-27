@@ -43,6 +43,20 @@ def parse_key_value(value: str) -> tuple[str, str]:
     return key, raw
 
 
+def resolve_project_init_target(
+    *,
+    path: str | None,
+    name: str | None,
+) -> tuple[str, str | None]:
+    if path and name:
+        raise ProjectValidationError("Use either PATH or --name, not both")
+    if name:
+        return name, name
+    if path:
+        return path, None
+    return ".", None
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = LinkarArgumentParser(
         prog="linkar",
@@ -84,10 +98,21 @@ def build_parser() -> argparse.ArgumentParser:
     project_init = project_subparsers.add_parser(
         "init",
         help="Create a new project in a directory.",
-        description="Create project.yaml in the target directory.",
+        description="Create project.yaml in the target directory. Use --name to create a new directory automatically.",
         formatter_class=HelpFormatter,
     )
-    project_init.add_argument("path", nargs="?", default=".", metavar="PATH", help="Directory to initialize as a Linkar project.")
+    project_init.add_argument(
+        "path",
+        nargs="?",
+        default=None,
+        metavar="PATH",
+        help="Directory to initialize as a Linkar project.",
+    )
+    project_init.add_argument(
+        "--name",
+        metavar="PROJECT_NAME",
+        help="Create a new directory with this name and use it as the project id unless --id is set.",
+    )
     project_init.add_argument(
         "--id",
         dest="project_id",
@@ -238,8 +263,9 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         if args.command == "project" and args.project_command == "init":
-            project_path = init_project(args.path, project_id=args.project_id)
-            project_id = args.project_id or Path(args.path).resolve().name
+            target_path, implied_id = resolve_project_init_target(path=args.path, name=args.name)
+            project_path = init_project(target_path, project_id=args.project_id or implied_id)
+            project_id = args.project_id or implied_id or Path(target_path).resolve().name
             ui.print_project_created(project_path, project_id)
             return 0
         if args.command == "project" and args.project_command == "runs":

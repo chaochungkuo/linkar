@@ -107,6 +107,24 @@ def test_project_init(tmp_path: Path) -> None:
     assert data["templates"] == []
 
 
+def test_project_init_with_name_creates_directory(tmp_path: Path) -> None:
+    completed = run_cli("project", "init", "--name", "PROJECT1", cwd=tmp_path)
+    assert completed.returncode == 0, completed.stderr
+
+    project_dir = tmp_path / "PROJECT1"
+    assert project_dir.is_dir()
+    data = yaml.safe_load((project_dir / "project.yaml").read_text())
+    assert data["id"] == "PROJECT1"
+    assert data["packs"] == []
+    assert data["templates"] == []
+
+
+def test_project_init_rejects_path_and_name_together(tmp_path: Path) -> None:
+    completed = run_cli("project", "init", "demo", "--name", "PROJECT1", cwd=tmp_path)
+    assert completed.returncode == 1
+    assert "Use either PATH or --name, not both" in completed.stderr
+
+
 def test_help_output_is_clean_and_descriptive(tmp_path: Path) -> None:
     root_help = run_cli("--help", cwd=tmp_path)
     assert root_help.returncode == 0, root_help.stderr
@@ -120,6 +138,11 @@ def test_help_output_is_clean_and_descriptive(tmp_path: Path) -> None:
     assert "Resolve parameters, execute a template" in run_help.stdout
     assert "Template id or path to a template directory." in run_help.stdout
     assert "default:" not in run_help.stdout.lower()
+
+    project_init_help = run_cli("project", "init", "--help", cwd=tmp_path)
+    assert project_init_help.returncode == 0, project_init_help.stderr
+    assert "Use --name to create a new directory automatically." in project_init_help.stdout
+    assert "--name PROJECT_NAME" in project_init_help.stdout
 
 
 def test_bare_cli_shows_helpful_guidance(tmp_path: Path) -> None:
