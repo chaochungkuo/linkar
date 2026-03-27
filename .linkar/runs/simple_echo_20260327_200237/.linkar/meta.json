@@ -1,0 +1,31 @@
+{
+  "binding": null,
+  "command": [
+    "/Users/jovesus/github/linkar/examples/packs/basic/templates/simple_echo/run.sh"
+  ],
+  "instance_id": "simple_echo_20260327_200237",
+  "outputs": {
+    "results_dir": "/Users/jovesus/github/linkar/.linkar/runs/simple_echo_20260327_200237/results"
+  },
+  "pack": {
+    "ref": "/Users/jovesus/github/linkar/examples/packs/basic",
+    "revision": null
+  },
+  "param_provenance": {
+    "name": {
+      "source": "explicit"
+    }
+  },
+  "params": {
+    "name": "EphemeralServer"
+  },
+  "software": [
+    {
+      "name": "linkar",
+      "version": "0.1.0"
+    }
+  ],
+  "template": "simple_echo",
+  "template_version": "0.1.0",
+  "timestamp": "2026-03-27T20:02:37.504827+00:00"
+}

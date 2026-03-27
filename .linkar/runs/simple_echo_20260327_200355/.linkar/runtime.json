@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/Users/jovesus/github/linkar/examples/packs/basic/templates/simple_echo/run.sh"
+  ],
+  "cwd": "/Users/jovesus/github/linkar/.linkar/runs/simple_echo_20260327_200355",
+  "duration_seconds": 0.018233,
+  "finished_at": "2026-03-27T20:03:55.336456+00:00",
+  "returncode": 0,
+  "started_at": "2026-03-27T20:03:55.318223+00:00",
+  "stderr": "",
+  "stdout": "",
+  "success": true
+}
