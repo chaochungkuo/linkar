@@ -41,7 +41,7 @@ class BindingContext:
     project: Project | None
     resolved_params: dict[str, Any]
 
-    def latest_output(self, key: str) -> Any | None:
+    def latest_output(self, key: str, template_id: str | None = None) -> Any | None:
         from linkar.runtime.projects import latest_project_output
 
-        return latest_project_output(self.project, key)
+        return latest_project_output(self.project, key, template_id=template_id)

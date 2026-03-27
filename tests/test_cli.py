@@ -969,7 +969,7 @@ cp "${SOURCE_DIR}/dataset/sample.txt" "${LINKAR_RESULTS_DIR}/consumed.txt"
     make_binding(
         pack_root,
         "consume_data",
-        "      source_dir:\n        from: output\n        key: results_dir",
+        "      source_dir:\n        template: produce_data\n        output: results_dir",
     )
 
     project_dir = tmp_path / "study"
@@ -997,8 +997,65 @@ cp "${SOURCE_DIR}/dataset/sample.txt" "${LINKAR_RESULTS_DIR}/consumed.txt"
     meta = json.loads((outdir / ".linkar" / "meta.json").read_text())
     assert meta["param_provenance"]["source_dir"]["source"] == "binding"
     assert meta["param_provenance"]["source_dir"]["binding_source"] == "output"
+    assert meta["param_provenance"]["source_dir"]["template"] == "produce_data"
+    assert meta["param_provenance"]["source_dir"]["output"] == "results_dir"
     assert meta["pack"]["ref"] == str(pack_root.resolve())
     assert meta["binding"]["ref"] == "default"
+
+
+def test_binding_output_rule_can_target_specific_template_id(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    make_template(
+        pack_root / "templates",
+        "produce_alpha",
+        "  message:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "${MESSAGE}" > "${LINKAR_RESULTS_DIR}/message.txt"
+""",
+    )
+    make_template(
+        pack_root / "templates",
+        "produce_beta",
+        "  message:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "${MESSAGE}" > "${LINKAR_RESULTS_DIR}/message.txt"
+""",
+    )
+    make_template(
+        pack_root / "templates",
+        "consume_selected",
+        "  results_dir:\n    type: path\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+cp "${RESULTS_DIR}/message.txt" "${LINKAR_RESULTS_DIR}/selected.txt"
+""",
+    )
+    make_binding(
+        pack_root,
+        "consume_selected",
+        "      results_dir:\n        template: produce_alpha\n        output: results_dir",
+    )
+
+    project_dir = tmp_path / "study"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    project_file = project_dir / "project.yaml"
+    project = yaml.safe_load(project_file.read_text())
+    project["packs"] = [{"ref": str(pack_root), "binding": "default"}]
+    project_file.write_text(yaml.safe_dump(project, sort_keys=False))
+
+    alpha = run_cli("run", "produce_alpha", "--message", "ALPHA", cwd=project_dir)
+    assert alpha.returncode == 0, alpha.stderr
+    beta = run_cli("run", "produce_beta", "--message", "BETA", cwd=project_dir)
+    assert beta.returncode == 0, beta.stderr
+
+    consume = run_cli("run", "consume_selected", cwd=project_dir)
+    assert consume.returncode == 0, consume.stderr
+    outdir = Path(consume.stdout.strip())
+    assert (outdir / "results" / "selected.txt").read_text().strip() == "ALPHA"
 
 
 def test_ad_hoc_binding_override_can_use_external_function(tmp_path: Path) -> None:
@@ -1018,7 +1075,7 @@ cp "${SOURCE_DIR}/sample.txt" "${LINKAR_RESULTS_DIR}/copied.txt"
     binding_root = make_binding(
         tmp_path / "binding",
         "consume_literal",
-        "      source_dir:\n        from: function\n        name: pick_source",
+        "      source_dir:\n        function: pick_source",
         function_name="pick_source",
         function_body=f"""from pathlib import Path
 
@@ -1058,7 +1115,7 @@ cp "${SOURCE_DIR}/sample.txt" "${LINKAR_RESULTS_DIR}/override.txt"
     make_binding(
         pack_root,
         "consume_override",
-        "      source_dir:\n        from: value\n        value: /definitely/missing",
+        "      source_dir:\n        value: /definitely/missing",
     )
     source_dir = tmp_path / "real_source"
     source_dir.mkdir()
@@ -1066,7 +1123,7 @@ cp "${SOURCE_DIR}/sample.txt" "${LINKAR_RESULTS_DIR}/override.txt"
     override_binding = make_binding(
         tmp_path / "override_binding",
         "consume_override",
-        f"      source_dir:\n        from: value\n        value: {str(source_dir)!r}",
+        f"      source_dir:\n        value: {str(source_dir)!r}",
     )
 
     project_dir = tmp_path / "project"
@@ -1158,7 +1215,7 @@ cp "${SOURCE_DIR}/sample.txt" "${LINKAR_RESULTS_DIR}/copied.txt"
     binding_root = make_binding(
         tmp_path / "remote_binding",
         "git_bound",
-        "      source_dir:\n        from: function\n        name: locate_source",
+        "      source_dir:\n        function: locate_source",
         function_name="locate_source",
         function_body=f"""from pathlib import Path
 

@@ -235,11 +235,13 @@ def remove_project_pack(
     }
 
 
-def latest_project_output(project: Project | None, key: str) -> Any | None:
+def latest_project_output(project: Project | None, key: str, template_id: str | None = None) -> Any | None:
     if project is None:
         return None
     templates = project.data.get("templates", [])
     for item in reversed(templates):
+        if template_id is not None and item.get("id") != template_id:
+            continue
         outputs = item.get("outputs") or {}
         if key in outputs:
             return outputs[key]

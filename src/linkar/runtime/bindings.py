@@ -81,9 +81,54 @@ def resolve_bound_value(
         raise AssetResolutionError(
             f"binding.yaml param rule must be a mapping for '{template.id}.{key}'"
         )
-    source = rule.get("from")
     ctx = BindingContext(template=template, project=project, resolved_params=dict(resolved_params))
 
+    if "template" in rule or "output" in rule:
+        template_name = rule.get("template")
+        output_key = rule.get("output", key)
+        if not template_name or not isinstance(template_name, str):
+            raise AssetResolutionError(
+                f"Binding template id is required for '{template.id}.{key}'"
+            )
+        value = ctx.latest_output(str(output_key), template_id=template_name)
+        if value is None:
+            raise ParameterResolutionError(
+                f"Binding could not resolve output '{template_name}.{output_key}' for '{template.id}.{key}'"
+            )
+        return True, value, {
+            "source": "binding",
+            "binding_source": "output",
+            "template": template_name,
+            "output": str(output_key),
+        }
+    if "function" in rule:
+        function_name = rule.get("function")
+        if not function_name or not isinstance(function_name, str):
+            raise AssetResolutionError(
+                f"Binding function name is required for '{template.id}.{key}'"
+            )
+        search_roots = []
+        if binding_root is not None:
+            search_roots.append(binding_root)
+        if template.pack_root is not None and template.pack_root not in search_roots:
+            search_roots.append(template.pack_root)
+        value = resolve_binding_function(function_name, search_roots)(ctx)
+        if value is None:
+            raise ParameterResolutionError(
+                f"Binding function returned no value for '{template.id}.{key}'"
+            )
+        return True, value, {
+            "source": "binding",
+            "binding_source": "function",
+            "name": function_name,
+        }
+    if "value" in rule:
+        return True, rule["value"], {
+            "source": "binding",
+            "binding_source": "value",
+        }
+
+    source = rule.get("from")
     if source == "output":
         output_key = rule.get("key", key)
         value = ctx.latest_output(str(output_key))
@@ -94,7 +139,7 @@ def resolve_bound_value(
         return True, value, {
             "source": "binding",
             "binding_source": "output",
-            "key": str(output_key),
+            "output": str(output_key),
         }
     if source == "function":
         function_name = rule.get("name")
@@ -128,7 +173,7 @@ def resolve_bound_value(
         }
 
     raise AssetResolutionError(
-        f"Unsupported binding source '{source}' for '{template.id}.{key}'"
+        f"Unsupported binding rule for '{template.id}.{key}'"
     )
 
 

@@ -2,5 +2,5 @@ templates:
   consume_message:
     params:
       results_dir:
-        from: output
-        key: results_dir
+        template: produce_message
+        output: results_dir

@@ -34,8 +34,8 @@ templates:
   consume_data:
     params:
       source_dir:
-        from: output
-        key: results_dir
+        template: produce_data
+        output: results_dir
 ```
 
 ## Top-Level Fields
@@ -56,40 +56,35 @@ templates:
   consume_data:
     params:
       source_dir:
-        from: output
-        key: results_dir
+        template: produce_data
+        output: results_dir
 ```
 
 ## Parameter Rule
-Each parameter rule must define:
+Each parameter rule should define exactly one source shape.
 
-- `from`
-
-Additional fields depend on the source type.
-
-## Supported Sources
-### `from: output`
-Resolve the value from the latest project output.
+## Supported Rule Shapes
+### Project output binding
+Resolve the value from the latest output exposed by a specific template id.
 
 Example:
 
 ```yaml
 source_dir:
-  from: output
-  key: results_dir
+  template: produce_data
+  output: results_dir
 ```
 
-If `key` is omitted, the parameter name may be used as the default output key.
+If `output` is omitted, the parameter name may be used as the default output key.
 
-### `from: function`
+### Function binding
 Resolve the value by calling a named function.
 
 Example:
 
 ```yaml
 reference_fasta:
-  from: function
-  name: resolve_reference
+  function: resolve_reference
 ```
 
 Functions are loaded from the binding asset's `functions/` directory first, then from the selected pack's `functions/` directory if needed.
@@ -101,14 +96,13 @@ def resolve(ctx):
     ...
 ```
 
-### `from: value`
+### Literal value binding
 Resolve the value from a literal value stored in the binding rule.
 
 Example:
 
 ```yaml
 reference_name:
-  from: value
   value: hg38
 ```
 
