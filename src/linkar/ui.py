@@ -164,6 +164,22 @@ class CliUI:
             table.add_row(template["id"], template["pack_ref"])
         self.console.print(table)
 
+    def print_packs(self, packs: list[dict[str, Any]]) -> None:
+        if not self.rich_enabled:
+            for pack in packs:
+                active = "*" if pack.get("active") else "-"
+                binding = pack.get("binding") or ""
+                self.plain_print(f"{active}\t{pack['id']}\t{pack['ref']}\t{binding}")
+            return
+        table = Table(box=box.SIMPLE_HEAVY, header_style="accent")
+        table.add_column("Active")
+        table.add_column("Pack")
+        table.add_column("Ref", style="value")
+        table.add_column("Binding", style="value")
+        for pack in packs:
+            table.add_row("yes" if pack.get("active") else "", pack["id"], pack["ref"], pack.get("binding") or "")
+        self.console.print(table)
+
     def print_metadata(self, metadata: dict[str, Any]) -> None:
         if not self.rich_enabled:
             self.plain_print(json.dumps(metadata, indent=2, sort_keys=True))

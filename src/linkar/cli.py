@@ -14,16 +14,23 @@ except ImportError:
 from linkar import __version__
 from linkar.assets import resolve_asset_refs
 from linkar.core import (
+    add_project_pack,
     discover_project,
+    get_active_pack_entry,
     generate_methods,
     init_project,
     inspect_run,
     list_project_runs,
+    list_configured_packs,
     list_templates,
     load_project,
     load_template,
+    preferred_pack_ref_for_assets,
     project_pack_entries,
+    remove_project_pack,
+    set_active_pack,
     test_template,
+    unique_assets,
     run_template,
 )
 from linkar.errors import LinkarError, ParameterResolutionError, ProjectValidationError
@@ -79,10 +86,20 @@ def load_template_for_cli(
     pack_refs: list[str] | None = None,
 ):
     project_obj = load_project_or_discover(project)
-    pack_assets = resolve_asset_refs(pack_refs) + [
-        entry.asset for entry in project_pack_entries(project_obj)
-    ]
-    template = load_template(template_ref, pack_assets=pack_assets)
+    project_entries = project_pack_entries(project_obj)
+    active_entry = get_active_pack_entry(project_obj)
+    explicit_pack_assets = resolve_asset_refs(pack_refs)
+    ordered_project_entries = sorted(
+        project_entries,
+        key=lambda entry: 0 if active_entry is not None and entry.id == active_entry.id else 1,
+    )
+    pack_assets = unique_assets(explicit_pack_assets + [entry.asset for entry in ordered_project_entries])
+    preferred_pack_ref = preferred_pack_ref_for_assets(explicit_pack_assets, active_entry)
+    template = load_template(
+        template_ref,
+        pack_assets=pack_assets,
+        preferred_pack_ref=preferred_pack_ref,
+    )
     return template, project_obj
 
 
@@ -235,6 +252,98 @@ def app(ctx: click.Context) -> None:
         ctx.exit(0)
 
 
+@app.group("pack")
+def pack_group() -> None:
+    """Manage packs configured in the current project."""
+
+
+@pack_group.command("add")
+@click.argument("ref")
+@click.option("--id", "pack_id", metavar="PACK_ID", help="Stable pack id stored in project.yaml.")
+@click.option("--binding", metavar="REF", help="Binding ref for this pack. Use 'default' for the pack default binding.")
+@click.option("--activate/--no-activate", default=True, show_default=True, help="Make this pack the active pack after adding it.")
+@click.option(
+    "--project",
+    type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+    help="Project directory or project.yaml path. Defaults to the current directory.",
+    show_default=False,
+)
+@handle_linkar_errors
+def pack_add_command(
+    ref: str,
+    pack_id: str | None,
+    binding: str | None,
+    activate: bool,
+    project: str | None,
+    ui: CliUI,
+) -> None:
+    """Add a pack to the project configuration."""
+    result = add_project_pack(ref, project=project, pack_id=pack_id, binding=binding, activate=activate)
+    ui.print_text(f"{result['id']}\t{result['ref']}")
+
+
+@pack_group.command("list")
+@click.option(
+    "--project",
+    type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+    help="Project directory or project.yaml path. Defaults to the current directory.",
+    show_default=False,
+)
+@handle_linkar_errors
+def pack_list_command(project: str | None, ui: CliUI) -> None:
+    """List packs configured in the project."""
+    ui.print_packs(list_configured_packs(project=project))
+
+
+@pack_group.command("use")
+@click.argument("identifier")
+@click.option(
+    "--project",
+    type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+    help="Project directory or project.yaml path. Defaults to the current directory.",
+    show_default=False,
+)
+@handle_linkar_errors
+def pack_use_command(identifier: str, project: str | None, ui: CliUI) -> None:
+    """Select the active/default pack for the project."""
+    result = set_active_pack(identifier, project=project)
+    ui.print_text(f"{result['id']}\t{result['ref']}")
+
+
+@pack_group.command("remove")
+@click.argument("identifier")
+@click.option(
+    "--project",
+    type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+    help="Project directory or project.yaml path. Defaults to the current directory.",
+    show_default=False,
+)
+@handle_linkar_errors
+def pack_remove_command(identifier: str, project: str | None, ui: CliUI) -> None:
+    """Remove a configured pack from the project."""
+    result = remove_project_pack(identifier, project=project)
+    ui.print_text(f"{result['id']}\t{result['ref']}")
+
+
+@pack_group.command("show")
+@click.option(
+    "--project",
+    type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+    help="Project directory or project.yaml path. Defaults to the current directory.",
+    show_default=False,
+)
+@handle_linkar_errors
+def pack_show_command(project: str | None, ui: CliUI) -> None:
+    """Show the active/default pack for the project."""
+    project_obj = load_project_or_discover(project)
+    if project_obj is None:
+        raise ProjectValidationError("No active project found")
+    active_entry = get_active_pack_entry(project_obj)
+    if active_entry is None:
+        raise ProjectValidationError("No active pack configured")
+    ui.print_text(f"{active_entry.id}\t{active_entry.asset.ref}")
+
+
 @app.group("project")
 def project_group() -> None:
     """Create a Linkar project or inspect run records stored in project.yaml."""
@@ -274,7 +383,7 @@ def project_runs(project: str | None, ui: CliUI) -> None:
     ui.print_runs(list_project_runs(project=project))
 
 
-def template_command_callback(template_id: str, template_path: str):
+def template_command_callback(template_id: str, template_path: str, pack_ref: str | None = None):
     template_spec = load_template(template_path)
 
     @handle_linkar_errors
@@ -289,13 +398,15 @@ def template_command_callback(template_id: str, template_path: str):
     ) -> None:
         params = {key: value for key, value in template_values.items() if value is not None}
         params.update(params_from_pairs(param))
+        run_template_ref = template_id if pack_ref is not None else template_path
+        run_pack_refs = [pack_ref] if pack_ref is not None else None
         with ui.status("Running template"):
             result = run_with_optional_prompts(
-                template_id,
+                run_template_ref,
                 params=params,
                 project=project,
                 outdir=outdir,
-                pack_refs=None,
+                pack_refs=run_pack_refs,
                 binding_ref=binding,
                 prompt_missing=prompt_missing,
             )
@@ -389,12 +500,18 @@ def run_raw_command(
 class DynamicRunGroup(click.Group):
     def list_commands(self, ctx: click.Context) -> list[str]:
         command_names = {"raw"}
-        duplicates: dict[str, int] = defaultdict(int)
+        by_id: dict[str, list[dict[str, Any]]] = defaultdict(list)
         try:
-            for template in list_templates(project=None):
-                duplicates[template["id"]] += 1
-            for template_id, count in duplicates.items():
-                if count == 1:
+            templates = list_templates(project=None)
+            project_obj = discover_project()
+            active_entry = get_active_pack_entry(project_obj)
+            for template in templates:
+                by_id[template["id"]].append(template)
+            for template_id, matches in by_id.items():
+                if len(matches) == 1:
+                    command_names.add(template_id)
+                    continue
+                if active_entry is not None and any(match["pack_ref"] == active_entry.asset.ref for match in matches):
                     command_names.add(template_id)
         except LinkarError:
             pass
@@ -405,13 +522,23 @@ class DynamicRunGroup(click.Group):
             return raw_run_command
 
         try:
+            project_obj = discover_project()
+            active_entry = get_active_pack_entry(project_obj)
             visible = [template for template in list_templates(project=None) if template["id"] == cmd_name]
         except LinkarError:
             visible = []
 
         if len(visible) == 1:
-            return template_command_callback(cmd_name, visible[0]["path"])
+            return template_command_callback(cmd_name, visible[0]["path"], visible[0]["pack_ref"])
         if len(visible) > 1:
+            if active_entry is not None:
+                active_matches = [template for template in visible if template["pack_ref"] == active_entry.asset.ref]
+                if len(active_matches) == 1:
+                    return template_command_callback(
+                        cmd_name,
+                        active_matches[0]["path"],
+                        active_matches[0]["pack_ref"],
+                    )
             def ambiguous() -> None:
                 raise ProjectValidationError(
                     f"Template '{cmd_name}' is ambiguous across configured packs. Use 'linkar run raw {cmd_name} --pack ...' instead."

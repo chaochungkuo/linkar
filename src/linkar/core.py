@@ -44,6 +44,7 @@ class Project:
 
 @dataclass
 class PackEntry:
+    id: str
     asset: ResolvedAsset
     binding: str | None = None
 
@@ -82,6 +83,46 @@ def project_file(path: Path) -> Path:
     return path
 
 
+def derive_pack_id(ref: str) -> str:
+    raw = ref.rstrip("/").rsplit("/", 1)[-1]
+    if raw.endswith(".git"):
+        raw = raw[:-4]
+    slug = re.sub(r"[^a-zA-Z0-9]+", "_", raw).strip("_").lower()
+    return slug or "pack"
+
+
+def pack_entry_to_data(entry: PackEntry) -> dict[str, Any]:
+    data: dict[str, Any] = {
+        "id": entry.id,
+        "ref": entry.asset.ref,
+    }
+    if entry.binding is not None:
+        data["binding"] = entry.binding
+    return data
+
+
+def unique_assets(assets: list[ResolvedAsset]) -> list[ResolvedAsset]:
+    seen: set[str] = set()
+    ordered: list[ResolvedAsset] = []
+    for asset in assets:
+        if asset.ref in seen:
+            continue
+        seen.add(asset.ref)
+        ordered.append(asset)
+    return ordered
+
+
+def preferred_pack_ref_for_assets(
+    explicit_assets: list[ResolvedAsset],
+    active_entry: PackEntry | None,
+) -> str | None:
+    if len(explicit_assets) == 1:
+        return explicit_assets[0].ref
+    if active_entry is not None and not explicit_assets:
+        return active_entry.asset.ref
+    return None
+
+
 def load_project(path: str | Path) -> Project:
     root_path = Path(path).resolve()
     file_path = project_file(root_path)
@@ -97,6 +138,9 @@ def load_project(path: str | Path) -> Project:
     packs = data.setdefault("packs", [])
     if not isinstance(packs, list):
         raise ProjectValidationError("project.yaml field 'packs' must be a list")
+    active_pack = data.get("active_pack")
+    if active_pack is not None and not isinstance(active_pack, str):
+        raise ProjectValidationError("project.yaml field 'active_pack' must be a string")
     return Project(root=file_path.parent, data=data)
 
 
@@ -108,6 +152,7 @@ def init_project(path: str | Path, project_id: str | None = None) -> Path:
         raise ProjectValidationError(f"Project already exists: {file_path}")
     data = {
         "id": project_id or root.name,
+        "active_pack": None,
         "packs": [],
         "templates": [],
     }
@@ -137,23 +182,178 @@ def project_pack_entries(project: Project | None) -> list[PackEntry]:
     entries: list[PackEntry] = []
     for item in project.data.get("packs", []):
         if isinstance(item, str):
-            entries.append(PackEntry(asset=resolve_asset_ref(item)))
+            asset = resolve_asset_ref(item)
+            entries.append(PackEntry(id=derive_pack_id(asset.ref), asset=asset))
             continue
         if not isinstance(item, dict):
             raise ProjectValidationError("project.yaml pack entries must be strings or mappings")
         ref = item.get("ref")
         if not ref or not isinstance(ref, str):
             raise ProjectValidationError("project.yaml pack entry field 'ref' is required")
+        pack_id = item.get("id")
+        if pack_id is not None and not isinstance(pack_id, str):
+            raise ProjectValidationError("project.yaml pack entry field 'id' must be a string")
         binding = item.get("binding")
         if binding is not None and not isinstance(binding, str):
             raise ProjectValidationError("project.yaml pack entry field 'binding' must be a string")
-        entries.append(PackEntry(asset=resolve_asset_ref(ref), binding=binding))
+        asset = resolve_asset_ref(ref)
+        entries.append(
+            PackEntry(
+                id=pack_id or derive_pack_id(asset.ref),
+                asset=asset,
+                binding=binding,
+            )
+        )
     return entries
+
+
+def get_active_pack_entry(project: Project | None) -> PackEntry | None:
+    entries = project_pack_entries(project)
+    if not entries:
+        return None
+    active_pack = project.data.get("active_pack") if project is not None else None
+    if active_pack:
+        for entry in entries:
+            if entry.id == active_pack or entry.asset.ref == active_pack:
+                return entry
+    if len(entries) == 1:
+        return entries[0]
+    return None
+
+
+def find_project_pack_entry(project: Project, identifier: str) -> PackEntry | None:
+    for entry in project_pack_entries(project):
+        if entry.id == identifier or entry.asset.ref == identifier:
+            return entry
+    return None
+
+
+def list_configured_packs(project: str | Path | Project | None = None) -> list[dict[str, Any]]:
+    if isinstance(project, (str, Path)):
+        project_obj = load_project(project)
+    elif project is None:
+        project_obj = discover_project()
+    else:
+        project_obj = project
+    if project_obj is None:
+        raise ProjectValidationError("No active project found")
+    active = project_obj.data.get("active_pack")
+    return [
+        {
+            "id": entry.id,
+            "ref": entry.asset.ref,
+            "binding": entry.binding,
+            "revision": entry.asset.revision,
+            "active": active == entry.id or (active is None and len(project_obj.data.get("packs", [])) == 1),
+        }
+        for entry in project_pack_entries(project_obj)
+    ]
+
+
+def add_project_pack(
+    ref: str,
+    *,
+    project: str | Path | Project | None = None,
+    pack_id: str | None = None,
+    binding: str | None = None,
+    activate: bool = False,
+) -> dict[str, Any]:
+    if isinstance(project, (str, Path)):
+        project_obj = load_project(project)
+    elif project is None:
+        project_obj = discover_project()
+    else:
+        project_obj = project
+    if project_obj is None:
+        raise ProjectValidationError("No active project found")
+    asset = resolve_asset_ref(ref)
+    resolved_id = pack_id or derive_pack_id(asset.ref)
+    for entry in project_pack_entries(project_obj):
+        if entry.id == resolved_id:
+            raise ProjectValidationError(f"Pack id already exists in project: {resolved_id}")
+        if entry.asset.ref == asset.ref:
+            raise ProjectValidationError(f"Pack already exists in project: {asset.ref}")
+    entry = PackEntry(id=resolved_id, asset=asset, binding=binding)
+    project_obj.data.setdefault("packs", []).append(pack_entry_to_data(entry))
+    if activate or len(project_obj.data["packs"]) == 1:
+        project_obj.data["active_pack"] = resolved_id
+    save_yaml(project_obj.root / "project.yaml", project_obj.data)
+    return {
+        "id": resolved_id,
+        "ref": asset.ref,
+        "binding": binding,
+        "active": project_obj.data.get("active_pack") == resolved_id,
+    }
+
+
+def set_active_pack(
+    identifier: str,
+    *,
+    project: str | Path | Project | None = None,
+) -> dict[str, Any]:
+    if isinstance(project, (str, Path)):
+        project_obj = load_project(project)
+    elif project is None:
+        project_obj = discover_project()
+    else:
+        project_obj = project
+    if project_obj is None:
+        raise ProjectValidationError("No active project found")
+    entry = find_project_pack_entry(project_obj, identifier)
+    if entry is None:
+        raise ProjectValidationError(f"Pack not found in project: {identifier}")
+    project_obj.data["active_pack"] = entry.id
+    save_yaml(project_obj.root / "project.yaml", project_obj.data)
+    return {
+        "id": entry.id,
+        "ref": entry.asset.ref,
+        "binding": entry.binding,
+        "active": True,
+    }
+
+
+def remove_project_pack(
+    identifier: str,
+    *,
+    project: str | Path | Project | None = None,
+) -> dict[str, Any]:
+    if isinstance(project, (str, Path)):
+        project_obj = load_project(project)
+    elif project is None:
+        project_obj = discover_project()
+    else:
+        project_obj = project
+    if project_obj is None:
+        raise ProjectValidationError("No active project found")
+    entry = find_project_pack_entry(project_obj, identifier)
+    if entry is None:
+        raise ProjectValidationError(f"Pack not found in project: {identifier}")
+    kept: list[dict[str, Any] | str] = []
+    for item in project_obj.data.get("packs", []):
+        if isinstance(item, str):
+            if resolve_asset_ref(item).ref == entry.asset.ref:
+                continue
+            kept.append(item)
+            continue
+        if item.get("id") == entry.id or item.get("ref") == entry.asset.ref:
+            continue
+        kept.append(item)
+    project_obj.data["packs"] = kept
+    if project_obj.data.get("active_pack") == entry.id:
+        remaining_entries = project_pack_entries(project_obj)
+        project_obj.data["active_pack"] = remaining_entries[0].id if remaining_entries else None
+    save_yaml(project_obj.root / "project.yaml", project_obj.data)
+    return {
+        "id": entry.id,
+        "ref": entry.asset.ref,
+        "binding": entry.binding,
+    }
 
 
 def load_template(
     template_ref: str | Path,
     pack_assets: list[ResolvedAsset] | None = None,
+    preferred_pack_ref: str | None = None,
 ) -> TemplateSpec:
     ref_path = Path(template_ref)
     if ref_path.exists():
@@ -172,12 +372,29 @@ def load_template(
                 f"Template not found: {template_ref}. Pass a template path or use --pack."
             )
         if len(candidates) > 1:
-            joined = ", ".join(asset.ref for asset in candidate_assets)
-            raise AssetResolutionError(
-                f"Template '{template_ref}' is ambiguous across packs: {joined}"
-            )
-        root = candidates[0]
-        pack_asset = candidate_assets[0]
+            if preferred_pack_ref is not None:
+                preferred = [
+                    (candidate, asset)
+                    for candidate, asset in zip(candidates, candidate_assets)
+                    if asset.ref == preferred_pack_ref
+                ]
+                if len(preferred) == 1:
+                    root = preferred[0][0]
+                    pack_asset = preferred[0][1]
+                    candidates = []
+                else:
+                    joined = ", ".join(asset.ref for asset in candidate_assets)
+                    raise AssetResolutionError(
+                        f"Template '{template_ref}' is ambiguous across packs: {joined}"
+                    )
+            else:
+                joined = ", ".join(asset.ref for asset in candidate_assets)
+                raise AssetResolutionError(
+                    f"Template '{template_ref}' is ambiguous across packs: {joined}"
+                )
+        if candidates:
+            root = candidates[0]
+            pack_asset = candidate_assets[0]
 
     spec_path = root / "template.yaml"
     if not spec_path.exists():
@@ -517,6 +734,13 @@ def update_project(project: Project, template: TemplateSpec, instance_id: str, o
         "outputs": outputs,
         "meta": relative_meta,
     }
+    if template.pack_ref is not None:
+        pack_entry = find_project_pack_entry(project, template.pack_ref)
+        entry["pack"] = {
+            "id": pack_entry.id if pack_entry is not None else derive_pack_id(template.pack_ref),
+            "ref": template.pack_ref,
+            "revision": template.pack_revision,
+        }
     project.data.setdefault("templates", []).append(entry)
     save_yaml(project.root / "project.yaml", project.data)
 
@@ -546,10 +770,14 @@ def resolve_project_assets(project: str | Path | Project | None = None) -> list[
     for entry in project_pack_entries(project_obj):
         assets.append(
             {
+                "pack_id": entry.id,
                 "pack_ref": entry.asset.ref,
                 "pack_root": str(entry.asset.root),
                 "pack_revision": entry.asset.revision,
                 "binding": entry.binding,
+                "active": project_obj.data.get("active_pack") == entry.id or (
+                    project_obj.data.get("active_pack") is None and len(project_obj.data.get("packs", [])) == 1
+                ),
             }
         )
     return assets
@@ -595,7 +823,12 @@ def list_templates(
     else:
         project_obj = project
     project_entries = project_pack_entries(project_obj)
-    pack_assets = resolve_asset_refs(pack_refs) + [entry.asset for entry in project_entries]
+    active_entry = get_active_pack_entry(project_obj)
+    ordered_project_entries = sorted(
+        project_entries,
+        key=lambda entry: 0 if active_entry is not None and entry.id == active_entry.id else 1,
+    )
+    pack_assets = unique_assets(resolve_asset_refs(pack_refs) + [entry.asset for entry in ordered_project_entries])
     seen: set[tuple[str, str]] = set()
     templates: list[dict[str, Any]] = []
     for asset in pack_assets:
@@ -665,8 +898,21 @@ def test_template(
         project_obj = project
 
     project_entries = project_pack_entries(project_obj)
-    combined_pack_assets = resolve_asset_refs(pack_refs) + [entry.asset for entry in project_entries]
-    template = load_template(template_ref, pack_assets=combined_pack_assets)
+    active_entry = get_active_pack_entry(project_obj)
+    explicit_pack_assets = resolve_asset_refs(pack_refs)
+    ordered_project_entries = sorted(
+        project_entries,
+        key=lambda entry: 0 if active_entry is not None and entry.id == active_entry.id else 1,
+    )
+    combined_pack_assets = unique_assets(
+        explicit_pack_assets + [entry.asset for entry in ordered_project_entries]
+    )
+    preferred_pack_ref = preferred_pack_ref_for_assets(explicit_pack_assets, active_entry)
+    template = load_template(
+        template_ref,
+        pack_assets=combined_pack_assets,
+        preferred_pack_ref=preferred_pack_ref,
+    )
 
     test_script = template.root / "test.sh"
     if not test_script.exists():
@@ -745,11 +991,24 @@ def run_template(
     else:
         project_obj = project
     project_entries = project_pack_entries(project_obj)
-    combined_pack_assets = resolve_asset_refs(pack_refs) + [entry.asset for entry in project_entries]
-    template = load_template(template_ref, pack_assets=combined_pack_assets)
+    active_entry = get_active_pack_entry(project_obj)
+    explicit_pack_assets = resolve_asset_refs(pack_refs)
+    ordered_project_entries = sorted(
+        project_entries,
+        key=lambda entry: 0 if active_entry is not None and entry.id == active_entry.id else 1,
+    )
+    combined_pack_assets = unique_assets(
+        explicit_pack_assets + [entry.asset for entry in ordered_project_entries]
+    )
+    preferred_pack_ref = preferred_pack_ref_for_assets(explicit_pack_assets, active_entry)
+    template = load_template(
+        template_ref,
+        pack_assets=combined_pack_assets,
+        preferred_pack_ref=preferred_pack_ref,
+    )
     selected_binding_ref = normalize_binding_ref(binding_ref)
     if selected_binding_ref is None and template.pack_root is not None:
-        for entry in project_entries:
+        for entry in ordered_project_entries:
             if entry.asset.root == template.pack_root:
                 selected_binding_ref = normalize_binding_ref(entry.binding)
                 break

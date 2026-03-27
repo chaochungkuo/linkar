@@ -103,6 +103,7 @@ def test_project_init(tmp_path: Path) -> None:
 
     data = yaml.safe_load((target / "project.yaml").read_text())
     assert data["id"] == "project_001"
+    assert data["active_pack"] is None
     assert data["packs"] == []
     assert data["templates"] == []
 
@@ -115,8 +116,55 @@ def test_project_init_with_name_creates_directory(tmp_path: Path) -> None:
     assert project_dir.is_dir()
     data = yaml.safe_load((project_dir / "project.yaml").read_text())
     assert data["id"] == "PROJECT1"
+    assert data["active_pack"] is None
     assert data["packs"] == []
     assert data["templates"] == []
+
+
+def test_pack_commands_manage_project_configuration(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    pack_one = tmp_path / "pack_one"
+    pack_two = tmp_path / "pack_two"
+    pack_one.mkdir()
+    pack_two.mkdir()
+
+    added = run_cli("pack", "add", str(pack_one), "--id", "pack_one", cwd=project_dir)
+    assert added.returncode == 0, added.stderr
+    assert "pack_one" in added.stdout
+
+    added_two = run_cli(
+        "pack",
+        "add",
+        str(pack_two),
+        "--id",
+        "pack_two",
+        "--activate",
+        cwd=project_dir,
+    )
+    assert added_two.returncode == 0, added_two.stderr
+
+    listed = run_cli("pack", "list", cwd=project_dir)
+    assert listed.returncode == 0, listed.stderr
+    assert "*\tpack_two\t" in listed.stdout
+    assert "-\tpack_one\t" in listed.stdout
+
+    shown = run_cli("pack", "show", cwd=project_dir)
+    assert shown.returncode == 0, shown.stderr
+    assert "pack_two" in shown.stdout
+
+    used = run_cli("pack", "use", "pack_one", cwd=project_dir)
+    assert used.returncode == 0, used.stderr
+    project = yaml.safe_load((project_dir / "project.yaml").read_text())
+    assert project["active_pack"] == "pack_one"
+
+    removed = run_cli("pack", "remove", "pack_two", cwd=project_dir)
+    assert removed.returncode == 0, removed.stderr
+    project = yaml.safe_load((project_dir / "project.yaml").read_text())
+    assert len(project["packs"]) == 1
+    assert project["packs"][0]["id"] == "pack_one"
 
 
 def test_project_init_rejects_path_and_name_together(tmp_path: Path) -> None:
@@ -318,6 +366,44 @@ def test_project_pack_configuration_is_used_for_template_lookup(tmp_path: Path) 
 
     indexed = yaml.safe_load(project_file.read_text())
     assert indexed["templates"][0]["id"] == "hello"
+    assert indexed["templates"][0]["pack"]["id"] == "pack"
+
+
+def test_active_pack_resolves_duplicate_template_ids(tmp_path: Path) -> None:
+    pack_one = tmp_path / "pack_one"
+    pack_two = tmp_path / "pack_two"
+    make_template(
+        pack_one / "templates",
+        "dup",
+        "  name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'one %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/out.txt"
+""",
+    )
+    make_template(
+        pack_two / "templates",
+        "dup",
+        "  name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'two %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/out.txt"
+""",
+    )
+
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+    assert run_cli("pack", "add", str(pack_one), "--id", "pack_one", cwd=project_dir).returncode == 0
+    assert run_cli("pack", "add", str(pack_two), "--id", "pack_two", "--activate", cwd=project_dir).returncode == 0
+
+    completed = run_cli("run", "dup", "--name", "Linkar", cwd=project_dir)
+    assert completed.returncode == 0, completed.stderr
+
+    project = yaml.safe_load((project_dir / "project.yaml").read_text())
+    outdir = project_dir / project["templates"][0]["path"]
+    assert (outdir / "results" / "out.txt").read_text().strip() == "two Linkar"
+    assert project["templates"][0]["pack"]["id"] == "pack_two"
 
 
 def test_dynamic_template_help_exposes_template_specific_options(tmp_path: Path) -> None:
@@ -917,10 +1003,12 @@ printf '%s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/name.txt"
     assets = resolve_project_assets(project_dir)
     assert assets == [
         {
+            "pack_id": "pack",
             "pack_ref": str(pack_root.resolve()),
             "pack_root": str(pack_root.resolve()),
             "pack_revision": None,
             "binding": "default",
+            "active": True,
         }
     ]
 
