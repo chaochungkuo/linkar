@@ -61,6 +61,7 @@ The current minimal structure is:
 
 ```yaml
 id: bclconvert_qc
+version: 0.1.0
 params:
   bcl_dir:
     type: path
@@ -91,6 +92,23 @@ Examples:
 - `bclconvert`
 - `fastqc`
 - `rnaseq`
+
+### `version`
+Optional.
+
+This is the template definition version, used for provenance and auditability.
+
+Rules:
+
+- Should be a human-readable string
+- Should change when the template behavior or interface changes materially
+- Does not affect template lookup or resolution in the current implementation
+
+Examples:
+
+- `0.1.0`
+- `1.2.3`
+- `2026.03`
 
 ### `params`
 Optional, but usually expected.

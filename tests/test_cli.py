@@ -54,13 +54,23 @@ def create_git_repo(path: Path) -> str:
     return path.resolve().as_uri()
 
 
-def make_template(root: Path, template_id: str, params: str, body: str) -> Path:
+def make_template(
+    root: Path,
+    template_id: str,
+    params: str,
+    body: str,
+    *,
+    version: str | None = None,
+) -> Path:
     template_dir = root / template_id
     template_dir.mkdir(parents=True)
+    header = [f"id: {template_id}"]
+    if version is not None:
+        header.append(f"version: {version}")
     (template_dir / "template.yaml").write_text(
         "\n".join(
-            [
-                f"id: {template_id}",
+            header
+            + [
                 "params:",
                 params,
                 "run:",
@@ -243,8 +253,44 @@ def test_run_template_updates_project(tmp_path: Path) -> None:
 
     meta = json.loads((project_dir / instance["meta"]).read_text())
     assert meta["template"] == "hello"
+    assert meta["template_version"] == "0.1.0"
     assert meta["params"]["name"] == "Linkar"
     assert meta["param_provenance"]["name"]["source"] == "explicit"
+    assert instance["template_version"] == "0.1.0"
+
+
+def test_template_version_is_recorded_for_custom_templates(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    template = make_template(
+        tmp_path / "templates",
+        "versioned_template",
+        "  name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/name.txt"
+""",
+        version="1.2.3",
+    )
+
+    completed = run_cli(
+        "run",
+        "raw",
+        str(template),
+        "--param",
+        "name=Versioned",
+        cwd=project_dir,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+    project = yaml.safe_load((project_dir / "project.yaml").read_text())
+    entry = project["templates"][0]
+    assert entry["template_version"] == "1.2.3"
+
+    meta = json.loads((project_dir / entry["meta"]).read_text())
+    assert meta["template_version"] == "1.2.3"
 
 
 def test_run_discovers_project_from_current_directory(tmp_path: Path) -> None:

@@ -27,6 +27,7 @@ from linkar.errors import (
 @dataclass
 class TemplateSpec:
     id: str
+    version: str | None
     root: Path
     params: dict[str, dict[str, Any]]
     run_entry: str
@@ -404,6 +405,9 @@ def load_template(
     template_id = data.get("id")
     if not template_id:
         raise TemplateValidationError(f"Template id missing in {spec_path}")
+    template_version = data.get("version")
+    if template_version is not None and not isinstance(template_version, str):
+        raise TemplateValidationError(f"Template version must be a string in {spec_path}")
 
     run = data.get("run") or {}
     entry = run.get("entry")
@@ -434,6 +438,7 @@ def load_template(
 
     return TemplateSpec(
         id=template_id,
+        version=template_version,
         root=root,
         params=params,
         run_entry=entry,
@@ -728,6 +733,7 @@ def update_project(project: Project, template: TemplateSpec, instance_id: str, o
     relative_meta = os.path.relpath(meta_path, project.root)
     entry = {
         "id": template.id,
+        "template_version": template.version,
         "instance_id": instance_id,
         "path": relative_path,
         "params": params,
@@ -848,6 +854,7 @@ def list_templates(
             templates.append(
                 {
                     "id": template_id,
+                    "version": spec.get("version"),
                     "pack_ref": asset.ref,
                     "pack_revision": asset.revision,
                     "path": str(child.resolve()),
@@ -1077,6 +1084,7 @@ def run_template(
         meta_path,
         {
             "template": template.id,
+            "template_version": template.version,
             "instance_id": instance_id,
             "params": resolved_params,
             "param_provenance": param_provenance,

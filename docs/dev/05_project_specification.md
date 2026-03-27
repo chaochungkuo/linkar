@@ -54,6 +54,7 @@ id: project_001
 packs: []
 templates:
   - id: fastqc
+    template_version: 0.1.0
     instance_id: fastqc_001
     path: ./fastqc_001
     params: {}
@@ -126,6 +127,7 @@ Each item in `templates` represents one recorded template instance.
 Expected fields:
 
 - `id`
+- `template_version`
 - `instance_id`
 - `path`
 - `params`
@@ -142,6 +144,11 @@ Examples:
 
 - `fastqc_001`
 - `fastqc_002`
+
+### `template_version`
+The template definition version used for this run, if the template declares one.
+
+This is provenance only. It should help later inspection and reproducibility, but it should not be treated as the primary lookup key for template resolution.
 
 ### `path`
 The relative path from the project root to the run directory.
