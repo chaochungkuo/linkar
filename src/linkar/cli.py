@@ -61,7 +61,7 @@ if hasattr(click, "rich_click"):
         "  linkar config pack add ~/github/izkf_genomics_pack\n"
         "  linkar pack add /path/to/project-pack\n"
         "  linkar run fastqc --input sample.fastq.gz\n"
-        "  linkar run raw simple_echo --pack ./examples/packs/basic --param name=Linkar\n"
+        "  linkar run simple_echo --pack ./examples/packs/basic --param name=Linkar\n"
         "  linkar test fastqc\n\n"
         "Linkar keeps the CLI thin over the core runtime semantics."
     )
@@ -275,7 +275,7 @@ def project_runs(project: str | None, ui: CliUI) -> None:
 )
 @click.pass_context
 def run_group(ctx: click.Context) -> None:
-    """Run configured templates with template-aware options or use 'raw' for ad hoc execution."""
+    """Run templates with template-aware options or the generic TEMPLATE interface."""
 
 
 run_group.add_command(raw_run_command)

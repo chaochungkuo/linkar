@@ -112,33 +112,106 @@ def template_command_callback(template_id: str, template_path: str, pack_ref: st
     )
 
 
-@handle_linkar_errors
-def run_raw_command(
-    template: str,
-    pack: tuple[str, ...],
-    binding: str | None,
-    project: str | None,
-    outdir: str | None,
-    prompt_missing: bool,
-    param: tuple[tuple[str, str], ...],
-    ui: CliUI,
-) -> None:
-    with ui.status("Running template"):
-        result = run_with_optional_prompts(
-            template,
-            params=params_from_pairs(param),
-            project=project,
-            outdir=outdir,
-            pack_refs=list(pack),
-            binding_ref=binding,
-            prompt_missing=prompt_missing,
+def generic_run_callback(bound_template: str | None = None):
+    @handle_linkar_errors
+    def callback(
+        pack: tuple[str, ...],
+        binding: str | None,
+        project: str | None,
+        outdir: str | None,
+        prompt_missing: bool,
+        param: tuple[tuple[str, str], ...],
+        ui: CliUI,
+        template: str | None = None,
+    ) -> None:
+        template_ref = bound_template or template
+        if template_ref is None:
+            raise ProjectValidationError("Missing template reference.")
+        with ui.status("Running template"):
+            result = run_with_optional_prompts(
+                template_ref,
+                params=params_from_pairs(param),
+                project=project,
+                outdir=outdir,
+                pack_refs=list(pack),
+                binding_ref=binding,
+                prompt_missing=prompt_missing,
+            )
+        ui.print_run_completed(result)
+
+    return callback
+
+
+def make_generic_run_command(name: str, *, bound_template: str | None = None, hidden: bool = False):
+    params: list[click.Parameter] = []
+    if bound_template is None:
+        params.append(
+            click.Argument(
+                ["template"],
+                required=True,
+                shell_complete=shell_complete_template_ref,
+            )
         )
-    ui.print_run_completed(result)
+
+    params.extend(
+        [
+            click.Option(
+                ["--pack"],
+                multiple=True,
+                type=str,
+                shell_complete=shell_complete_filesystem_ref,
+                help="Pack path or asset reference to search for the template. Repeat to add more than one.",
+                show_default=False,
+            ),
+            click.Option(
+                ["--binding"],
+                type=str,
+                shell_complete=shell_complete_filesystem_ref,
+                help="Binding path or asset reference used to resolve parameters.",
+                show_default=False,
+            ),
+            click.Option(
+                ["--project"],
+                type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+                help="Project directory or project.yaml path. Defaults to the current directory.",
+                show_default=False,
+            ),
+            click.Option(
+                ["--outdir"],
+                type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+                help="Write run artifacts to a specific directory instead of the default location.",
+                show_default=False,
+            ),
+            click.Option(
+                ["--prompt/--no-prompt", "prompt_missing"],
+                default=True,
+                help="Prompt interactively for unresolved required parameters when running in a TTY.",
+                show_default=True,
+            ),
+            click.Option(
+                ["--param"],
+                multiple=True,
+                callback=lambda _ctx, _param, value: tuple(parse_key_value(item) for item in value),
+                metavar="KEY=VALUE",
+                help="Template parameter in KEY=VALUE form.",
+                show_default=False,
+            ),
+        ]
+    )
+
+    return click.Command(
+        name=name,
+        callback=generic_run_callback(bound_template),
+        params=params,
+        help="Run any template by id or path using the generic execution interface.",
+        short_help="Run a template with the generic interface.",
+        hidden=hidden,
+    )
 
 
 class DynamicRunGroup(click.Group):
     def list_commands(self, ctx: click.Context) -> list[str]:
-        command_names = {"raw"}
+        command_names: set[str] = set()
         by_id: dict[str, list[dict[str, Any]]] = defaultdict(list)
         try:
             templates = list_templates(project=None)
@@ -179,66 +252,7 @@ class DynamicRunGroup(click.Group):
                         active_matches[0]["pack_ref"],
                     )
 
-            def ambiguous() -> None:
-                raise ProjectValidationError(
-                    f"Template '{cmd_name}' is ambiguous across configured packs. Use 'linkar run raw {cmd_name} --pack ...' instead."
-                )
-
-            return click.Command(cmd_name, callback=handle_linkar_errors(ambiguous))
-        return None
+        return make_generic_run_command(cmd_name, bound_template=cmd_name)
 
 
-raw_run_command = click.Command(
-    name="raw",
-    callback=run_raw_command,
-    params=[
-        click.Argument(
-            ["template"],
-            required=True,
-            shell_complete=shell_complete_template_ref,
-        ),
-        click.Option(
-            ["--pack"],
-            multiple=True,
-            type=str,
-            shell_complete=shell_complete_filesystem_ref,
-            help="Pack path or asset reference to search for the template. Repeat to add more than one.",
-            show_default=False,
-        ),
-        click.Option(
-            ["--binding"],
-            type=str,
-            shell_complete=shell_complete_filesystem_ref,
-            help="Binding path or asset reference used to resolve parameters.",
-            show_default=False,
-        ),
-        click.Option(
-            ["--project"],
-            type=click.Path(path_type=str, dir_okay=True, file_okay=True),
-            help="Project directory or project.yaml path. Defaults to the current directory.",
-            show_default=False,
-        ),
-        click.Option(
-            ["--outdir"],
-            type=click.Path(path_type=str, dir_okay=True, file_okay=True),
-            help="Write run artifacts to a specific directory instead of the default location.",
-            show_default=False,
-        ),
-        click.Option(
-            ["--prompt/--no-prompt", "prompt_missing"],
-            default=True,
-            help="Prompt interactively for unresolved required parameters when running in a TTY.",
-            show_default=True,
-        ),
-        click.Option(
-            ["--param"],
-            multiple=True,
-            callback=lambda _ctx, _param, value: tuple(parse_key_value(item) for item in value),
-            metavar="KEY=VALUE",
-            help="Template parameter in KEY=VALUE form.",
-            show_default=False,
-        ),
-    ],
-    help="Run any template by id or path using the generic execution interface.",
-    short_help="Run a template with the generic interface.",
-)
+raw_run_command = make_generic_run_command("raw", hidden=True)

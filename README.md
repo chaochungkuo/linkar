@@ -33,7 +33,7 @@ linkar project init --name demo
 Run the example template ad hoc from the bundled pack, without creating or using a project:
 
 ```bash
-linkar run raw simple_echo \
+linkar run simple_echo \
   --pack ./examples/packs/basic \
   --param name=Linkar
 ```
@@ -49,7 +49,7 @@ In project mode, Linkar creates an instance directory in the project, writes res
 
 Pack scope is intentionally project-first:
 
-- `linkar run raw ... --pack ...` is ad hoc and does not require a project
+- `linkar run TEMPLATE --pack ...` is ad hoc and does not require a project
 - `linkar pack ...` manages packs saved in the current project's `project.yaml`
 - `linkar config pack ...` manages global packs saved in user config
 
@@ -67,7 +67,7 @@ linkar config pack list
 linkar run fastqc --input sample.fastq.gz
 ```
 
-Use `linkar run raw ...` when you want the generic path-or-pack execution interface.
+Use `linkar run TEMPLATE ...` when you want the generic path-or-pack execution interface.
 
 ## Website
 

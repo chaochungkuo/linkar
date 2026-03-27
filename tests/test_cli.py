@@ -245,12 +245,12 @@ def test_help_output_is_clean_and_descriptive(tmp_path: Path) -> None:
     assert root_help.returncode == 0, root_help.stderr
     assert "Run reusable computational templates" in root_help.stdout
     assert "Commands" in root_help.stdout
-    assert "linkar run raw simple_echo --pack" in root_help.stdout
+    assert "linkar run simple_echo --pack" in root_help.stdout
 
     run_help = run_cli("run", "--help", cwd=tmp_path)
     assert run_help.returncode == 0, run_help.stderr
-    assert "Run configured templates with template-aware options" in run_help.stdout
-    assert "raw" in run_help.stdout
+    assert "Run templates with template-aware options or the generic TEMPLATE" in run_help.stdout
+    assert "raw" not in run_help.stdout
 
     project_init_help = run_cli("project", "init", "--help", cwd=tmp_path)
     assert project_init_help.returncode == 0, project_init_help.stderr
@@ -275,11 +275,10 @@ def test_bare_cli_shows_helpful_guidance(tmp_path: Path) -> None:
 
 
 def test_parser_errors_show_contextual_help(tmp_path: Path) -> None:
-    completed = run_cli("run", "raw", cwd=tmp_path)
+    completed = run_cli("run", cwd=tmp_path)
     assert completed.returncode == 2
-    assert "Missing argument 'TEMPLATE'" in completed.stderr
-    assert "Usage: linkar run raw" in completed.stderr
-    assert "Use -h or --help for more details." in completed.stderr
+    assert "Usage: linkar run" in completed.stdout
+    assert "Commands" in completed.stdout
 
 
 def test_run_template_updates_project(tmp_path: Path) -> None:
@@ -289,7 +288,6 @@ def test_run_template_updates_project(tmp_path: Path) -> None:
 
     completed = run_cli(
         "run",
-        "raw",
         "simple_echo",
         "--pack",
         str(ROOT / "examples" / "packs" / "basic"),
@@ -334,7 +332,6 @@ printf '%s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/name.txt"
 
     completed = run_cli(
         "run",
-        "raw",
         str(template),
         "--param",
         "name=Versioned",
@@ -368,7 +365,6 @@ printf '%s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/name.txt"
 
     completed = run_cli(
         "run",
-        "raw",
         str(template),
         "--param",
         "name=Rendered",
@@ -399,7 +395,6 @@ def test_run_discovers_project_from_current_directory(tmp_path: Path) -> None:
 
     completed = run_cli(
         "run",
-        "raw",
         "simple_echo",
         "--pack",
         str(ROOT / "examples" / "packs" / "basic"),
@@ -442,7 +437,6 @@ cp "${RESULTS_DIR}/fastq/sample.txt" "${LINKAR_RESULTS_DIR}/consumed.txt"
 
     produce = run_cli(
         "run",
-        "raw",
         str(producer),
         "--param",
         "sample_name=S1",
@@ -450,7 +444,7 @@ cp "${RESULTS_DIR}/fastq/sample.txt" "${LINKAR_RESULTS_DIR}/consumed.txt"
     )
     assert produce.returncode == 0, produce.stderr
 
-    consume = run_cli("run", "raw", str(consumer), cwd=project_dir)
+    consume = run_cli("run", str(consumer), cwd=project_dir)
     assert consume.returncode == 0, consume.stderr
 
     project = yaml.safe_load((project_dir / "project.yaml").read_text())
@@ -465,7 +459,6 @@ cp "${RESULTS_DIR}/fastq/sample.txt" "${LINKAR_RESULTS_DIR}/consumed.txt"
 def test_ephemeral_run_uses_linkar_runs(tmp_path: Path) -> None:
     completed = run_cli(
         "run",
-        "raw",
         "simple_echo",
         "--pack",
         str(ROOT / "examples" / "packs" / "basic"),
@@ -785,7 +778,6 @@ printf 'Wave, %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/wave.txt"
 
     completed = run_cli(
         "run",
-        "raw",
         "wave",
         "--pack",
         str(pack_one),
@@ -824,7 +816,6 @@ printf 'two %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/out.txt"
 
     completed = run_cli(
         "run",
-        "raw",
         "dup",
         "--pack",
         str(pack_one),
@@ -850,7 +841,7 @@ exit 7
 """,
     )
 
-    completed = run_cli("run", "raw", str(template), "--param", "name=x", cwd=tmp_path)
+    completed = run_cli("run", str(template), "--param", "name=x", cwd=tmp_path)
     assert completed.returncode == 1
     assert "runtime.json" in completed.stderr
 
@@ -947,7 +938,6 @@ def resolve(ctx):
 
     completed = run_cli(
         "run",
-        "raw",
         "consume_literal",
         "--pack",
         str(pack_root),
@@ -1017,7 +1007,7 @@ printf '%s\n' "${GREETING}" > "${LINKAR_RESULTS_DIR}/greeting.txt"
 """,
     )
 
-    completed = run_cli("run", "raw", str(template), cwd=tmp_path)
+    completed = run_cli("run", str(template), cwd=tmp_path)
     assert completed.returncode == 0, completed.stderr
     outdir = Path(completed.stdout.strip())
     meta = json.loads((outdir / ".linkar" / "meta.json").read_text())
@@ -1042,7 +1032,6 @@ printf 'Git wave, %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/wave.txt"
 
     completed = run_cli(
         "run",
-        "raw",
         "git_wave",
         "--pack",
         git_url,
@@ -1092,7 +1081,6 @@ def resolve(ctx):
 
     completed = run_cli(
         "run",
-        "raw",
         "git_bound",
         "--pack",
         str(pack_root),
@@ -1115,7 +1103,6 @@ def test_project_runs_command_lists_indexed_runs(tmp_path: Path) -> None:
 
     completed = run_cli(
         "run",
-        "raw",
         "simple_echo",
         "--pack",
         str(ROOT / "examples" / "packs" / "basic"),
@@ -1166,7 +1153,6 @@ def test_inspect_run_command_returns_metadata_json(tmp_path: Path) -> None:
 
     completed = run_cli(
         "run",
-        "raw",
         "simple_echo",
         "--pack",
         str(ROOT / "examples" / "packs" / "basic"),
@@ -1209,9 +1195,9 @@ cp "${RESULTS_DIR}/fastq/sample.txt" "${LINKAR_RESULTS_DIR}/consumed.txt"
 """,
     )
 
-    produce = run_cli("run", "raw", str(producer), "--param", "sample_name=S1", cwd=project_dir)
+    produce = run_cli("run", str(producer), "--param", "sample_name=S1", cwd=project_dir)
     assert produce.returncode == 0, produce.stderr
-    consume = run_cli("run", "raw", str(consumer), cwd=project_dir)
+    consume = run_cli("run", str(consumer), cwd=project_dir)
     assert consume.returncode == 0, consume.stderr
 
     methods = run_cli("methods", cwd=project_dir)
