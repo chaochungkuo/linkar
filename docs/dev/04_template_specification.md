@@ -218,6 +218,16 @@ For shell-based templates, the preferred convention is:
 - keep template-local testing in either `test.sh` or `test.py`
 - let `run.sh` assume it runs beside any support files the template needs
 
+During a real run, Linkar stages a runtime bundle into the run directory before execution.
+
+This means:
+
+- the entry script runs from the recorded run artifact
+- support files such as `pixi.toml`, helper scripts, and local configs are copied beside it
+- test-only files such as `test.sh`, `test.py`, and `testdata/` remain in the source template directory
+
+This keeps authoring simple while preserving self-contained run artifacts.
+
 This keeps the runtime contract small and keeps template authoring close to a normal directory-based tool layout.
 
 ## Execution Modes

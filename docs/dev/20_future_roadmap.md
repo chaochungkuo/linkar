@@ -22,8 +22,8 @@ Turn the current design docs into a stable baseline for implementation.
 - [x] Complete and align core design docs under `docs/dev`
 - [x] Define the MVP boundary
 - [x] Align terminology across vision, concepts, architecture, template, project, pack, binding, CLI, and API docs
-- [ ] Define repository development conventions
-- [ ] Add minimal example assets specifically intended for spec validation
+- [x] Define repository development conventions
+- [x] Add minimal example assets specifically intended for spec validation
 
 ### Exit Criteria
 - [x] No major contradictions across the core docs
@@ -350,22 +350,22 @@ Add broader distribution and richer user-facing surfaces after the local API lay
 
 ## Cross-Cutting Workstreams
 ### Testing
-- [ ] Add unit tests for parsers and resolution logic
-- [ ] Add integration tests for template execution
-- [ ] Add project-mode coverage
-- [ ] Add ephemeral-mode coverage
-- [ ] Add pack selection tests once pack support exists
-- [ ] Add binding selection tests once binding support exists
+- [x] Add unit tests for parsers and resolution logic
+- [x] Add integration tests for template execution
+- [x] Add project-mode coverage
+- [x] Add ephemeral-mode coverage
+- [x] Add pack selection tests once pack support exists
+- [x] Add binding selection tests once binding support exists
 - [x] Add API server tests once the local API layer exists
 
 ### Documentation
-- [ ] Keep `docs/dev` aligned with implementation
-- [ ] Maintain example templates and packs
-- [ ] Write minimal user-facing quickstarts when behavior stabilizes
+- [x] Keep `docs/dev` aligned with implementation
+- [x] Maintain example templates and packs
+- [x] Write minimal user-facing quickstarts when behavior stabilizes
 
 ### Example Assets
-- [ ] Maintain one minimal standalone template
-- [ ] Maintain one small multi-step pack
+- [x] Maintain one minimal standalone template
+- [x] Maintain one small multi-step pack
 - [ ] Maintain one example binding setup showing default vs override behavior
 
 ### Error Quality

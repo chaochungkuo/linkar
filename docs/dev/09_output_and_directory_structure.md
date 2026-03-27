@@ -31,6 +31,13 @@ This is the primary artifact for the run.
 
 For shell-based templates, `run.sh` is the runtime entrypoint recorded with the run artifact.
 
+In direct mode, Linkar stages the runtime bundle into this directory before execution. That staged bundle may include:
+
+- the entrypoint
+- helper scripts
+- local environment files such as `pixi.toml` and `pixi.lock`
+- other support files required by the runtime logic
+
 Test-only files such as `test.sh`, `test.py`, and `testdata/` should remain in the source template directory and should not be copied into recorded run artifacts.
 
 ### `outdir/results/`

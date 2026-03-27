@@ -69,6 +69,32 @@ linkar run fastqc --input sample.fastq.gz
 
 Use `linkar run TEMPLATE ...` when you want the generic path-or-pack execution interface.
 
+## Example Packs
+
+Bundled examples are organized by teaching purpose:
+
+- `examples/packs/basic`
+  - minimal templates and local authoring patterns
+  - includes `simple_echo`, `simple_file_input`, `simple_boolean_flag`, `download_test_data`, `fastq_stats`, `pixi_echo`, and `pixi_pytest`
+- `examples/packs/chaining`
+  - a small project-mode pack showing output reuse through a default binding
+- `examples/packs/pack_management`
+  - two tiny packs with the same template id to demonstrate active-pack selection
+- `examples/packs/remote`
+  - a tiny pack intended for Git-backed remote asset demonstrations
+
+Typical progression:
+
+```bash
+linkar test simple_echo --pack ./examples/packs/basic
+linkar test simple_file_input --pack ./examples/packs/basic
+linkar test simple_boolean_flag --pack ./examples/packs/basic
+linkar test download_test_data --pack ./examples/packs/basic
+linkar test fastq_stats --pack ./examples/packs/basic
+```
+
+The basic pack is for didactic templates. Real domain templates should live in a dedicated external pack such as `izkf_genomics_pack`.
+
 ## Website
 
 The demo/docs site now lives in `website/` and is built with Astro for GitHub Pages.
