@@ -1,0 +1,12 @@
+id: pixi_pytest
+version: 0.1.0
+description: Run a tiny pytest suite through pixi and write a JUnit report.
+params:
+  name:
+    type: str
+    required: true
+outputs:
+  pytest_report: {}
+run:
+  entry: run.sh
+  mode: direct
