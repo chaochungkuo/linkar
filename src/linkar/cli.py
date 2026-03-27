@@ -6,7 +6,10 @@ from functools import update_wrapper
 from pathlib import Path
 from typing import Any
 
-import click
+try:
+    import rich_click as click
+except ImportError:
+    import click
 
 from linkar import __version__
 from linkar.assets import resolve_asset_refs
@@ -25,6 +28,21 @@ from linkar.core import (
 from linkar.errors import LinkarError, ParameterResolutionError, ProjectValidationError
 from linkar.server import serve
 from linkar.ui import CliUI
+
+if hasattr(click, "rich_click"):
+    click.rich_click.STYLE_OPTION = "bold cyan"
+    click.rich_click.STYLE_SWITCH = "bold bright_cyan"
+    click.rich_click.STYLE_COMMAND = "bold green"
+    click.rich_click.STYLE_ARGUMENT = "bold yellow"
+    click.rich_click.STYLE_METAVAR = "bold magenta"
+    click.rich_click.STYLE_USAGE = "bold white"
+    click.rich_click.STYLE_USAGE_COMMAND = "bold cyan"
+    click.rich_click.STYLE_HELPTEXT = ""
+    click.rich_click.STYLE_OPTION_HELP = ""
+    click.rich_click.STYLE_OPTION_DEFAULT = "dim"
+    click.rich_click.STYLE_REQUIRED_SHORT = "bold red"
+    click.rich_click.ERRORS_SUGGESTION = "Use [bold cyan]-h[/bold cyan] or [bold cyan]--help[/bold cyan] for more details."
+    click.rich_click.FOOTER_TEXT = "Linkar keeps the CLI thin over the core runtime semantics."
 
 
 def parse_key_value(value: str) -> tuple[str, str]:

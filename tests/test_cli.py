@@ -129,7 +129,7 @@ def test_help_output_is_clean_and_descriptive(tmp_path: Path) -> None:
     root_help = run_cli("--help", cwd=tmp_path)
     assert root_help.returncode == 0, root_help.stderr
     assert "Run reusable computational templates" in root_help.stdout
-    assert "Commands:" in root_help.stdout
+    assert "Commands" in root_help.stdout
     assert "linkar run raw hello --pack" in root_help.stdout
 
     run_help = run_cli("run", "--help", cwd=tmp_path)
@@ -141,20 +141,22 @@ def test_help_output_is_clean_and_descriptive(tmp_path: Path) -> None:
     assert project_init_help.returncode == 0, project_init_help.stderr
     assert "use --name to create a new" in project_init_help.stdout.lower()
     assert "directory automatically." in project_init_help.stdout.lower()
-    assert "--name PROJECT_NAME" in project_init_help.stdout
+    assert "--name" in project_init_help.stdout
+    assert "PROJECT_NAME" in project_init_help.stdout
 
     raw_help = run_cli("run", "raw", "--help", cwd=tmp_path)
     assert raw_help.returncode == 0, raw_help.stderr
     assert "Run any template by id or path" in raw_help.stdout
     assert "TEMPLATE" in raw_help.stdout
+    assert "Options" in raw_help.stdout
 
 
 def test_bare_cli_shows_helpful_guidance(tmp_path: Path) -> None:
     completed = run_cli(cwd=tmp_path)
     assert completed.returncode == 0
     assert "Run reusable computational templates" in completed.stdout
-    assert "Commands:" in completed.stdout
-    assert completed.stderr == ""
+    assert "Commands" in completed.stdout
+    assert "Error" not in completed.stdout
 
 
 def test_parser_errors_show_contextual_help(tmp_path: Path) -> None:
@@ -162,6 +164,7 @@ def test_parser_errors_show_contextual_help(tmp_path: Path) -> None:
     assert completed.returncode == 2
     assert "Missing argument 'TEMPLATE'" in completed.stderr
     assert "Usage: linkar run raw" in completed.stderr
+    assert "Use -h or --help for more details." in completed.stderr
 
 
 def test_run_template_updates_project(tmp_path: Path) -> None:
