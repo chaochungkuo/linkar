@@ -120,8 +120,9 @@ h3 {
 }
 
 h1 {
-  font-size: clamp(3rem, 8vw, 6.5rem);
-  max-width: 9ch;
+  font-size: clamp(2.6rem, 5.6vw, 4.75rem);
+  max-width: 11ch;
+  letter-spacing: -0.03em;
 }
 
 h2 {
