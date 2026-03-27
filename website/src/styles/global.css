@@ -6,6 +6,7 @@
   --muted: #58665f;
   --accent: #0f7a5f;
   --accent-strong: #0b5743;
+  --warm: #b06b1c;
   --line: rgba(20, 35, 31, 0.12);
   --shadow: 0 20px 60px rgba(20, 35, 31, 0.1);
   --radius: 24px;
@@ -23,18 +24,47 @@ html {
 
 body {
   margin: 0;
+  min-height: 100vh;
   font-family: var(--sans);
   color: var(--ink);
   background:
-    radial-gradient(circle at top left, rgba(15, 122, 95, 0.12), transparent 28rem),
-    radial-gradient(circle at bottom right, rgba(176, 107, 28, 0.12), transparent 24rem),
+    radial-gradient(circle at top left, rgba(15, 122, 95, 0.16), transparent 28rem),
+    radial-gradient(circle at bottom right, rgba(176, 107, 28, 0.16), transparent 24rem),
     linear-gradient(180deg, #f7f1e8 0%, var(--bg) 100%);
 }
 
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(20, 35, 31, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 35, 31, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.5), transparent 85%);
+}
+
+a {
+  color: inherit;
+}
+
+code,
+pre {
+  font-family: var(--mono);
+}
+
 .page-shell {
+  position: relative;
   max-width: 1200px;
   margin: 0 auto;
   padding: 1.5rem;
+}
+
+.hero {
+  min-height: 86vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .topbar {
@@ -50,6 +80,7 @@ body {
   font-size: 1.25rem;
   letter-spacing: 0.08em;
   text-transform: lowercase;
+  text-decoration: none;
 }
 
 .nav-links {
@@ -62,12 +93,6 @@ body {
   color: var(--muted);
   text-decoration: none;
   font-size: 0.95rem;
-}
-
-.hero {
-  min-height: 86vh;
-  display: flex;
-  flex-direction: column;
 }
 
 .hero-grid {
@@ -116,6 +141,10 @@ h3 {
   color: var(--muted);
 }
 
+.article-lede {
+  max-width: 60ch;
+}
+
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
@@ -132,6 +161,11 @@ h3 {
   border-radius: 999px;
   text-decoration: none;
   font-weight: 700;
+  transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease;
+}
+
+.button:hover {
+  transform: translateY(-2px);
 }
 
 .button-primary {
@@ -149,7 +183,8 @@ h3 {
 .content-card,
 .feature-card,
 .tutorial-card,
-.doc-card {
+.doc-card,
+.article-card {
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -158,6 +193,7 @@ h3 {
 
 .hero-panel {
   padding: 1rem;
+  animation: float-in 600ms ease;
 }
 
 .terminal-window {
@@ -186,7 +222,6 @@ h3 {
   margin: 0;
   padding: 1.2rem 1.3rem 1.4rem;
   overflow: auto;
-  font-family: var(--mono);
   font-size: 0.94rem;
   line-height: 1.7;
 }
@@ -198,11 +233,21 @@ h3 {
 .section-alt {
   margin: 0 -1.5rem;
   padding: 5rem 1.5rem;
-  background: linear-gradient(180deg, transparent 0%, rgba(236, 227, 210, 0.8) 18%, rgba(236, 227, 210, 0.8) 82%, transparent 100%);
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(236, 227, 210, 0.8) 18%,
+    rgba(236, 227, 210, 0.8) 82%,
+    transparent 100%
+  );
 }
 
 .section-heading {
   margin-bottom: 2rem;
+}
+
+.docs-secondary-heading {
+  margin-top: 3.5rem;
 }
 
 .card-grid,
@@ -233,7 +278,8 @@ h3 {
 .content-card,
 .tutorial-card,
 .doc-card,
-.workflow-step {
+.workflow-step,
+.article-card {
   padding: 1.35rem;
 }
 
@@ -250,7 +296,6 @@ h3 {
 .content-card pre {
   margin: 0.9rem 0 0;
   padding: 0;
-  font-family: var(--mono);
   font-size: 0.94rem;
   line-height: 1.7;
   white-space: pre-wrap;
@@ -258,97 +303,116 @@ h3 {
 
 .workflow-step {
   border-top: 3px solid var(--accent);
-  background: rgba(255, 252, 246, 0.8);
-  border-radius: 20px;
+  background: rgba(255, 252, 246, 0.72);
+  border-radius: var(--radius);
 }
 
 .step-index {
-  display: inline-block;
-  margin-bottom: 0.85rem;
-  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  margin-bottom: 1rem;
+  border-radius: 999px;
+  background: rgba(15, 122, 95, 0.12);
+  color: var(--accent-strong);
   font-family: var(--mono);
-  font-size: 0.85rem;
+  font-weight: 700;
 }
 
 .workflow-terminal {
   margin-top: 1.5rem;
 }
 
-.tutorial-card {
-  position: relative;
+.tutorial-link,
+.doc-card {
+  text-decoration: none;
+  transition: transform 180ms ease, border-color 180ms ease;
+}
+
+.tutorial-link:hover,
+.doc-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(15, 122, 95, 0.34);
 }
 
 .status-tag {
   display: inline-flex;
   margin-top: 1rem;
-  padding: 0.28rem 0.65rem;
+  padding: 0.35rem 0.6rem;
   border-radius: 999px;
-  background: rgba(15, 122, 95, 0.12);
-  color: var(--accent-strong);
-  font-size: 0.82rem;
+  background: rgba(176, 107, 28, 0.12);
+  color: var(--warm);
+  font-size: 0.8rem;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
-.doc-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.article-shell {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 5rem;
 }
 
-.doc-card {
+.back-link {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: var(--muted);
   text-decoration: none;
-  color: inherit;
-  transition: transform 180ms ease, border-color 180ms ease;
 }
 
-.doc-card:hover {
-  transform: translateY(-3px);
-  border-color: rgba(15, 122, 95, 0.4);
+.prose h1 {
+  max-width: none;
 }
 
-code {
-  font-family: var(--mono);
+.prose h2,
+.prose h3 {
+  margin-top: 2rem;
 }
 
-@media (max-width: 980px) {
+.prose p,
+.prose li {
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.prose pre {
+  overflow: auto;
+  padding: 1rem;
+  border-radius: 16px;
+  background: #0f1715;
+  color: #dbefe8;
+}
+
+@keyframes float-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 900px) {
   .hero-grid,
   .three-up,
   .two-up,
   .split-grid,
-  .workflow-strip,
-  .doc-grid {
+  .workflow-strip {
     grid-template-columns: 1fr;
-  }
-
-  .hero {
-    min-height: auto;
-  }
-
-  h1 {
-    max-width: 11ch;
-  }
-}
-
-@media (max-width: 680px) {
-  .page-shell {
-    padding: 1rem;
-  }
-
-  .section-alt {
-    margin: 0 -1rem;
-    padding: 4rem 1rem;
   }
 
   .topbar {
     align-items: flex-start;
     flex-direction: column;
-    padding-bottom: 1.5rem;
   }
 
-  .hero-actions,
-  .nav-links {
-    width: 100%;
-  }
-
-  .button {
-    width: 100%;
+  .section-alt {
+    margin: 0;
+    border-radius: var(--radius);
   }
 }

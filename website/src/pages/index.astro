@@ -1,0 +1,178 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+
+const tutorials = (await getCollection("tutorials")).sort((a, b) => a.data.order - b.data.order);
+const explanations = (await getCollection("explanations")).sort((a, b) => a.data.order - b.data.order);
+const tutorialHref = (slug: string) => `${import.meta.env.BASE_URL}tutorials/${slug}/`;
+const explanationHref = (slug: string) => `${import.meta.env.BASE_URL}explanations/${slug}/`;
+const docs = [
+  { title: "Vision", description: "Problem statement, product thesis, and philosophy.", href: "https://github.com/jovesus/linkar/blob/main/docs/dev/01_vision_and_philosophy.md" },
+  { title: "Template Spec", description: "Template contract, metadata, and source-file conventions.", href: "https://github.com/jovesus/linkar/blob/main/docs/dev/04_template_specification.md" },
+  { title: "Project Spec", description: "Project structure, pack selection, and run indexing.", href: "https://github.com/jovesus/linkar/blob/main/docs/dev/05_project_specification.md" },
+  { title: "CLI Design", description: "CLI principles, pack scopes, and command behavior.", href: "https://github.com/jovesus/linkar/blob/main/docs/dev/15_cli_design.md" },
+  { title: "Example Workflows", description: "Concrete workflows to turn into end-user tutorials.", href: "https://github.com/jovesus/linkar/blob/main/docs/dev/19_example_workflows.md" },
+  { title: "Roadmap", description: "Development phases and implementation progress.", href: "https://github.com/jovesus/linkar/blob/main/docs/dev/20_future_roadmap.md" },
+];
+---
+
+<BaseLayout title="Linkar Demo Site">
+  <div class="page-shell">
+    <SiteHeader />
+
+    <main>
+      <section id="why" class="section">
+        <div class="section-heading">
+          <p class="eyebrow">Why Linkar</p>
+          <h2>Keep the execution model small.</h2>
+        </div>
+
+        <div class="card-grid three-up">
+          <article class="feature-card">
+            <h3>Templates stay standalone</h3>
+            <p>
+              Each template is a normal directory with a small YAML interface and a runnable source
+              script. Template authors can still test <code>script.sh</code> directly.
+            </p>
+          </article>
+          <article class="feature-card">
+            <h3>Projects stay readable</h3>
+            <p>
+              <code>project.yaml</code> records pack choices and run history without becoming a
+              hidden workflow engine or database.
+            </p>
+          </article>
+          <article class="feature-card">
+            <h3>Artifacts stay inspectable</h3>
+            <p>
+              Every run lives in a normal directory with <code>results/</code>,
+              <code>.linkar/meta.json</code>, and runtime details that can be inspected later.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="quickstart" class="section section-alt">
+        <div class="section-heading">
+          <p class="eyebrow">Quickstart</p>
+          <h2>The shortest useful path.</h2>
+        </div>
+
+        <div class="split-grid">
+          <div class="content-card">
+            <h3>1. Install and test</h3>
+            <pre><code>pixi run test
+pixi run cli-help</code></pre>
+          </div>
+
+          <div class="content-card">
+            <h3>2. Start a project</h3>
+            <pre><code>linkar project init --name demo
+cd demo</code></pre>
+          </div>
+
+          <div class="content-card">
+            <h3>3. Add a pack</h3>
+            <pre><code>linkar config pack add ~/github/izkf_genomics_pack
+linkar templates</code></pre>
+          </div>
+
+          <div class="content-card">
+            <h3>4. Run a template</h3>
+            <pre><code>linkar run fastqc --input sample.fastq.gz
+linkar project runs
+linkar inspect run fastqc_001</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="workflow" class="section">
+        <div class="section-heading">
+          <p class="eyebrow">Mental Model</p>
+          <h2>Three layers, one direction.</h2>
+        </div>
+
+        <div class="workflow-strip">
+          <div class="workflow-step">
+            <span class="step-index">01</span>
+            <h3>Template</h3>
+            <p>Atomic reusable unit with a declared interface and a runnable source script.</p>
+          </div>
+          <div class="workflow-step">
+            <span class="step-index">02</span>
+            <h3>Pack</h3>
+            <p>Purposeful collection of templates and optional binding defaults.</p>
+          </div>
+          <div class="workflow-step">
+            <span class="step-index">03</span>
+            <h3>Project</h3>
+            <p>Local run index that tracks outputs, provenance, and active pack choices.</p>
+          </div>
+        </div>
+
+        <div class="terminal-window workflow-terminal">
+          <div class="terminal-bar">
+            <span></span><span></span><span></span>
+          </div>
+          <pre><code>study/
+  project.yaml
+  fastqc_001/
+    run.sh
+    script.sh
+    results/
+    .linkar/
+      meta.json
+      runtime.json</code></pre>
+        </div>
+      </section>
+
+      <section id="tutorials" class="section section-alt">
+        <div class="section-heading">
+          <p class="eyebrow">Tutorials</p>
+          <h2>Practical guides for users and pack authors.</h2>
+        </div>
+
+        <div class="card-grid two-up">
+          {tutorials.map((entry) => (
+            <a class="tutorial-card tutorial-link" href={tutorialHref(entry.slug)}>
+              <h3>{entry.data.title}</h3>
+              <p>{entry.data.description}</p>
+              <span class="status-tag">{entry.data.status}</span>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <section id="docs" class="section">
+        <div class="section-heading">
+          <p class="eyebrow">Reference</p>
+          <h2>Design notes and explanations.</h2>
+        </div>
+
+        <div class="card-grid two-up">
+          {explanations.map((entry) => (
+            <a class="doc-card" href={explanationHref(entry.slug)}>
+              <h3>{entry.data.title}</h3>
+              <p>{entry.data.description}</p>
+            </a>
+          ))}
+        </div>
+
+        <div class="section-heading docs-secondary-heading">
+          <p class="eyebrow">Spec Set</p>
+          <h2>Existing development docs.</h2>
+        </div>
+
+        <div class="doc-grid">
+          {docs.map((doc) => (
+            <a class="doc-card" href={doc.href}>
+              <h3>{doc.title}</h3>
+              <p>{doc.description}</p>
+            </a>
+          ))}
+        </div>
+      </section>
+    </main>
+  </div>
+</BaseLayout>

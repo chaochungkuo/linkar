@@ -1,0 +1,53 @@
+---
+const navItems = [
+  { href: "#why", label: "Why" },
+  { href: "#quickstart", label: "Quickstart" },
+  { href: "#workflow", label: "Workflow" },
+  { href: "#tutorials", label: "Tutorials" },
+  { href: "#docs", label: "Docs" },
+];
+---
+
+<header class="hero">
+  <nav class="topbar">
+    <a class="brand" href="/">linkar</a>
+    <div class="nav-links">
+      {
+        navItems.map((item) => (
+          <a href={item.href}>{item.label}</a>
+        ))
+      }
+    </div>
+  </nav>
+
+  <div class="hero-grid">
+    <div class="hero-copy">
+      <p class="eyebrow">Filesystem-first template runtime</p>
+      <h1>Reusable analysis templates, with transparent runs.</h1>
+      <p class="lede">
+        Linkar sits between ad hoc scripts and heavyweight workflow systems. It gives you reusable
+        templates, portable run artifacts, project-aware chaining, and metadata that humans and
+        agents can inspect.
+      </p>
+      <div class="hero-actions">
+        <a class="button button-primary" href="#quickstart">Start Here</a>
+        <a class="button button-secondary" href="#tutorials">Browse Tutorials</a>
+      </div>
+    </div>
+
+    <div class="hero-panel">
+      <div class="terminal-window">
+        <div class="terminal-bar">
+          <span></span><span></span><span></span>
+        </div>
+        <pre><code>linkar project init --name study
+cd study
+
+linkar config pack add ~/github/izkf_genomics_pack
+linkar run fastqc --input sample.fastq.gz
+linkar run multiqc
+linkar methods</code></pre>
+      </div>
+    </div>
+  </div>
+</header>

@@ -68,3 +68,17 @@ linkar run fastqc --input sample.fastq.gz
 ```
 
 Use `linkar run raw ...` when you want the generic path-or-pack execution interface.
+
+## Website
+
+The demo/docs site now lives in `website/` and is built with Astro for GitHub Pages.
+
+Use Node 22 there:
+
+```bash
+cd website
+npm install
+npm run dev
+```
+
+The GitHub Pages workflow is in `.github/workflows/deploy-pages.yml`.
