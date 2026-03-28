@@ -4,6 +4,7 @@ from pathlib import Path
 
 from linkar.runtime.projects import init_project, load_project
 from linkar.runtime.runs import (
+    collect_declared_glob_output,
     collect_outputs,
     default_output_relative_path,
     determine_outdir,
@@ -143,6 +144,20 @@ def test_resolve_declared_output_path_supports_default_and_explicit_paths(tmp_pa
     ) == (outdir / "results" / "reports" / "report.html").resolve()
 
 
+def test_collect_declared_glob_output_returns_sorted_matches(tmp_path: Path) -> None:
+    outdir = tmp_path / "run"
+    (outdir / "results" / "fastqc").mkdir(parents=True)
+    (outdir / "results" / "fastqc" / "b_fastqc.html").write_text("<html>b</html>\n")
+    (outdir / "results" / "fastqc" / "a_fastqc.html").write_text("<html>a</html>\n")
+
+    matches = collect_declared_glob_output({"glob": "fastqc/*_fastqc.html"}, outdir)
+
+    assert matches == [
+        str((outdir / "results" / "fastqc" / "a_fastqc.html").resolve()),
+        str((outdir / "results" / "fastqc" / "b_fastqc.html").resolve()),
+    ]
+
+
 def test_collect_outputs_uses_declared_relative_paths_when_present(tmp_path: Path) -> None:
     template_dir = make_template(tmp_path / "templates", "outputs_demo", "#!/usr/bin/env bash\n")
     (template_dir / "template.yaml").write_text(
@@ -173,6 +188,38 @@ def test_collect_outputs_uses_declared_relative_paths_when_present(tmp_path: Pat
         "results_dir": str((outdir / "results").resolve()),
         "output_dir": str((outdir / "results" / "output").resolve()),
         "report_html": str((outdir / "results" / "reports" / "report.html").resolve()),
+    }
+
+
+def test_collect_outputs_records_declared_glob_outputs_as_lists(tmp_path: Path) -> None:
+    template_dir = make_template(tmp_path / "templates", "glob_demo", "#!/usr/bin/env bash\n")
+    (template_dir / "template.yaml").write_text(
+        "\n".join(
+            [
+                "id: glob_demo",
+                "outputs:",
+                "  fastqc_reports:",
+                "    glob: fastqc/*_fastqc.html",
+                "run:",
+                "  entry: run.sh",
+                "  mode: direct",
+                "",
+            ]
+        )
+    )
+    template = load_template(template_dir)
+    outdir = tmp_path / "run"
+    (outdir / "results" / "fastqc").mkdir(parents=True)
+    (outdir / "results" / "fastqc" / "a_fastqc.html").write_text("<html>a</html>\n")
+    (outdir / "results" / "fastqc" / "b_fastqc.html").write_text("<html>b</html>\n")
+
+    outputs = collect_outputs(template, outdir)
+
+    assert outputs == {
+        "fastqc_reports": [
+            str((outdir / "results" / "fastqc" / "a_fastqc.html").resolve()),
+            str((outdir / "results" / "fastqc" / "b_fastqc.html").resolve()),
+        ]
     }
 
 

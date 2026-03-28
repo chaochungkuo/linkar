@@ -164,6 +164,8 @@ outputs:
 
 After the run, Linkar records only the declared outputs whose resolved path actually exists. This keeps metadata explicit without forcing every possible path to be present.
 
+For collection-style outputs, templates may declare `glob`. The glob is evaluated relative to `results/`, and Linkar records a sorted list of matched paths. This is useful for outputs such as many report files under one QC directory.
+
 ## Design Constraints
 The directory structure should remain:
 

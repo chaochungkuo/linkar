@@ -177,6 +177,18 @@ outputs:
 
 In that case, Linkar resolves `report_html` to `results/reports/report.html`.
 
+If a template needs to expose a collection of files, the output spec may declare `glob`.
+
+Example:
+
+```yaml
+outputs:
+  fastqc_reports:
+    glob: fastqc/*_fastqc.html
+```
+
+In that case, Linkar evaluates the glob relative to `results/` and records a sorted list of matched paths. `glob` is intended for collection-style outputs, while `path` and the default output-name mapping remain the preferred way to expose single files or directories.
+
 ## Parameter Specification
 Each parameter entry may define:
 

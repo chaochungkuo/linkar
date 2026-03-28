@@ -1329,6 +1329,42 @@ printf '<html>%s</html>\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/reports/report.htm
     }
 
 
+def test_run_metadata_collects_declared_glob_outputs(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    make_template(
+        pack_root / "templates",
+        "glob_outputs",
+        "  name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p "${LINKAR_RESULTS_DIR}/fastqc"
+printf '<html>%s-1</html>\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/fastqc/a_fastqc.html"
+printf '<html>%s-2</html>\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/fastqc/b_fastqc.html"
+""",
+        outputs="  fastqc_reports:\n    glob: fastqc/*_fastqc.html",
+    )
+
+    completed = run_cli(
+        "run",
+        "glob_outputs",
+        "--pack",
+        str(pack_root),
+        "--param",
+        "name=Linkar",
+        cwd=tmp_path,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+    outdir = Path(completed.stdout.strip())
+    meta = json.loads((outdir / ".linkar" / "meta.json").read_text())
+    assert meta["outputs"] == {
+        "fastqc_reports": [
+            str((outdir / "results" / "fastqc" / "a_fastqc.html").resolve()),
+            str((outdir / "results" / "fastqc" / "b_fastqc.html").resolve()),
+        ]
+    }
+
+
 def test_inspect_run_command_returns_metadata_json(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
     init = run_cli("project", "init", str(project_dir), cwd=tmp_path)

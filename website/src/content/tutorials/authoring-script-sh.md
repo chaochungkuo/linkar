@@ -15,3 +15,5 @@ That gives you both:
 In direct mode, Linkar stages the runtime bundle into the run directory before execution. That lets templates depend on support files such as `pixi.toml`, helper scripts, or local config files without forcing authors to reach back into the source template directory at runtime.
 
 Declared outputs are also resolved from that run artifact. By default, Linkar maps output names to paths under `results/`: `results_dir` becomes `results/`, `fastqc_dir` becomes `results/fastqc`, and other names can be overridden with an explicit relative `path` in `template.yaml`.
+
+When a template needs to expose many files, it can declare `glob` for an output. Linkar evaluates that glob under `results/` and records the matched paths as a list, which is useful for collections such as many FastQC HTML reports.

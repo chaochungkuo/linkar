@@ -129,6 +129,18 @@ def load_template(
             raise TemplateValidationError(
                 f"Template output spec must be a mapping for '{key}' in {spec_path}"
             )
+        if "path" in spec and "glob" in spec:
+            raise TemplateValidationError(
+                f"Template output '{key}' cannot declare both 'path' and 'glob' in {spec_path}"
+            )
+        if "path" in spec and (not isinstance(spec["path"], str) or not spec["path"].strip()):
+            raise TemplateValidationError(
+                f"Template output '{key}' path must be a non-empty string in {spec_path}"
+            )
+        if "glob" in spec and (not isinstance(spec["glob"], str) or not spec["glob"].strip()):
+            raise TemplateValidationError(
+                f"Template output '{key}' glob must be a non-empty string in {spec_path}"
+            )
 
     return TemplateSpec(
         id=template_id,

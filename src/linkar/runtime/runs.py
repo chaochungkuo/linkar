@@ -93,12 +93,26 @@ def resolve_declared_output_path(output_name: str, spec: dict[str, Any], outdir:
     return (results_dir / relative).resolve()
 
 
-def collect_outputs(template: TemplateSpec, outdir: Path) -> dict[str, str]:
-    outputs: dict[str, str] = {}
+def collect_declared_glob_output(spec: dict[str, Any], outdir: Path) -> list[str]:
+    results_dir = (outdir / "results").resolve()
+    pattern = spec.get("glob")
+    if not isinstance(pattern, str) or not pattern.strip():
+        raise TemplateValidationError("Declared glob output requires a non-empty string pattern")
+    matches = sorted(path.resolve() for path in results_dir.glob(pattern))
+    return [str(path) for path in matches]
+
+
+def collect_outputs(template: TemplateSpec, outdir: Path) -> dict[str, Any]:
+    outputs: dict[str, Any] = {}
     results_dir = (outdir / "results").resolve()
     declared_outputs = template.outputs or {}
     if declared_outputs:
         for output_name, spec in declared_outputs.items():
+            if "glob" in spec:
+                matched_paths = collect_declared_glob_output(spec, outdir)
+                if matched_paths:
+                    outputs[output_name] = matched_paths
+                continue
             output_path = resolve_declared_output_path(output_name, spec, outdir)
             if output_path.exists():
                 outputs[output_name] = str(output_path)
