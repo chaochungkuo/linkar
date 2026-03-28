@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -114,11 +115,18 @@ def parse_param_value(value: Any, param_type: str) -> Any:
         raise ParameterResolutionError(f"Invalid bool value: {value}")
     if param_type == "path":
         return str(Path(value).expanduser().resolve())
+    if param_type == "list[path]":
+        if isinstance(value, (list, tuple)):
+            raw_items = list(value)
+        else:
+            raw_items = [item for item in str(value).split(os.pathsep) if item]
+        return [str(Path(item).expanduser().resolve()) for item in raw_items]
     raise ParameterResolutionError(f"Unsupported param type: {param_type}")
 
 
 def format_env_value(value: Any) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
+    if isinstance(value, list):
+        return os.pathsep.join(str(item) for item in value)
     return str(value)
-

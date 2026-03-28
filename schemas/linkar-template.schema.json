@@ -25,7 +25,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["str", "int", "float", "bool", "path"]
+            "enum": ["str", "int", "float", "bool", "path", "list[path]"]
           },
           "required": {
             "type": "boolean"

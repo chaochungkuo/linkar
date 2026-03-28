@@ -1365,6 +1365,87 @@ printf '<html>%s-2</html>\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/fastqc/b_fastqc.
     }
 
 
+def test_project_binding_can_pass_glob_output_into_list_path_param(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    producer = make_template(
+        tmp_path / "templates",
+        "produce_reports",
+        "  sample_name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p "${LINKAR_RESULTS_DIR}/fastqc"
+printf '<html>%s-A</html>\n' "${SAMPLE_NAME}" > "${LINKAR_RESULTS_DIR}/fastqc/a_fastqc.html"
+printf '<html>%s-B</html>\n' "${SAMPLE_NAME}" > "${LINKAR_RESULTS_DIR}/fastqc/b_fastqc.html"
+""",
+        outputs="  fastqc_reports:\n    glob: fastqc/*_fastqc.html",
+    )
+    consumer = make_template(
+        tmp_path / "templates",
+        "consume_reports",
+        "  report_files:\n    type: list[path]\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+IFS=':' read -r -a files <<< "${REPORT_FILES}"
+printf '%s\n' "${#files[@]}" > "${LINKAR_RESULTS_DIR}/count.txt"
+printf '%s\n' "${files[0]}" > "${LINKAR_RESULTS_DIR}/first.txt"
+""",
+    )
+    binding_root = make_binding(
+        tmp_path / "binding",
+        "consume_reports",
+        "      report_files:\n        template: produce_reports\n        output: fastqc_reports",
+    )
+
+    producer_run = run_template(
+        producer,
+        params={"sample_name": "demo"},
+        project=project_dir,
+    )
+    producer_outdir = Path(producer_run["outdir"])
+    assert (producer_outdir / "results" / "fastqc" / "a_fastqc.html").exists()
+
+    consumer_run = run_template(
+        consumer,
+        project=project_dir,
+        binding_ref=str(binding_root),
+    )
+
+    consumer_outdir = Path(consumer_run["outdir"])
+    assert (consumer_outdir / "results" / "count.txt").read_text().strip() == "2"
+    assert (consumer_outdir / "results" / "first.txt").read_text().strip().endswith("a_fastqc.html")
+    meta = json.loads((consumer_outdir / ".linkar" / "meta.json").read_text())
+    assert meta["param_provenance"]["report_files"]["binding_source"] == "output"
+    assert meta["param_provenance"]["report_files"]["output"] == "fastqc_reports"
+
+
+def test_binding_override_example_pack_can_switch_between_default_and_override_bindings(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    pack_root = ROOT / "examples" / "packs" / "binding_overrides"
+    override_binding = pack_root / "override_binding"
+
+    add = run_cli("pack", "add", str(pack_root), "--id", "binding_overrides", "--binding", "default", cwd=project_dir)
+    assert add.returncode == 0, add.stderr
+
+    produce = run_cli("run", "produce_data", "--value", "project", cwd=project_dir)
+    assert produce.returncode == 0, produce.stderr
+
+    consume_default = run_cli("run", "consume_data", cwd=project_dir)
+    assert consume_default.returncode == 0, consume_default.stderr
+    default_outdir = Path(consume_default.stdout.strip())
+    assert (default_outdir / "results" / "copied.txt").read_text().strip() == "project"
+
+    consume_override = run_cli("run", "consume_data", "--binding", str(override_binding), cwd=project_dir)
+    assert consume_override.returncode == 0, consume_override.stderr
+    override_outdir = Path(consume_override.stdout.strip())
+    assert (override_outdir / "results" / "copied.txt").read_text().strip() == "override"
+
+
 def test_inspect_run_command_returns_metadata_json(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
     init = run_cli("project", "init", str(project_dir), cwd=tmp_path)

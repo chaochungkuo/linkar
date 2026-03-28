@@ -129,6 +129,7 @@ Examples:
 - `"8"` -> `8` for `int`
 - `"true"` -> `True` for `bool`
 - `"./data"` -> normalized path for `path`
+- `["./a.html", "./b.html"]` -> normalized absolute paths for `list[path]`
 
 ## Missing Values
 If a required parameter remains unresolved after all sources are checked, the run must fail before execution.

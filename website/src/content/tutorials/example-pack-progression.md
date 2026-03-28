@@ -29,6 +29,17 @@ linkar run produce_message --message "hello"
 linkar run consume_message
 ```
 
+Then inspect binding selection explicitly:
+
+```bash
+linkar project init --name binding-demo
+cd binding-demo
+linkar pack add ../examples/packs/binding_overrides --id binding_overrides --binding default
+linkar run produce_data --value project
+linkar run consume_data
+linkar run consume_data --binding ../examples/packs/binding_overrides/override_binding
+```
+
 Finally, inspect the other example sets:
 
 - `examples/packs/pack_management` for duplicate template ids and active-pack selection

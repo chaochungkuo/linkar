@@ -111,7 +111,7 @@ def load_template(
                 f"Template param spec must be a mapping for '{key}' in {spec_path}"
             )
         param_type = spec.get("type", "str")
-        if param_type not in {"str", "int", "float", "bool", "path"}:
+        if param_type not in {"str", "int", "float", "bool", "path", "list[path]"}:
             raise TemplateValidationError(
                 f"Unsupported param type '{param_type}' for '{key}' in {spec_path}"
             )

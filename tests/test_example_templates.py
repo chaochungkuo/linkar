@@ -63,3 +63,10 @@ def test_all_remote_pack_templates_have_passing_template_tests(tmp_path: Path) -
     pack_root = ROOT / "examples" / "packs" / "remote"
     completed = run_cli("test", "remote_wave", "--pack", str(pack_root), cwd=tmp_path)
     assert completed.returncode == 0, completed.stderr
+
+
+def test_all_binding_override_pack_templates_have_passing_template_tests(tmp_path: Path) -> None:
+    pack_root = ROOT / "examples" / "packs" / "binding_overrides"
+    for template_id in ["produce_data", "consume_data"]:
+        completed = run_cli("test", template_id, "--pack", str(pack_root), cwd=tmp_path)
+        assert completed.returncode == 0, f"{template_id}: {completed.stderr}"

@@ -118,6 +118,16 @@ MVP precedence:
 
 If a binding rule exists for a parameter and fails to resolve, the run should fail clearly rather than silently ignoring the binding.
 
+## Default vs Override
+A pack may ship a default binding at its root and also provide alternate binding assets elsewhere.
+
+That allows a project or caller to choose between:
+
+- the pack's default linkage behavior
+- an explicit override binding for a different local context
+
+This should remain a conscious selection by the caller or project configuration. Linkar should not silently switch between bindings based on ambient state.
+
 ## Function Context
 Binding functions receive a context object that may expose:
 

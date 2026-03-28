@@ -1,0 +1,5 @@
+templates:
+  consume_data:
+    params:
+      source_dir:
+        function: resolve_override_source

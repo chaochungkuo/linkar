@@ -80,6 +80,8 @@ Bundled examples are organized by teaching purpose:
   - a small project-mode pack showing output reuse through a default binding
 - `examples/packs/pack_management`
   - two tiny packs with the same template id to demonstrate active-pack selection
+- `examples/packs/binding_overrides`
+  - a small pack showing the difference between a default binding and an explicit override binding
 - `examples/packs/remote`
   - a tiny pack intended for Git-backed remote asset demonstrations
 

@@ -1,0 +1,6 @@
+templates:
+  consume_data:
+    params:
+      source_dir:
+        template: produce_data
+        output: dataset_dir

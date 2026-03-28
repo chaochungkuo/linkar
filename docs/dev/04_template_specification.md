@@ -219,6 +219,7 @@ The current supported types are:
 - `float`
 - `bool`
 - `path`
+- `list[path]`
 
 If omitted, `type` defaults to `str`.
 

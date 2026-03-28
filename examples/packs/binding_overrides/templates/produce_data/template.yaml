@@ -1,0 +1,14 @@
+id: produce_data
+version: 0.1.0
+description: Produce a tiny dataset directory for binding demos.
+params:
+  value:
+    type: str
+    required: true
+outputs:
+  results_dir: {}
+  dataset_dir:
+    path: dataset
+run:
+  entry: run.sh
+  mode: direct

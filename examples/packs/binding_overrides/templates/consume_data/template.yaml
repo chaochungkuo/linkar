@@ -1,0 +1,12 @@
+id: consume_data
+version: 0.1.0
+description: Consume a source directory selected by either the default or an override binding.
+params:
+  source_dir:
+    type: path
+    required: true
+outputs:
+  results_dir: {}
+run:
+  entry: run.sh
+  mode: direct

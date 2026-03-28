@@ -41,6 +41,7 @@ The initial parameter types are:
 - `float`
 - `bool`
 - `path`
+- `list[path]`
 
 If `type` is omitted, it defaults to `str`.
 
@@ -96,6 +97,17 @@ Use for:
 - output references passed between steps
 
 The core should normalize paths consistently so templates do not need to guess how they were provided.
+
+### `list[path]`
+Represents an ordered collection of filesystem paths.
+
+Use for:
+
+- collections of reports discovered by glob
+- sets of FASTQ files passed from one template to another
+- any downstream input that should consume multiple path outputs explicitly
+
+Internally this resolves to a list of normalized absolute path strings.
 
 ## Parameter Fields
 The initial parameter schema supports:
@@ -183,6 +195,7 @@ Examples:
 - `fastq_dir` -> `FASTQ_DIR`
 - `threads` -> `THREADS`
 - `paired_end` -> `PAIRED_END`
+- `fastqc_reports` -> `FASTQC_REPORTS`
 
 Example:
 
@@ -190,6 +203,7 @@ Example:
 FASTQ_DIR=/data/reads
 THREADS=8
 PAIRED_END=true
+FASTQC_REPORTS=/data/a_fastqc.html:/data/b_fastqc.html
 ```
 
 This keeps the template-facing contract simple across Bash, Python, and other runtimes.

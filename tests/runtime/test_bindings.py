@@ -9,7 +9,7 @@ import yaml
 from linkar.errors import AssetResolutionError, ParameterResolutionError
 from linkar.runtime.bindings import resolve_params_detailed
 from linkar.runtime.projects import init_project, load_project
-from linkar.runtime.shared import save_yaml
+from linkar.runtime.shared import format_env_value, save_yaml
 from linkar.runtime.templates import load_template
 
 
@@ -144,3 +144,52 @@ def test_binding_still_accepts_legacy_from_syntax(tmp_path: Path) -> None:
 
     assert resolved["source_dir"] == str(Path("/tmp/legacy").resolve())
     assert provenance["source_dir"]["binding_source"] == "value"
+
+
+def test_binding_output_rule_can_resolve_list_path_values(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    make_template(
+        pack_root,
+        "consume",
+        "  report_files:\n    type: list[path]\n    required: true",
+        "#!/usr/bin/env bash\nset -euo pipefail\n",
+    )
+    make_binding(
+        pack_root,
+        {
+            "templates": {
+                "consume": {
+                    "params": {
+                        "report_files": {
+                            "template": "produce_reports",
+                            "output": "fastqc_reports",
+                        }
+                    }
+                }
+            }
+        },
+    )
+
+    project_path = init_project(tmp_path / "project")
+    project = load_project(project_path.parent)
+    project.data["templates"] = [
+        {
+            "id": "produce_reports",
+            "outputs": {
+                "fastqc_reports": ["/tmp/a_fastqc.html", "/tmp/b_fastqc.html"],
+            },
+        }
+    ]
+    save_yaml(project.root / "project.yaml", project.data)
+
+    template = load_template(pack_root / "templates" / "consume")
+    resolved, provenance = resolve_params_detailed(template, project=project, binding_ref="default")
+
+    assert resolved["report_files"] == [
+        str(Path("/tmp/a_fastqc.html").resolve()),
+        str(Path("/tmp/b_fastqc.html").resolve()),
+    ]
+    assert provenance["report_files"]["template"] == "produce_reports"
+    assert format_env_value(resolved["report_files"]) == (
+        f"{resolved['report_files'][0]}:{resolved['report_files'][1]}"
+    )

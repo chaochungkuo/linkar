@@ -366,7 +366,7 @@ Add broader distribution and richer user-facing surfaces after the local API lay
 ### Example Assets
 - [x] Maintain one minimal standalone template
 - [x] Maintain one small multi-step pack
-- [ ] Maintain one example binding setup showing default vs override behavior
+- [x] Maintain one example binding setup showing default vs override behavior
 
 ### Error Quality
 - [ ] Improve early validation errors
@@ -376,12 +376,12 @@ Add broader distribution and richer user-facing surfaces after the local API lay
 - [ ] Improve failed run error messages
 
 ## Recommended Immediate Build Order
-- [ ] Finish Phase 1 completely before adding richer reuse layers
-- [ ] Add only local path-based pack loading from Phase 2 first
-- [ ] Define `binding.yaml` before implementing runtime binding behavior
-- [ ] Add the smallest binding MVP from Phase 3
-- [ ] Strengthen provenance before remote asset loading
-- [ ] Add Git/GitHub asset loading only after the above are stable
+- [x] Finish Phase 1 completely before adding richer reuse layers
+- [x] Add only local path-based pack loading from Phase 2 first
+- [x] Define `binding.yaml` before implementing runtime binding behavior
+- [x] Add the smallest binding MVP from Phase 3
+- [x] Strengthen provenance before remote asset loading
+- [x] Add Git/GitHub asset loading only after the above are stable
 
 ## Explicit Long-Term Deferrals
 - [ ] Defer registry or Docker-Hub-like distribution until later
@@ -392,10 +392,10 @@ Add broader distribution and richer user-facing surfaces after the local API lay
 - [ ] Defer complicated workflow syntax
 
 ## Definition of Success
-- [ ] Linkar remains conceptually small
-- [ ] Templates remain standalone and portable
-- [ ] Packs improve reuse without reducing portability
-- [ ] Bindings improve convenience without becoming hidden magic
-- [ ] Project state stays transparent
-- [ ] Metadata becomes trustworthy enough for reproducibility and methods generation
-- [ ] Future APIs and UIs can be layered on without changing core semantics
+- [x] Linkar remains conceptually small
+- [x] Templates remain standalone and portable
+- [x] Packs improve reuse without reducing portability
+- [x] Bindings improve convenience without becoming hidden magic
+- [x] Project state stays transparent
+- [x] Metadata becomes trustworthy enough for reproducibility and methods generation
+- [x] Future APIs and UIs can be layered on without changing core semantics
