@@ -21,6 +21,25 @@ const explanationHref = (slug: string) => `${import.meta.env.BASE_URL}explanatio
       </section>
 
       <section class="section page-section-tight">
+        <div class="split-grid">
+          <article class="content-card">
+            <h3>Read this before designing around Linkar</h3>
+            <p>
+              These pages explain the product boundaries. They are the best way to understand what
+              Linkar should do, what it should not do, and why the runtime stays filesystem-first.
+            </p>
+          </article>
+          <article class="content-card">
+            <h3>Why this matters</h3>
+            <p>
+              Once the model is clear, the CLI, packs, outputs, and local API all make more sense.
+              Most design questions reduce to the same few boundaries.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section page-section-tight">
         <div class="card-grid two-up">
           {explanations.map((entry) => (
             <a class="doc-card" href={explanationHref(entry.slug)}>

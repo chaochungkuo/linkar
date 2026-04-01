@@ -17,6 +17,25 @@ import SiteNav from "../../components/SiteNav.astro";
       </section>
 
       <section class="section page-section-tight">
+        <div class="split-grid">
+          <article class="content-card">
+            <h3>Fastest way to explore</h3>
+            <pre><code>linkar test simple_echo --pack ./examples/packs/basic
+linkar test fastq_stats --pack ./examples/packs/basic
+linkar test produce_message --pack ./examples/packs/chaining</code></pre>
+          </article>
+
+          <article class="content-card">
+            <h3>How to use these examples</h3>
+            <p>
+              Read them in order. Each pack is meant to teach one new part of the runtime model
+              without introducing unnecessary complexity too early.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section page-section-tight">
         <div class="card-grid two-up">
           <article class="feature-card">
             <h3>Basic</h3>
@@ -53,6 +72,12 @@ import SiteNav from "../../components/SiteNav.astro";
               Demonstrates default binding behavior and explicit override binding so the same
               template can consume different sources predictably.
             </p>
+            <pre><code>examples/packs/binding_overrides
+  linkar_pack.yaml
+  override_binding.yaml
+  templates/
+    produce_data
+    consume_data</code></pre>
           </article>
 
           <article class="feature-card">
@@ -61,6 +86,8 @@ import SiteNav from "../../components/SiteNav.astro";
               Covers duplicate template ids, active-pack selection, and Git-backed pack assets
               without turning Linkar into a registry-first product.
             </p>
+            <pre><code>examples/packs/pack_management
+examples/packs/remote</code></pre>
           </article>
         </div>
       </section>

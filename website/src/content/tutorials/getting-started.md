@@ -23,6 +23,26 @@ This gives you:
 - immutable run history under `.linkar/runs/`
 - `.linkar/runs/<instance_id>/.linkar/meta.json` for provenance
 
+## What happens after `linkar run`
+
+In project mode, Linkar now separates:
+
+- the stable project-facing alias, such as `./fastqc`
+- the immutable recorded run under `.linkar/runs/fastqc_001`
+
+That means the project root stays readable while the real history remains preserved.
+
+## Typical next commands
+
+```bash
+linkar project runs
+linkar inspect run fastqc_001
+linkar templates
+```
+
+Use `linkar project runs` to review what happened locally, and `linkar inspect run` to read the
+metadata and outputs for one recorded run.
+
 This is the Linkar user path.
 
 Template authoring is separate. Template repos can use `test.sh`, `test.py`, Pixi, pytest, or
