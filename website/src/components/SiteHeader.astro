@@ -1,29 +1,8 @@
----
-const navItems = [
-  { href: "#why", label: "Why" },
-  { href: "#interfaces", label: "Interfaces" },
-  { href: "#quickstart", label: "Quickstart" },
-  { href: "#workflow", label: "Model" },
-  { href: "#proof", label: "Proof" },
-  { href: "#tutorials", label: "Tutorials" },
-  { href: "#docs", label: "Docs" },
-];
+import SiteNav from "./SiteNav.astro";
 ---
 
 <header class="hero">
-  <nav class="topbar">
-    <a class="brand" href="/">
-      <span class="brand-mark">lk</span>
-      <span class="brand-word">linkar</span>
-    </a>
-    <div class="nav-links">
-      {
-        navItems.map((item) => (
-          <a href={item.href}>{item.label}</a>
-        ))
-      }
-    </div>
-  </nav>
+  <SiteNav />
 
   <div class="hero-grid">
     <div class="hero-copy">
@@ -40,8 +19,8 @@ const navItems = [
         for AI agents to use reliably without shell scraping.
       </p>
       <div class="hero-actions">
-        <a class="button button-primary" href="#quickstart">Start Here</a>
-        <a class="button button-secondary" href="#interfaces">See The Interfaces</a>
+        <a class="button button-primary" href={`${import.meta.env.BASE_URL}tutorials/getting-started/`}>Start Here</a>
+        <a class="button button-secondary" href={`${import.meta.env.BASE_URL}tutorials/using-linkar-from-agents/`}>For Agents</a>
       </div>
       <div class="hero-metrics">
         <div class="metric-card">

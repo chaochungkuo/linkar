@@ -1,6 +1,7 @@
 ---
 import { getCollection, render } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import SiteNav from "../../components/SiteNav.astro";
 
 export async function getStaticPaths() {
   const tutorials = await getCollection("tutorials");
@@ -15,13 +16,16 @@ const { Content } = await render(entry);
 ---
 
 <BaseLayout title={`${entry.data.title} | Linkar`}>
-  <main class="article-shell">
-    <a class="back-link" href={import.meta.env.BASE_URL}>Back to home</a>
-    <article class="article-card prose">
-      <p class="eyebrow">Tutorial</p>
-      <h1>{entry.data.title}</h1>
-      <p class="lede article-lede">{entry.data.description}</p>
-      <Content />
-    </article>
-  </main>
+  <div class="page-shell">
+    <SiteNav />
+    <main class="article-shell">
+      <a class="back-link" href={`${import.meta.env.BASE_URL}tutorials/`}>Back to tutorials</a>
+      <article class="article-card prose">
+        <p class="eyebrow">Tutorial</p>
+        <h1>{entry.data.title}</h1>
+        <p class="lede article-lede">{entry.data.description}</p>
+        <Content />
+      </article>
+    </main>
+  </div>
 </BaseLayout>

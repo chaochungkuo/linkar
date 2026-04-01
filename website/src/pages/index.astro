@@ -7,14 +7,6 @@ const tutorials = (await getCollection("tutorials")).sort((a, b) => a.data.order
 const explanations = (await getCollection("explanations")).sort((a, b) => a.data.order - b.data.order);
 const tutorialHref = (slug: string) => `${import.meta.env.BASE_URL}tutorials/${slug}/`;
 const explanationHref = (slug: string) => `${import.meta.env.BASE_URL}explanations/${slug}/`;
-const docs = [
-  { title: "Vision", description: "Problem statement, product thesis, and philosophy.", href: "https://github.com/jovesus/linkar/blob/main/docs/dev/01_vision_and_philosophy.md" },
-  { title: "Template Spec", description: "Template contract, metadata, and source-file conventions.", href: "https://github.com/jovesus/linkar/blob/main/docs/dev/04_template_specification.md" },
-  { title: "Project Spec", description: "Project structure, pack selection, and run indexing.", href: "https://github.com/jovesus/linkar/blob/main/docs/dev/05_project_specification.md" },
-  { title: "CLI Design", description: "CLI principles, pack scopes, and command behavior.", href: "https://github.com/jovesus/linkar/blob/main/docs/dev/15_cli_design.md" },
-  { title: "Example Workflows", description: "Concrete workflows to turn into end-user tutorials.", href: "https://github.com/jovesus/linkar/blob/main/docs/dev/19_example_workflows.md" },
-  { title: "Roadmap", description: "Development phases and implementation progress.", href: "https://github.com/jovesus/linkar/blob/main/docs/dev/20_future_roadmap.md" },
-];
 ---
 
 <BaseLayout
@@ -25,14 +17,13 @@ const docs = [
     <SiteHeader />
 
     <main>
-      <section id="why" class="section">
+      <section class="section">
         <div class="section-heading">
           <p class="eyebrow">Why Linkar</p>
-          <h2>The space between scripts and workflow engines is a product surface.</h2>
+          <h2>A runtime for the work between scripts and workflow engines.</h2>
           <p class="section-copy">
-            Scripts are easy to start and hard to reuse. Workflow systems are powerful and heavy.
-            Linkar keeps the middle simple: reusable templates, readable runs, and enough structure
-            for automation.
+            Linkar keeps one computational step reusable, inspectable, and easy to run. It does
+            not ask you to adopt a workflow language just to make a script portable.
           </p>
         </div>
 
@@ -62,13 +53,13 @@ const docs = [
         </div>
       </section>
 
-      <section id="interfaces" class="section section-dark">
+      <section class="section section-dark">
         <div class="section-heading">
           <p class="eyebrow">Interfaces</p>
-          <h2>One runtime, two excellent entrypoints.</h2>
+          <h2>One runtime, two clear interfaces.</h2>
           <p class="section-copy">
-            Linkar should feel natural in a terminal and just as natural inside automation. The CLI
-            and local API are thin skins over the same core behavior.
+            Humans get a short CLI. Agents get a structured core and local API. Both write the same
+            run artifact on disk.
           </p>
         </div>
 
@@ -108,7 +99,7 @@ GET  /runs/&lcub;instance_id&rcub;</code></pre>
         </div>
       </section>
 
-      <section id="quickstart" class="section section-alt">
+      <section class="section section-alt">
         <div class="section-heading">
           <p class="eyebrow">Quickstart</p>
           <h2>The shortest useful path.</h2>
@@ -145,102 +136,15 @@ linkar inspect run fastqc_001</code></pre>
         </div>
       </section>
 
-      <section id="workflow" class="section">
+      <section class="section">
         <div class="section-heading">
-          <p class="eyebrow">Mental Model</p>
-          <h2>Three layers, one runtime.</h2>
+          <p class="eyebrow">Where To Go Next</p>
+          <h2>Use the site by page, not by section.</h2>
           <p class="section-copy">
-            Templates define one step. Packs distribute them. Projects record what actually ran.
+            The homepage should introduce the model. The real learning and reference material now
+            lives in dedicated pages.
           </p>
         </div>
-
-        <div class="workflow-strip">
-          <div class="workflow-step">
-            <span class="step-index">01</span>
-            <h3>Template</h3>
-            <p>Atomic reusable unit with a declared interface and a runnable source script.</p>
-          </div>
-          <div class="workflow-step">
-            <span class="step-index">02</span>
-            <h3>Pack</h3>
-            <p>Purposeful collection of templates and optional binding defaults.</p>
-          </div>
-          <div class="workflow-step">
-            <span class="step-index">03</span>
-            <h3>Project</h3>
-            <p>Local run index that tracks outputs, provenance, and active pack choices.</p>
-          </div>
-        </div>
-
-        <div class="terminal-window workflow-terminal">
-          <div class="terminal-bar">
-            <span></span><span></span><span></span>
-          </div>
-          <pre><code>study/
-  project.yaml
-  fastqc_001/
-    run.sh
-    results/
-    .linkar/
-      meta.json
-      runtime.json</code></pre>
-        </div>
-
-        <div class="card-grid two-up">
-          <article class="feature-card">
-            <h3>Human interface</h3>
-            <p>A thin CLI with project discovery, readable commands, and inspectable local state.</p>
-          </article>
-          <article class="feature-card">
-            <h3>Machine interface</h3>
-            <p>A thin core and local API with structured params, outputs, and metadata.</p>
-          </article>
-        </div>
-      </section>
-
-      <section id="proof" class="section section-alt">
-        <div class="section-heading">
-          <p class="eyebrow">Why It Matters</p>
-          <h2>Designed for high-trust execution records.</h2>
-          <p class="section-copy">
-            The goal is not only to run something once. The goal is to make that run usable later
-            by a colleague, by your future self, or by an AI system.
-          </p>
-        </div>
-
-        <div class="proof-grid">
-          <article class="proof-card">
-            <span class="proof-index">01</span>
-            <h3>Clear contracts</h3>
-            <p><code>linkar_template.yaml</code> declares params, outputs, and the real entrypoint.</p>
-          </article>
-          <article class="proof-card">
-            <span class="proof-index">02</span>
-            <h3>Portable runs</h3>
-            <p>Every execution leaves behind results, metadata, and runtime facts in one place.</p>
-          </article>
-          <article class="proof-card">
-            <span class="proof-index">03</span>
-            <h3>Lightweight chaining</h3>
-            <p>Templates connect through recorded outputs and bindings, not a heavyweight DAG language.</p>
-          </article>
-          <article class="proof-card">
-            <span class="proof-index">04</span>
-            <h3>Agent-ready structure</h3>
-            <p>The same core semantics are available through Python helpers, the CLI, and the local API.</p>
-          </article>
-        </div>
-      </section>
-
-      <section id="tutorials" class="section section-alt">
-        <div class="section-heading">
-          <p class="eyebrow">Tutorials</p>
-          <h2>Practical guides for users and pack authors.</h2>
-          <p class="section-copy">
-            Start with the basic project flow, then move into template authoring, packs, and agent use.
-          </p>
-        </div>
-
         <div class="card-grid two-up">
           {tutorials.map((entry) => (
             <a class="tutorial-card tutorial-link" href={tutorialHref(entry.slug)}>
@@ -250,47 +154,7 @@ linkar inspect run fastqc_001</code></pre>
             </a>
           ))}
         </div>
-      </section>
-
-      <section id="examples" class="section">
-        <div class="section-heading">
-          <p class="eyebrow">Examples</p>
-          <h2>Use the bundled packs as a progression.</h2>
-          <p class="section-copy">
-            The examples move from the smallest shell template to chaining, binding overrides, and
-            remote asset references.
-          </p>
-        </div>
-
-        <div class="card-grid two-up">
-          <article class="feature-card">
-            <h3>Basic pack</h3>
-            <p>
-              Start with `simple_echo`, then move through file inputs, explicit defaults, light
-              downloads, FASTQ summaries, and pixi-backed templates.
-            </p>
-          </article>
-          <article class="feature-card">
-            <h3>Chaining and beyond</h3>
-            <p>
-              Continue with `examples/packs/chaining`, then inspect `pack_management` and `remote`
-              for active-pack selection and Git-backed assets.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <section id="docs" class="section">
-        <div class="section-heading">
-          <p class="eyebrow">Reference</p>
-          <h2>Specs, rationale, and design notes.</h2>
-          <p class="section-copy">
-            Linkar is meant to be inspectable all the way down. The docs explain the model, the
-            contracts, and the long-term direction in plain language.
-          </p>
-        </div>
-
-        <div class="card-grid two-up">
+        <div class="card-grid two-up section-top-gap">
           {explanations.map((entry) => (
             <a class="doc-card" href={explanationHref(entry.slug)}>
               <h3>{entry.data.title}</h3>
@@ -298,19 +162,9 @@ linkar inspect run fastqc_001</code></pre>
             </a>
           ))}
         </div>
-
-        <div class="section-heading docs-secondary-heading">
-          <p class="eyebrow">Spec Set</p>
-          <h2>Existing development docs.</h2>
-        </div>
-
-        <div class="doc-grid">
-          {docs.map((doc) => (
-            <a class="doc-card" href={doc.href}>
-              <h3>{doc.title}</h3>
-              <p>{doc.description}</p>
-            </a>
-          ))}
+        <div class="hero-actions section-top-gap">
+          <a class="button button-primary" href={`${import.meta.env.BASE_URL}tutorials/`}>Browse tutorials</a>
+          <a class="button button-secondary" href={`${import.meta.env.BASE_URL}reference/`}>Open reference</a>
         </div>
       </section>
     </main>

@@ -1,0 +1,62 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SiteNav from "../../components/SiteNav.astro";
+
+const explanations = (await getCollection("explanations")).sort((a, b) => a.data.order - b.data.order);
+const explanationHref = (slug: string) => `${import.meta.env.BASE_URL}explanations/${slug}/`;
+const docs = [
+  { title: "Vision", description: "Problem statement, product thesis, and philosophy.", href: "https://github.com/jovesus/linkar/blob/main/docs/dev/01_vision_and_philosophy.md" },
+  { title: "Template spec", description: "Canonical template contract, runtime entrypoints, outputs, and tests.", href: "https://github.com/jovesus/linkar/blob/main/docs/dev/04_template_specification.md" },
+  { title: "Project spec", description: "Project structure, pack selection, and run indexing.", href: "https://github.com/jovesus/linkar/blob/main/docs/dev/05_project_specification.md" },
+  { title: "CLI design", description: "CLI principles, pack scopes, and command behavior.", href: "https://github.com/jovesus/linkar/blob/main/docs/dev/15_cli_design.md" },
+  { title: "Core API design", description: "How the Python helpers and local API line up with CLI semantics.", href: "https://github.com/jovesus/linkar/blob/main/docs/dev/16_core_api_design.md" },
+  { title: "Roadmap", description: "What is finished, what is next, and where Linkar should stop growing.", href: "https://github.com/jovesus/linkar/blob/main/docs/dev/20_future_roadmap.md" },
+];
+---
+
+<BaseLayout title="Reference | Linkar" description="Read the Linkar explanations, specs, and development docs that define the runtime contract and product direction.">
+  <div class="page-shell">
+    <SiteNav />
+    <main class="section-page">
+      <section class="page-hero">
+        <p class="eyebrow">Reference</p>
+        <h1 class="page-title">Specs and rationale in one place.</h1>
+        <p class="lede page-lede">
+          Linkar stays readable all the way down. The public pages explain the model, and the
+          development docs define the contract in more detail.
+        </p>
+      </section>
+
+      <section class="section page-section-tight">
+        <div class="section-heading">
+          <p class="eyebrow">Explanations</p>
+          <h2>Product-level rationale.</h2>
+        </div>
+        <div class="card-grid two-up">
+          {explanations.map((entry) => (
+            <a class="doc-card" href={explanationHref(entry.slug)}>
+              <h3>{entry.data.title}</h3>
+              <p>{entry.data.description}</p>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <section class="section page-section-tight">
+        <div class="section-heading">
+          <p class="eyebrow">Development Docs</p>
+          <h2>Primary specs and design notes.</h2>
+        </div>
+        <div class="doc-grid two-up">
+          {docs.map((doc) => (
+            <a class="doc-card" href={doc.href}>
+              <h3>{doc.title}</h3>
+              <p>{doc.description}</p>
+            </a>
+          ))}
+        </div>
+      </section>
+    </main>
+  </div>
+</BaseLayout>

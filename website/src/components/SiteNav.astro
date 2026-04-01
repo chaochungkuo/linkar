@@ -1,0 +1,34 @@
+---
+const base = import.meta.env.BASE_URL;
+const pathname = Astro.url.pathname;
+
+const navItems = [
+  { href: `${base}explanations/why-linkar/`, label: "Why" },
+  { href: `${base}tutorials/`, label: "Tutorials" },
+  { href: `${base}examples/`, label: "Examples" },
+  { href: `${base}reference/`, label: "Reference" },
+];
+
+function isActive(href: string) {
+  if (href === `${base}`) {
+    return pathname === href;
+  }
+  return pathname === href || pathname.startsWith(href);
+}
+---
+
+<nav class="topbar">
+  <a class="brand" href={base}>
+    <span class="brand-mark">lk</span>
+    <span class="brand-word">linkar</span>
+  </a>
+  <div class="nav-links">
+    {
+      navItems.map((item) => (
+        <a href={item.href} aria-current={isActive(item.href) ? "page" : undefined}>
+          {item.label}
+        </a>
+      ))
+    }
+  </div>
+</nav>

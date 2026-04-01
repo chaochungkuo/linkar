@@ -1,0 +1,35 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SiteNav from "../../components/SiteNav.astro";
+
+const explanations = (await getCollection("explanations")).sort((a, b) => a.data.order - b.data.order);
+const explanationHref = (slug: string) => `${import.meta.env.BASE_URL}explanations/${slug}/`;
+---
+
+<BaseLayout title="Explanations | Linkar" description="Understand the product model behind Linkar: why it stays small, how packs work, and why the project model is filesystem-first.">
+  <div class="page-shell">
+    <SiteNav />
+    <main class="section-page">
+      <section class="page-hero">
+        <p class="eyebrow">Explanations</p>
+        <h1 class="page-title">The model behind the runtime.</h1>
+        <p class="lede page-lede">
+          Linkar is easier to use once the boundaries are clear: templates stay atomic, packs stay
+          distributable, and projects stay readable on disk.
+        </p>
+      </section>
+
+      <section class="section page-section-tight">
+        <div class="card-grid two-up">
+          {explanations.map((entry) => (
+            <a class="doc-card" href={explanationHref(entry.slug)}>
+              <h3>{entry.data.title}</h3>
+              <p>{entry.data.description}</p>
+            </a>
+          ))}
+        </div>
+      </section>
+    </main>
+  </div>
+</BaseLayout>

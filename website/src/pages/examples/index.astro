@@ -1,0 +1,69 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SiteNav from "../../components/SiteNav.astro";
+---
+
+<BaseLayout title="Examples | Linkar" description="Explore the bundled Linkar example packs, from minimal shell templates to chaining, binding overrides, pack selection, and remote assets.">
+  <div class="page-shell">
+    <SiteNav />
+    <main class="section-page">
+      <section class="page-hero">
+        <p class="eyebrow">Examples</p>
+        <h1 class="page-title">Bundled packs you can read and run.</h1>
+        <p class="lede page-lede">
+          The example packs are meant to teach the product model in a sequence, not just provide
+          random sample files.
+        </p>
+      </section>
+
+      <section class="section page-section-tight">
+        <div class="card-grid two-up">
+          <article class="feature-card">
+            <h3>Basic</h3>
+            <p>
+              Minimal templates that show the runtime contract clearly: shell entrypoints,
+              explicit defaults, local test entrypoints, and small Pixi-backed examples.
+            </p>
+            <pre><code>examples/packs/basic
+  simple_echo
+  simple_file_input
+  simple_boolean_flag
+  download_test_data
+  fastq_stats
+  pixi_echo
+  pixi_pytest</code></pre>
+          </article>
+
+          <article class="feature-card">
+            <h3>Chaining</h3>
+            <p>
+              Shows how one template can consume another template’s outputs through pack-level
+              binding defaults.
+            </p>
+            <pre><code>examples/packs/chaining
+  linkar_pack.yaml
+  templates/
+    produce_message
+    consume_message</code></pre>
+          </article>
+
+          <article class="feature-card">
+            <h3>Binding overrides</h3>
+            <p>
+              Demonstrates default binding behavior and explicit override binding so the same
+              template can consume different sources predictably.
+            </p>
+          </article>
+
+          <article class="feature-card">
+            <h3>Pack management and remote</h3>
+            <p>
+              Covers duplicate template ids, active-pack selection, and Git-backed pack assets
+              without turning Linkar into a registry-first product.
+            </p>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+</BaseLayout>
