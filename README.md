@@ -17,6 +17,22 @@ Linkar still accepts the legacy filenames `template.yaml` and `binding.yaml` for
 
 ## Quickstart
 
+Install Linkar as a CLI tool first.
+
+Recommended:
+
+```bash
+pipx install git+https://github.com/jovesus/linkar.git
+```
+
+Alternative for `uv` users:
+
+```bash
+uv tool install git+https://github.com/jovesus/linkar.git
+```
+
+Then start with the shortest useful flow:
+
 ```bash
 linkar project init --name demo
 cd demo

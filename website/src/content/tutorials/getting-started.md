@@ -5,6 +5,25 @@ order: 1
 status: ready
 ---
 
+Install Linkar as a CLI tool first.
+
+Recommended:
+
+```bash
+pipx install git+https://github.com/jovesus/linkar.git
+```
+
+Alternative for `uv` users:
+
+```bash
+uv tool install git+https://github.com/jovesus/linkar.git
+```
+
+These are user-facing install paths. Template-local Pixi environments and editable installs belong
+to template authoring or Linkar repo development, not to normal Linkar usage.
+
+## First run
+
 Start with the shortest useful flow:
 
 ```bash

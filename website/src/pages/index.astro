@@ -104,13 +104,22 @@ GET  /runs/&lcub;run_ref&rcub;/runtime</code></pre>
       <section class="section section-alt">
         <div class="section-heading">
           <p class="eyebrow">Quickstart</p>
-          <h2>The shortest useful path.</h2>
+          <h2>Install once, then keep the path short.</h2>
           <p class="section-copy">
-            Start a project, attach a pack, run one template, then inspect the recorded result.
+            Install Linkar as a CLI tool, then start a project, attach a pack, run one template,
+            and inspect the recorded result.
           </p>
         </div>
 
         <div class="split-grid">
+          <div class="content-card">
+            <h3>0. Install Linkar</h3>
+            <pre><code>pipx install git+https://github.com/jovesus/linkar.git
+
+# or
+uv tool install git+https://github.com/jovesus/linkar.git</code></pre>
+          </div>
+
           <div class="content-card">
             <h3>1. Start a project</h3>
             <pre><code>linkar project init --name demo
