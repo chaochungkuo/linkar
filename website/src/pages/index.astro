@@ -83,11 +83,11 @@ linkar inspect run fastqc_001</code></pre>
           <article class="interface-card">
             <div class="interface-head">
               <span class="interface-tag">Machine</span>
-              <h3>Structured API for agents</h3>
+              <h3>Structured API and MCP for agents</h3>
             </div>
             <p>
-              Inspect templates, run work, and consume outputs through JSON while still writing the
-              same on-disk artifacts.
+              Inspect templates, run work, and consume outputs through JSON or MCP tools while
+              still writing the same on-disk artifacts.
             </p>
             <pre><code>linkar serve --port 8000
 
@@ -96,7 +96,9 @@ GET  /templates/&lcub;template_id&rcub;
 POST /resolve
 POST /run
 GET  /runs/&lcub;run_ref&rcub;/outputs
-GET  /runs/&lcub;run_ref&rcub;/runtime</code></pre>
+GET  /runs/&lcub;run_ref&rcub;/runtime
+
+linkar mcp serve</code></pre>
           </article>
         </div>
       </section>

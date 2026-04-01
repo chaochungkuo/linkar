@@ -38,6 +38,7 @@ from linkar.core import (
     test_template,
 )
 from linkar.errors import ProjectValidationError
+from linkar.mcp_server import main as serve_mcp
 from linkar.runtime.projects import missing_project_error
 from linkar.server import serve
 from linkar.ui import CliUI
@@ -64,6 +65,7 @@ if hasattr(click, "rich_click"):
         "  linkar run simple_echo --pack ./examples/packs/basic --param name=Linkar\n"
         "  linkar test fastqc\n"
         "  linkar serve --port 8000\n\n"
+        "  linkar mcp serve\n\n"
         "Linkar keeps the CLI thin over the same core semantics used by the local API."
     )
 
@@ -232,6 +234,20 @@ def pack_show_command(project: str | None, ui: CliUI) -> None:
 @app.group("project")
 def project_group() -> None:
     """Create a Linkar project or inspect run records stored in project.yaml."""
+
+
+@app.group("mcp")
+def mcp_group() -> None:
+    """Expose Linkar as a local MCP server for agent clients."""
+
+
+@mcp_group.command("serve")
+def mcp_serve_command() -> None:
+    """Start the stdio MCP server."""
+    try:
+        serve_mcp()
+    except RuntimeError as exc:
+        raise click.ClickException(str(exc)) from exc
 
 
 @project_group.command("init")

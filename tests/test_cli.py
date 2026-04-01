@@ -265,11 +265,16 @@ def test_help_output_is_clean_and_descriptive(tmp_path: Path) -> None:
     assert "Commands" in root_help.stdout
     assert "linkar run simple_echo --pack" in root_help.stdout
     assert "linkar serve --port 8000" in root_help.stdout
+    assert "linkar mcp serve" in root_help.stdout
 
     run_help = run_cli("run", "--help", cwd=tmp_path)
     assert run_help.returncode == 0, run_help.stderr
     assert "Run templates with template-aware options or the generic TEMPLATE" in run_help.stdout
     assert "raw" not in run_help.stdout
+
+    mcp_help = run_cli("mcp", "--help", cwd=tmp_path)
+    assert mcp_help.returncode == 0, mcp_help.stderr
+    assert "local MCP server" in mcp_help.stdout
 
     project_init_help = run_cli("project", "init", "--help", cwd=tmp_path)
     assert project_init_help.returncode == 0, project_init_help.stderr

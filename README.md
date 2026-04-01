@@ -5,6 +5,7 @@
 - A Python core with pure project and template orchestration logic
 - A Click-based CLI with template-aware run commands
 - A thin local JSON API over the same core semantics
+- A stdio MCP server for tool-oriented agent clients
 - YAML-based templates and projects
 - Metadata and runtime capture under `.linkar/`
 
@@ -106,6 +107,39 @@ Error responses use:
 ```json
 {"ok": false, "error": {"code": "param_resolution_error", "message": "..."}}
 ```
+
+## MCP for agent clients
+
+Linkar also exposes a local stdio MCP server over the same core semantics.
+
+Install the optional dependency if you want the MCP bridge:
+
+```bash
+pip install 'linkar[mcp]'
+```
+
+Then start it with either entrypoint:
+
+```bash
+linkar mcp serve
+```
+
+or:
+
+```bash
+linkar-mcp
+```
+
+High-value MCP tools include:
+
+- `linkar_list_templates`
+- `linkar_describe_template`
+- `linkar_resolve`
+- `linkar_run`
+- `linkar_test`
+- `linkar_inspect_run`
+- `linkar_get_run_outputs`
+- `linkar_get_run_runtime`
 
 ## Linkar Repo Development
 

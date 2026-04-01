@@ -8,7 +8,7 @@ status: ready
 Linkar is designed for two interfaces:
 
 - a short CLI for humans
-- a structured core and local API for machines and AI agents
+- a structured core, local API, and MCP bridge for machines and AI agents
 
 If you are building an agent or automation layer, prefer the machine-facing interfaces over shell
 scraping.
@@ -106,3 +106,39 @@ linkar run simple_echo --pack ./examples/packs/basic --param name=Human
 
 But once an agent needs repeated inspection and execution, the core helpers or the local API are
 the cleaner path.
+
+## MCP path for tool-oriented clients
+
+If the client already speaks MCP, use Linkar's stdio MCP server instead of wrapping the CLI.
+
+Install the optional dependency:
+
+```bash
+pip install 'linkar[mcp]'
+```
+
+Then start the server:
+
+```bash
+linkar mcp serve
+```
+
+or:
+
+```bash
+linkar-mcp
+```
+
+The MCP tool surface mirrors the same high-value operations:
+
+- `linkar_list_templates`
+- `linkar_describe_template`
+- `linkar_resolve`
+- `linkar_run`
+- `linkar_test`
+- `linkar_inspect_run`
+- `linkar_get_run_outputs`
+- `linkar_get_run_runtime`
+
+This is the cleanest path for Codex-style clients because it exposes small, explicit tools instead
+of forcing shell parsing or a second wrapper layer over the HTTP API.

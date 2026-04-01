@@ -16,6 +16,9 @@ It should not invent:
 
 The API server should be a transport layer over the core, just as the CLI is.
 
+The same rule applies to the MCP server. MCP is another transport over core semantics, not a
+second orchestration layer.
+
 ## Purpose
 The first API server should provide:
 
@@ -65,6 +68,11 @@ The first local API server should expose:
 - `POST /test`
 
 These operations should remain thin wrappers over the same core semantics.
+
+## MCP Direction
+
+The MCP layer should expose a small, tool-oriented subset of the same discovery, resolve, run, and
+inspection operations. It should be a stdio server that local agent clients can attach to directly.
 
 ## Error Model
 The API server should map typed core errors to stable machine-facing responses.

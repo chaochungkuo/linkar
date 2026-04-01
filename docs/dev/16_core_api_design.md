@@ -19,6 +19,9 @@ This is not secondary to the CLI. The product goal is a dual-interface runtime:
 
 The core API is what makes those two interfaces share one execution model instead of drifting apart.
 
+A stdio MCP server can sit on top of the same core for tool-oriented agent clients. That MCP layer
+should still remain thin over the same semantics instead of inventing a second machine model.
+
 ## Design Rules
 The core API should:
 
@@ -187,6 +190,31 @@ curl -s http://127.0.0.1:8000/runs/simple_echo_001/outputs?project=./study
 ```
 
 The important property is that the CLI, core, and server all drive the same runtime path.
+
+## MCP Usage
+
+For Codex-style clients, Linkar also exposes a stdio MCP server:
+
+```bash
+linkar mcp serve
+```
+
+Recommended MCP tool surface:
+
+- `linkar_list_templates`
+- `linkar_describe_template`
+- `linkar_resolve`
+- `linkar_run`
+- `linkar_test`
+- `linkar_list_project_runs`
+- `linkar_list_project_assets`
+- `linkar_inspect_run`
+- `linkar_get_run_outputs`
+- `linkar_get_run_runtime`
+- `linkar_generate_methods`
+
+This surface should stay close to the same discovery, resolution, execution, and inspection steps
+already defined for the core and local HTTP API.
 
 ## Local API Endpoint Shape
 
