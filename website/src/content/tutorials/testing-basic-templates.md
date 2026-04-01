@@ -75,3 +75,4 @@ linkar run fastq_stats \
 ```
 
 That creates a real run directory under `.linkar/runs/` or under the current project if a project is active.
+In project mode, the project root exposes a stable path such as `./fastq_stats`, while the immutable recorded artifact lives under `.linkar/runs/<instance_id>/`.

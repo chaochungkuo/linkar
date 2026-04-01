@@ -84,23 +84,27 @@ It is intended for:
 It may include command, timestamps, return code, and captured output details.
 
 ## Project Mode Layout
-When a project is active, instance directories should typically live under the project root.
+When a project is active, the immutable run artifact lives under `.linkar/runs/`, and the project root exposes a stable user-facing path for the latest run of each template.
 
 Example:
 
 ```text
 study/
   project.yaml
-  bclconvert_001/
-    results/
-    .linkar/
-      meta.json
-      runtime.json
-  fastqc_001/
-    results/
-    .linkar/
-      meta.json
-      runtime.json
+  bclconvert/
+  fastqc/
+  .linkar/
+    runs/
+      bclconvert_001/
+        results/
+        .linkar/
+          meta.json
+          runtime.json
+      fastqc_001/
+        results/
+        .linkar/
+          meta.json
+          runtime.json
 ```
 
 ## Ephemeral Mode Layout

@@ -428,6 +428,35 @@ def test_run_discovers_project_from_current_directory(tmp_path: Path) -> None:
     assert project["templates"][0]["id"] == "simple_echo"
 
 
+def test_project_run_uses_stable_project_path_and_history_dir(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    completed = run_cli(
+        "run",
+        "simple_echo",
+        "--pack",
+        str(ROOT / "examples" / "packs" / "basic"),
+        "--param",
+        "name=StablePath",
+        cwd=project_dir,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+    outdir = Path(completed.stdout.strip())
+    assert outdir == (project_dir / "simple_echo")
+    assert outdir.is_symlink()
+    assert outdir.resolve().parent.name == "runs"
+    assert (outdir / "greeting.txt").read_text().strip() == "Hello, StablePath"
+
+    project = yaml.safe_load((project_dir / "project.yaml").read_text())
+    entry = project["templates"][0]
+    assert entry["path"] == "simple_echo"
+    assert entry["history_path"] == ".linkar/runs/simple_echo_001"
+    assert entry["meta"] == ".linkar/runs/simple_echo_001/.linkar/meta.json"
+
+
 def test_local_templates_can_chain_without_pack(tmp_path: Path) -> None:
     project_dir = tmp_path / "study"
     init = run_cli("project", "init", str(project_dir), cwd=tmp_path)

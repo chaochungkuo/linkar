@@ -7,10 +7,12 @@ from linkar.runtime.runs import (
     collect_declared_glob_output,
     collect_outputs,
     default_output_relative_path,
+    determine_project_alias_dir,
     determine_outdir,
     determine_test_dir,
     next_instance_id,
     resolve_declared_output_path,
+    sync_project_alias,
     should_exclude_runtime_path,
     should_render_shell_wrapper,
     stage_runtime_bundle,
@@ -89,7 +91,8 @@ def test_determine_outdir_and_testdir_follow_project_and_ephemeral_rules(tmp_pat
     project = load_project(project_path.parent)
 
     outdir = determine_outdir(template, project, None, "demo_001")
-    assert outdir == (project.root / "demo_001").resolve()
+    assert outdir == (project.root / ".linkar" / "runs" / "demo_001").resolve()
+    assert determine_project_alias_dir(template, project) == (project.root / "demo").resolve()
 
     testdir = determine_test_dir(template, project, None)
     assert testdir.parent.parent == (project.root / ".linkar").resolve()
@@ -98,6 +101,17 @@ def test_determine_outdir_and_testdir_follow_project_and_ephemeral_rules(tmp_pat
     ephemeral_outdir = determine_outdir(template, None, None, "demo_999")
     assert ephemeral_outdir.parent.parent.name == ".linkar"
     assert ephemeral_outdir.parent.name == "runs"
+
+
+def test_sync_project_alias_points_stable_project_path_to_history_dir(tmp_path: Path) -> None:
+    history_dir = tmp_path / ".linkar" / "runs" / "demo_001"
+    history_dir.mkdir(parents=True)
+    alias_dir = tmp_path / "demo"
+
+    sync_project_alias(history_dir, alias_dir)
+
+    assert alias_dir.is_symlink()
+    assert alias_dir.resolve() == history_dir.resolve()
 
 
 def test_stage_runtime_bundle_copies_support_files_but_excludes_test_only_files(tmp_path: Path) -> None:

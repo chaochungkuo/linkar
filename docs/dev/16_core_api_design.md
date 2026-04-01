@@ -68,9 +68,10 @@ Example result shape:
 {
     "template": "fastqc",
     "instance_id": "fastqc_001",
-    "outdir": "/path/to/project/fastqc_001",
-    "meta": "/path/to/project/fastqc_001/.linkar/meta.json",
-    "runtime": "/path/to/project/fastqc_001/.linkar/runtime.json",
+    "outdir": "/path/to/project/fastqc",
+    "history_outdir": "/path/to/project/.linkar/runs/fastqc_001",
+    "meta": "/path/to/project/.linkar/runs/fastqc_001/.linkar/meta.json",
+    "runtime": "/path/to/project/.linkar/runs/fastqc_001/.linkar/runtime.json",
 }
 ```
 

@@ -27,8 +27,12 @@ Example:
 ```text
 study/
   project.yaml
-  fastqc_001/
-  rnaseq_001/
+  fastqc/
+  rnaseq/
+  .linkar/
+    runs/
+      fastqc_001/
+      rnaseq_001/
 ```
 
 The presence of `project.yaml` marks the directory as a Linkar project.
@@ -56,11 +60,12 @@ templates:
   - id: fastqc
     template_version: 0.1.0
     instance_id: fastqc_001
-    path: ./fastqc_001
+    path: ./fastqc
+    history_path: ./.linkar/runs/fastqc_001
     params: {}
     outputs:
-      fastq_dir: ./fastqc_001/results
-    meta: ./fastqc_001/.linkar/meta.json
+      fastq_dir: ./fastqc/results
+    meta: ./.linkar/runs/fastqc_001/.linkar/meta.json
 ```
 
 ## Top-Level Fields
@@ -130,6 +135,7 @@ Expected fields:
 - `template_version`
 - `instance_id`
 - `path`
+- `history_path`
 - `params`
 - `outputs`
 - `meta`
@@ -151,9 +157,18 @@ The template definition version used for this run, if the template declares one.
 This is provenance only. It should help later inspection and reproducibility, but it should not be treated as the primary lookup key for template resolution.
 
 ### `path`
-The relative path from the project root to the run directory.
+The relative path from the project root to the stable user-facing directory for the template.
 
-This should point to the template instance output directory.
+In project mode this is typically a stable alias such as `./fastqc` or `./multiqc`.
+
+### `history_path`
+The relative path from the project root to the immutable recorded run artifact.
+
+Typical value:
+
+```text
+./.linkar/runs/fastqc_001
+```
 
 ### `params`
 The resolved parameters used for that run.
@@ -169,15 +184,15 @@ Examples:
 
 ```yaml
 outputs:
-  fastq_dir: ./bclconvert_001/results/fastq
-  report_html: ./fastqc_001/results/report.html
+  fastq_dir: ./bclconvert/results/fastq
+  report_html: ./fastqc/results/report.html
 ```
 
 ### `meta`
 The relative path from the project root to the run metadata file, typically:
 
 ```text
-./fastqc_001/.linkar/meta.json
+./.linkar/runs/fastqc_001/.linkar/meta.json
 ```
 
 This provides a bridge from project-level indexing to the full run record.
@@ -207,24 +222,29 @@ A common layout is:
 ```text
 study/
   project.yaml
-  bclconvert_001/
-    results/
-    .linkar/
-      meta.json
-      runtime.json
-  fastqc_001/
-    results/
-    .linkar/
-      meta.json
-      runtime.json
+  bclconvert/
+  fastqc/
+  .linkar/
+    runs/
+      bclconvert_001/
+        results/
+        .linkar/
+          meta.json
+          runtime.json
+      fastqc_001/
+        results/
+        .linkar/
+          meta.json
+          runtime.json
 ```
 
-The project indexes these run directories, but the run directories remain the primary execution artifacts.
+The project root stays readable, while immutable run history lives under `.linkar/runs/`.
 
 This is important:
 
 - The project is the index
-- The run directory is the artifact
+- The stable project-root directory is the current user-facing path
+- The history run directory is the immutable artifact
 
 ## Relative Path Rules
 Paths recorded in `project.yaml` should generally be relative to the project root.
@@ -329,21 +349,23 @@ packs:
 templates:
   - id: bclconvert
     instance_id: bclconvert_001
-    path: ./bclconvert_001
+    path: ./bclconvert
+    history_path: ./.linkar/runs/bclconvert_001
     params:
       bcl_dir: /data/run42
       threads: 8
     outputs:
-      fastq_dir: ./bclconvert_001/results/fastq
-    meta: ./bclconvert_001/.linkar/meta.json
+      fastq_dir: ./bclconvert/results/fastq
+    meta: ./.linkar/runs/bclconvert_001/.linkar/meta.json
   - id: fastqc
     instance_id: fastqc_001
-    path: ./fastqc_001
+    path: ./fastqc
+    history_path: ./.linkar/runs/fastqc_001
     params:
-      fastq_dir: ./bclconvert_001/results/fastq
+      fastq_dir: ./bclconvert/results/fastq
     outputs:
-      report_dir: ./fastqc_001/results
-    meta: ./fastqc_001/.linkar/meta.json
+      report_dir: ./fastqc/results
+    meta: ./.linkar/runs/fastqc_001/.linkar/meta.json
 ```
 
 ## Summary

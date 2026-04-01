@@ -93,6 +93,7 @@ class CliUI:
 
     def print_run_completed(self, result: dict[str, Any]) -> None:
         outdir = Path(result["outdir"])
+        history_outdir = Path(result.get("history_outdir", result["outdir"]))
         if not self.rich_enabled:
             self.plain_print(str(outdir))
             return
@@ -105,9 +106,14 @@ class CliUI:
         body.append(": ", style="muted")
         body.append(str(outdir / "results"), style="value")
         body.append("\n")
-        body.append("Run Dir", style="label")
+        body.append("Project Dir", style="label")
         body.append(": ", style="muted")
         body.append(str(outdir), style="value")
+        if history_outdir != outdir:
+            body.append("\n")
+            body.append("History Dir", style="label")
+            body.append(": ", style="muted")
+            body.append(str(history_outdir), style="value")
         self.console.print(
             Panel(
                 body,

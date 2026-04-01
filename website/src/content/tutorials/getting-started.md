@@ -19,8 +19,9 @@ This gives you:
 
 - a normal project directory
 - `project.yaml`
-- a recorded run directory
-- `.linkar/meta.json` for provenance
+- a stable project-root directory such as `./fastqc`
+- immutable run history under `.linkar/runs/`
+- `.linkar/runs/<instance_id>/.linkar/meta.json` for provenance
 
 This is the Linkar user path.
 

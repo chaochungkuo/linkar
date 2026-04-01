@@ -163,6 +163,8 @@ Example shape:
 }
 ```
 
+In project mode, the project index may point `path` at a stable project-root alias such as `./fastqc`, while `meta.json` itself continues to live inside the immutable history directory under `.linkar/runs/fastqc_001/`.
+
 ## Design Principles
 Metadata should be:
 

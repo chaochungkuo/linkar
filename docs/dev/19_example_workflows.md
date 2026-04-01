@@ -63,6 +63,7 @@ linkar run fastqc
 Expected behavior:
 
 - two distinct instances are created
+- the stable project-root path still stays `./fastqc`
 - project history preserves both
 - later resolution can still use recency where appropriate
 

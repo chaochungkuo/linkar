@@ -25,7 +25,7 @@ linkar run simple_echo --name Linkar
 linkar inspect run simple_echo_001
 ```
 
-In project mode, Linkar creates an instance directory in the project, writes results to `results/`, and records metadata in `.linkar/meta.json`.
+In project mode, Linkar exposes a stable directory such as `./simple_echo`, writes results under `results/`, and keeps immutable run history plus metadata under `.linkar/runs/<instance_id>/`.
 
 For ad hoc runs without a project:
 

@@ -65,7 +65,7 @@ The output directory is also the execution directory.
 
 Typical behavior:
 
-- project mode: create a run directory under the project root
+- project mode: create an immutable run directory under `.linkar/runs/` and expose a stable project-root alias such as `./fastqc`
 - ephemeral mode: create a run directory under `.linkar/runs/`
 - explicit `outdir`: use the caller-provided location
 

@@ -54,8 +54,14 @@ def determine_outdir(
     if outdir is not None:
         return Path(outdir).resolve()
     if project is not None:
-        return (project.root / instance_id).resolve()
+        return (project.root / ".linkar" / "runs" / instance_id).resolve()
     return (Path.cwd() / ".linkar" / "runs" / instance_id).resolve()
+
+
+def determine_project_alias_dir(template: TemplateSpec, project: Project | None) -> Path | None:
+    if project is None:
+        return None
+    return project.root / template.id
 
 
 def determine_test_dir(
@@ -190,19 +196,22 @@ def update_project(
     template: TemplateSpec,
     instance_id: str,
     outdir: Path,
+    display_outdir: Path,
     params: dict[str, Any],
     outputs: dict[str, Any],
     meta_path: Path,
 ) -> None:
     from linkar.runtime.shared import save_yaml
 
-    relative_path = os.path.relpath(outdir, project.root)
+    relative_path = os.path.relpath(display_outdir, project.root)
+    relative_history_path = os.path.relpath(outdir, project.root)
     relative_meta = os.path.relpath(meta_path, project.root)
     entry = {
         "id": template.id,
         "template_version": template.version,
         "instance_id": instance_id,
         "path": relative_path,
+        "history_path": relative_history_path,
         "params": params,
         "outputs": outputs,
         "meta": relative_meta,
@@ -216,6 +225,17 @@ def update_project(
         }
     project.data.setdefault("templates", []).append(entry)
     save_yaml(project.root / "project.yaml", project.data)
+
+
+def sync_project_alias(output_dir: Path, alias_dir: Path) -> None:
+    if alias_dir.exists() or alias_dir.is_symlink():
+        if alias_dir.is_symlink() or alias_dir.is_file():
+            alias_dir.unlink()
+        else:
+            raise ProjectValidationError(
+                f"Cannot create project alias at {alias_dir}: path already exists and is not a symlink"
+            )
+    alias_dir.symlink_to(output_dir, target_is_directory=True)
 
 
 def list_project_runs(project: str | Path | Project | None = None) -> list[dict[str, Any]]:
@@ -447,6 +467,9 @@ def run_template(
     )
     instance_id = next_instance_id(template.id, project_obj)
     output_dir = determine_outdir(template, project_obj, outdir, instance_id)
+    display_dir = determine_project_alias_dir(template, project_obj) if outdir is None else output_dir
+    if display_dir is None:
+        display_dir = output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "results").mkdir(exist_ok=True)
     linkar_dir = output_dir / ".linkar"
@@ -541,11 +564,13 @@ def run_template(
     )
 
     if project_obj is not None:
+        sync_project_alias(output_dir, display_dir)
         update_project(
             project_obj,
             template=template,
             instance_id=instance_id,
             outdir=output_dir,
+            display_outdir=display_dir,
             params=resolved_params,
             outputs=outputs,
             meta_path=meta_path,
@@ -554,7 +579,8 @@ def run_template(
     return {
         "template": template.id,
         "instance_id": instance_id,
-        "outdir": str(output_dir),
+        "outdir": str(display_dir),
+        "history_outdir": str(output_dir),
         "meta": str(meta_path),
         "runtime": str(runtime_path),
     }
