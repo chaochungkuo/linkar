@@ -266,11 +266,14 @@ def test_help_output_is_clean_and_descriptive(tmp_path: Path) -> None:
     assert "linkar run simple_echo --pack" in root_help.stdout
     assert "linkar serve --port 8000" in root_help.stdout
     assert "linkar mcp serve" in root_help.stdout
+    assert "╭─ Options" in root_help.stdout
 
     run_help = run_cli("run", "--help", cwd=tmp_path)
     assert run_help.returncode == 0, run_help.stderr
     assert "Run templates with template-aware options or the generic TEMPLATE" in run_help.stdout
     assert "raw" not in run_help.stdout
+    assert "╭─ Options" in run_help.stdout
+    assert "╭─ Commands" in run_help.stdout
 
     mcp_help = run_cli("mcp", "--help", cwd=tmp_path)
     assert mcp_help.returncode == 0, mcp_help.stderr
@@ -288,6 +291,7 @@ def test_help_output_is_clean_and_descriptive(tmp_path: Path) -> None:
     assert "Run any template by id or path" in raw_help.stdout
     assert "TEMPLATE" in raw_help.stdout
     assert "Options" in raw_help.stdout
+    assert "╭─ Options" in raw_help.stdout
 
 
 def test_bare_cli_shows_helpful_guidance(tmp_path: Path) -> None:
@@ -776,8 +780,11 @@ printf '%s\n' "${THREADS}" > "${LINKAR_RESULTS_DIR}/threads.txt"
 
     completed = run_cli("run", "fastqc", "--help", cwd=project_dir)
     assert completed.returncode == 0, completed.stderr
-    assert "--input PATH" in completed.stdout
-    assert "--threads INT" in completed.stdout
+    assert "--input" in completed.stdout
+    assert "PATH" in completed.stdout
+    assert "--threads" in completed.stdout
+    assert "INT" in completed.stdout
+    assert "╭─ Options" in completed.stdout
 
 
 def test_template_test_command_runs_template_local_test_script(tmp_path: Path) -> None:

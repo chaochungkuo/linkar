@@ -22,6 +22,9 @@ from linkar.cli_support.common import (
     shell_complete_template_ref,
 )
 
+CommandClass = getattr(click, "RichCommand", click.Command)
+GroupClass = getattr(click, "RichGroup", click.Group)
+
 
 def template_command_callback(template_id: str, template_path: str, pack_ref: str | None = None):
     template_spec = load_template(template_path)
@@ -103,7 +106,7 @@ def template_command_callback(template_id: str, template_path: str, pack_ref: st
         ]
     )
 
-    return click.Command(
+    return CommandClass(
         name=template_id,
         callback=callback,
         params=params,
@@ -199,7 +202,7 @@ def make_generic_run_command(name: str, *, bound_template: str | None = None, hi
         ]
     )
 
-    return click.Command(
+    return CommandClass(
         name=name,
         callback=generic_run_callback(bound_template),
         params=params,
@@ -209,7 +212,7 @@ def make_generic_run_command(name: str, *, bound_template: str | None = None, hi
     )
 
 
-class DynamicRunGroup(click.Group):
+class DynamicRunGroup(GroupClass):
     def list_commands(self, ctx: click.Context) -> list[str]:
         command_names: set[str] = set()
         by_id: dict[str, list[dict[str, Any]]] = defaultdict(list)
