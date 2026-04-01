@@ -199,17 +199,20 @@ h1,
 h2,
 h3 {
   margin: 0;
-  line-height: 0.98;
+  line-height: 1.02;
 }
 
 h1 {
-  font-size: clamp(3rem, 7.1vw, 6rem);
-  max-width: 10ch;
-  letter-spacing: -0.05em;
+  font-size: clamp(2.7rem, 5.8vw, 4.9rem);
+  max-width: 11ch;
+  letter-spacing: -0.045em;
 }
 
 .hero-title {
-  font-size: clamp(3rem, 7.1vw, 6rem);
+  font-size: clamp(2.9rem, 6vw, 5.1rem);
+  max-width: 8.2ch;
+  line-height: 0.97;
+  text-wrap: balance;
 }
 
 h2 {
@@ -224,7 +227,7 @@ h3 {
 
 .lede {
   max-width: 44rem;
-  margin: 1.45rem 0 0;
+  margin: 1.25rem 0 0;
   font-size: 1.12rem;
   line-height: 1.78;
   color: var(--muted);
@@ -371,7 +374,7 @@ h3 {
 }
 
 .page-title {
-  max-width: 13ch;
+  max-width: 14ch;
 }
 
 .page-lede {
@@ -630,6 +633,11 @@ h3 {
   .hero-title {
     max-width: 12ch;
   }
+
+  .hero-title {
+    font-size: clamp(2.8rem, 8vw, 4.4rem);
+    line-height: 0.99;
+  }
 }
 
 @media (max-width: 900px) {
@@ -661,5 +669,21 @@ h3 {
 
   .brand-word {
     letter-spacing: 0.1em;
+  }
+
+  h1 {
+    font-size: clamp(2.35rem, 12vw, 3.3rem);
+    max-width: 12ch;
+  }
+
+  .hero-title {
+    font-size: clamp(2.45rem, 12vw, 3.45rem);
+    max-width: 9.5ch;
+    line-height: 1;
+  }
+
+  .lede {
+    font-size: 1.02rem;
+    line-height: 1.72;
   }
 }
