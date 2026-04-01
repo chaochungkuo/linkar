@@ -57,6 +57,40 @@ linkar run fastqc --input sample.fastq.gz
 
 Use `linkar run TEMPLATE ...` when you want the generic path-or-pack execution interface.
 
+## Local API
+
+Linkar also exposes a small local JSON API over the same core semantics:
+
+```bash
+linkar serve --port 8000
+```
+
+Current agent-oriented endpoints:
+
+- `GET /templates`
+- `GET /templates/{template_id}`
+- `GET /projects/runs`
+- `GET /projects/assets`
+- `GET /runs/{run_ref}`
+- `GET /runs/{run_ref}/outputs`
+- `GET /runs/{run_ref}/runtime`
+- `GET /methods`
+- `POST /resolve`
+- `POST /run`
+- `POST /test`
+
+Success responses use:
+
+```json
+{"ok": true, "data": {...}}
+```
+
+Error responses use:
+
+```json
+{"ok": false, "error": {"code": "param_resolution_error", "message": "..."}}
+```
+
 ## Linkar Repo Development
 
 These commands are for working on the `linkar` engine repo itself, not for normal Linkar usage.

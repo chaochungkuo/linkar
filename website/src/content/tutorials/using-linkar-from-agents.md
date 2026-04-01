@@ -51,10 +51,40 @@ Then inspect and run through JSON:
 
 ```bash
 curl -s "http://127.0.0.1:8000/templates?pack=./examples/packs/basic"
-curl -s "http://127.0.0.1:8000/projects/runs?project=./study"
+curl -s "http://127.0.0.1:8000/templates/simple_echo?pack=./examples/packs/basic"
+curl -s -X POST "http://127.0.0.1:8000/resolve" \
+  -H "Content-Type: application/json" \
+  -d '{"template":"simple_echo","pack_refs":["./examples/packs/basic"],"params":{"name":"Agent"}}'
 curl -s -X POST "http://127.0.0.1:8000/run" \
   -H "Content-Type: application/json" \
   -d '{"template":"simple_echo","pack_refs":["./examples/packs/basic"],"params":{"name":"Agent"}}'
+curl -s "http://127.0.0.1:8000/runs/simple_echo_001/outputs?project=./study"
+```
+
+Current local API surface:
+
+- `GET /templates`
+- `GET /templates/{template_id}`
+- `GET /projects/runs`
+- `GET /projects/assets`
+- `GET /runs/{run_ref}`
+- `GET /runs/{run_ref}/outputs`
+- `GET /runs/{run_ref}/runtime`
+- `GET /methods`
+- `POST /resolve`
+- `POST /run`
+- `POST /test`
+
+Success responses use:
+
+```json
+{"ok": true, "data": {...}}
+```
+
+Errors use:
+
+```json
+{"ok": false, "error": {"code": "param_resolution_error", "message": "..."}}
 ```
 
 ## Why this is better than shell scraping

@@ -32,13 +32,17 @@ Representative APIs include:
 
 ```python
 run_template(template_ref, params=None, project=None, outdir=None, pack_refs=None, binding_ref=None)
+test_template(template_ref, project=None, outdir=None, pack_refs=None)
 load_project(path)
 init_project(path, project_id=None)
 load_template(template_ref, pack_refs=None)
 resolve_params(template, cli_params=None, project=None)
+preview_params_detailed(template, cli_params=None, project=None, binding_ref=None)
+describe_template(template_ref, pack_refs=None, project=None)
 list_project_runs(project=None)
 list_templates(pack_refs=None, project=None)
 inspect_run(run_ref, project=None)
+inspect_runtime(run_ref, project=None)
 generate_methods(project=None)
 ```
 
@@ -172,13 +176,55 @@ linkar serve --port 8000
 
 ```bash
 curl -s http://127.0.0.1:8000/templates?pack=./examples/packs/basic
-curl -s http://127.0.0.1:8000/projects/runs?project=./study
+curl -s http://127.0.0.1:8000/templates/simple_echo?pack=./examples/packs/basic
+curl -s -X POST http://127.0.0.1:8000/resolve \
+  -H 'Content-Type: application/json' \
+  -d '{"template":"simple_echo","pack_refs":["./examples/packs/basic"],"params":{"name":"Agent"}}'
 curl -s -X POST http://127.0.0.1:8000/run \
   -H 'Content-Type: application/json' \
   -d '{"template":"simple_echo","pack_refs":["./examples/packs/basic"],"params":{"name":"Agent"}}'
+curl -s http://127.0.0.1:8000/runs/simple_echo_001/outputs?project=./study
 ```
 
 The important property is that the CLI, core, and server all drive the same runtime path.
+
+## Local API Endpoint Shape
+
+Current local API surface:
+
+- `GET /health`
+- `GET /templates`
+- `GET /templates/{template_id}`
+- `GET /projects/runs`
+- `GET /projects/assets`
+- `GET /runs/{run_ref}`
+- `GET /runs/{run_ref}/outputs`
+- `GET /runs/{run_ref}/runtime`
+- `GET /methods`
+- `POST /resolve`
+- `POST /run`
+- `POST /test`
+
+Success responses use:
+
+```json
+{
+  "ok": true,
+  "data": { "...": "..." }
+}
+```
+
+Errors use:
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "param_resolution_error",
+    "message": "Missing required param: name ..."
+  }
+}
+```
 
 ## Summary
 The core API should be:

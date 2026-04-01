@@ -77,7 +77,8 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
     )
 
     assert status == "200 OK"
-    outdir = Path(payload["outdir"])
+    result = payload["data"]
+    outdir = Path(result["outdir"])
     assert (outdir / "greeting.txt").read_text().strip() == "Hello, Server"
 
     status, _, runs_payload = call_app(
@@ -87,8 +88,8 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
-    assert len(runs_payload["runs"]) == 1
-    instance_id = runs_payload["runs"][0]["instance_id"]
+    assert len(runs_payload["data"]["runs"]) == 1
+    instance_id = runs_payload["data"]["runs"][0]["instance_id"]
 
     status, _, inspect_payload = call_app(
         app,
@@ -97,8 +98,26 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
-    assert inspect_payload["template"] == "simple_echo"
-    assert inspect_payload["params"]["name"] == "Server"
+    assert inspect_payload["data"]["template"] == "simple_echo"
+    assert inspect_payload["data"]["params"]["name"] == "Server"
+
+    status, _, outputs_payload = call_app(
+        app,
+        method="GET",
+        path=f"/runs/{instance_id}/outputs",
+        query=f"project={project_dir}",
+    )
+    assert status == "200 OK"
+    assert outputs_payload["data"]["outputs"] == inspect_payload["data"]["outputs"]
+
+    status, _, runtime_payload = call_app(
+        app,
+        method="GET",
+        path=f"/runs/{instance_id}/runtime",
+        query=f"project={project_dir}",
+    )
+    assert status == "200 OK"
+    assert runtime_payload["data"]["success"] is True
 
     status, _, templates_payload = call_app(
         app,
@@ -107,7 +126,17 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
-    assert any(item["id"] == "simple_echo" for item in templates_payload["templates"])
+    assert any(item["id"] == "simple_echo" for item in templates_payload["data"]["templates"])
+
+    status, _, template_payload = call_app(
+        app,
+        method="GET",
+        path="/templates/simple_echo",
+        query=f"project={project_dir}",
+    )
+    assert status == "200 OK"
+    assert template_payload["data"]["id"] == "simple_echo"
+    assert template_payload["data"]["run"]["entry"] == "run.sh"
 
     status, _, assets_payload = call_app(
         app,
@@ -116,7 +145,7 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
-    assert assets_payload["assets"][0]["pack_ref"] == str(ROOT / "examples" / "packs" / "basic")
+    assert assets_payload["data"]["assets"][0]["pack_ref"] == str(ROOT / "examples" / "packs" / "basic")
 
     status, _, methods_payload = call_app(
         app,
@@ -125,7 +154,58 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
-    assert "simple_echo" in methods_payload["text"]
+    assert "simple_echo" in methods_payload["data"]["text"]
+
+
+def test_server_resolve_and_test_endpoints(tmp_path: Path) -> None:
+    app = make_app()
+
+    status, _, resolve_payload = call_app(
+        app,
+        method="POST",
+        path="/resolve",
+        body=json.dumps(
+            {
+                "template": "simple_echo",
+                "pack_refs": [str(ROOT / "examples" / "packs" / "basic")],
+                "params": {"name": "Resolver"},
+            }
+        ).encode("utf-8"),
+    )
+    assert status == "200 OK"
+    assert resolve_payload["data"]["ready"] is True
+    assert resolve_payload["data"]["params"]["name"] == "Resolver"
+    assert resolve_payload["data"]["missing_required"] == []
+
+    status, _, missing_payload = call_app(
+        app,
+        method="POST",
+        path="/resolve",
+        body=json.dumps(
+            {
+                "template": "simple_echo",
+                "pack_refs": [str(ROOT / "examples" / "packs" / "basic")],
+            }
+        ).encode("utf-8"),
+    )
+    assert status == "200 OK"
+    assert missing_payload["data"]["ready"] is False
+    assert missing_payload["data"]["missing_required"] == ["name"]
+
+    status, _, test_payload = call_app(
+        app,
+        method="POST",
+        path="/test",
+        body=json.dumps(
+            {
+                "template": "simple_echo",
+                "pack_refs": [str(ROOT / "examples" / "packs" / "basic")],
+            }
+        ).encode("utf-8"),
+    )
+    assert status == "200 OK"
+    assert test_payload["data"]["template"] == "simple_echo"
+    assert Path(test_payload["data"]["runtime"]).exists()
 
 
 def test_server_returns_typed_error_payloads(tmp_path: Path) -> None:
@@ -138,7 +218,7 @@ def test_server_returns_typed_error_payloads(tmp_path: Path) -> None:
         body=b"{bad json",
     )
     assert status == "400 Bad Request"
-    assert payload["error"] == "invalid_project"
+    assert payload["error"]["code"] == "invalid_project"
 
     status, _, payload = call_app(
         app,
@@ -147,7 +227,7 @@ def test_server_returns_typed_error_payloads(tmp_path: Path) -> None:
         body=json.dumps({"project": str(tmp_path)}).encode("utf-8"),
     )
     assert status == "400 Bad Request"
-    assert payload["error"] == "invalid_project"
+    assert payload["error"]["code"] == "invalid_project"
 
     status, _, payload = call_app(
         app,
@@ -156,7 +236,7 @@ def test_server_returns_typed_error_payloads(tmp_path: Path) -> None:
         query="pack=/definitely/missing",
     )
     assert status == "404 Not Found"
-    assert payload["error"] == "asset_resolution_error"
+    assert payload["error"]["code"] == "asset_resolution_error"
 
 
 def test_server_run_error_payload_includes_actionable_missing_param_message(tmp_path: Path) -> None:
@@ -175,9 +255,9 @@ def test_server_run_error_payload_includes_actionable_missing_param_message(tmp_
     )
 
     assert status == "400 Bad Request"
-    assert payload["error"] == "param_resolution_error"
-    assert "Missing required param: name" in payload["message"]
-    assert "--name VALUE" in payload["message"]
+    assert payload["error"]["code"] == "param_resolution_error"
+    assert "Missing required param: name" in payload["error"]["message"]
+    assert "--name VALUE" in payload["error"]["message"]
 
 
 def test_server_run_endpoint_supports_ephemeral_mode() -> None:
@@ -196,6 +276,6 @@ def test_server_run_endpoint_supports_ephemeral_mode() -> None:
     )
 
     assert status == "200 OK"
-    outdir = Path(payload["outdir"])
+    outdir = Path(payload["data"]["outdir"])
     assert outdir.parent.name == "runs"
     assert (outdir / "greeting.txt").read_text().strip() == "Hello, EphemeralServer"

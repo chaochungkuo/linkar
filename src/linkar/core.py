@@ -13,6 +13,7 @@ from linkar.runtime.config import (
 from linkar.runtime.bindings import (
     binding_asset_root,
     load_binding_config,
+    preview_params_detailed,
     resolve_binding_function,
     resolve_bound_value,
     resolve_params,
@@ -38,6 +39,7 @@ from linkar.runtime.runs import (
     determine_test_dir,
     generate_methods,
     inspect_run,
+    inspect_runtime,
     list_project_runs,
     next_instance_id,
     resolve_project_assets,
@@ -60,7 +62,7 @@ from linkar.runtime.shared import (
     utc_now,
     write_json,
 )
-from linkar.runtime.templates import list_templates, load_template
+from linkar.runtime.templates import describe_template, list_templates, load_template
 
 __all__ = [
     "BindingContext",
@@ -71,6 +73,7 @@ __all__ = [
     "add_global_pack",
     "binding_asset_root",
     "collect_outputs",
+    "describe_template",
     "derive_pack_id",
     "determine_outdir",
     "determine_test_dir",
@@ -85,6 +88,7 @@ __all__ = [
     "global_pack_entries",
     "init_project",
     "inspect_run",
+    "inspect_runtime",
     "latest_project_output",
     "list_configured_packs",
     "list_global_packs",
@@ -99,6 +103,7 @@ __all__ = [
     "normalize_binding_ref",
     "pack_entry_to_data",
     "parse_param_value",
+    "preview_params_detailed",
     "preferred_pack_ref_for_assets",
     "project_file",
     "project_pack_entries",

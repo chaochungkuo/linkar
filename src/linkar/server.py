@@ -6,13 +6,19 @@ from urllib.parse import parse_qs, unquote
 
 from wsgiref.simple_server import make_server
 
+from linkar.assets import resolve_asset_refs
 from linkar.core import (
+    describe_template,
     generate_methods,
     inspect_run,
+    inspect_runtime,
     list_project_runs,
     list_templates,
+    load_template,
+    preview_params_detailed,
     resolve_project_assets,
     run_template,
+    test_template,
 )
 from linkar.errors import (
     AssetResolutionError,
@@ -22,6 +28,9 @@ from linkar.errors import (
     ProjectValidationError,
     TemplateValidationError,
 )
+from linkar.runtime.projects import discover_project, load_project
+from linkar.runtime.shared import normalize_binding_ref, preferred_pack_ref_for_assets, unique_assets
+from linkar.runtime.templates import combined_configured_pack_entries
 
 StartResponse = Callable[[str, list[tuple[str, str]]], object]
 WSGIApp = Callable[[dict, StartResponse], Iterable[bytes]]
@@ -41,6 +50,10 @@ def json_response(
         ],
     )
     return [body]
+
+
+def success_response(start_response: StartResponse, payload: dict | list) -> list[bytes]:
+    return json_response(start_response, "200 OK", {"ok": True, "data": payload})
 
 
 def error_status(exc: LinkarError) -> str:
@@ -75,7 +88,54 @@ def load_json_body(environ: dict) -> dict:
 
 
 def not_found(start_response: StartResponse) -> list[bytes]:
-    return json_response(start_response, "404 Not Found", {"error": "not_found"})
+    return json_response(
+        start_response,
+        "404 Not Found",
+        {"ok": False, "error": {"code": "not_found", "message": "Route not found"}},
+    )
+
+
+def preview_resolution(payload: dict) -> dict:
+    template_ref = payload.get("template")
+    if not isinstance(template_ref, str) or not template_ref:
+        raise ProjectValidationError("Request field 'template' is required")
+
+    project_value = payload.get("project")
+    if isinstance(project_value, str):
+        project_obj = load_project(project_value)
+    elif project_value is None:
+        project_obj = discover_project()
+    else:
+        project_obj = project_value
+
+    configured_entries, active_entry = combined_configured_pack_entries(project_obj)
+    explicit_pack_assets = resolve_asset_refs(payload.get("pack_refs"))
+    combined_pack_assets = unique_assets(explicit_pack_assets + [entry.asset for entry in configured_entries])
+    preferred_pack_ref = preferred_pack_ref_for_assets(explicit_pack_assets, active_entry)
+    template = load_template(
+        template_ref,
+        pack_assets=combined_pack_assets,
+        preferred_pack_ref=preferred_pack_ref,
+    )
+    selected_binding_ref = normalize_binding_ref(payload.get("binding_ref"))
+    if selected_binding_ref is None and template.pack_root is not None:
+        for entry in configured_entries:
+            if entry.asset.root == template.pack_root:
+                selected_binding_ref = normalize_binding_ref(entry.binding)
+                break
+    params, provenance, missing_required = preview_params_detailed(
+        template,
+        cli_params=payload.get("params"),
+        project=project_obj,
+        binding_ref=selected_binding_ref,
+    )
+    return {
+        "template": template.id,
+        "params": params,
+        "param_provenance": provenance,
+        "missing_required": missing_required,
+        "ready": not missing_required,
+    }
 
 
 def make_app() -> WSGIApp:
@@ -93,26 +153,54 @@ def make_app() -> WSGIApp:
                     pack_refs=query_values(query, "pack"),
                     project=query_value(query, "project"),
                 )
-                return json_response(start_response, "200 OK", {"templates": templates})
+                return success_response(start_response, {"templates": templates})
+
+            if method == "GET" and path.startswith("/templates/"):
+                template_ref = unquote(path.removeprefix("/templates/"))
+                if not template_ref:
+                    return not_found(start_response)
+                template = describe_template(
+                    template_ref,
+                    pack_refs=query_values(query, "pack"),
+                    project=query_value(query, "project"),
+                )
+                return success_response(start_response, template)
 
             if method == "GET" and path == "/projects/runs":
                 runs = list_project_runs(project=query_value(query, "project"))
-                return json_response(start_response, "200 OK", {"runs": runs})
+                return success_response(start_response, {"runs": runs})
 
             if method == "GET" and path == "/projects/assets":
                 assets = resolve_project_assets(project=query_value(query, "project"))
-                return json_response(start_response, "200 OK", {"assets": assets})
+                return success_response(start_response, {"assets": assets})
 
             if method == "GET" and path.startswith("/runs/"):
-                run_ref = unquote(path.removeprefix("/runs/"))
+                suffix = unquote(path.removeprefix("/runs/"))
+                if suffix.endswith("/runtime"):
+                    run_ref = suffix.removesuffix("/runtime")
+                    if not run_ref:
+                        return not_found(start_response)
+                    runtime = inspect_runtime(run_ref, project=query_value(query, "project"))
+                    return success_response(start_response, runtime)
+                if suffix.endswith("/outputs"):
+                    run_ref = suffix.removesuffix("/outputs")
+                    if not run_ref:
+                        return not_found(start_response)
+                    metadata = inspect_run(run_ref, project=query_value(query, "project"))
+                    return success_response(start_response, {"outputs": metadata.get("outputs", {})})
+                run_ref = suffix
                 if not run_ref:
                     return not_found(start_response)
                 metadata = inspect_run(run_ref, project=query_value(query, "project"))
-                return json_response(start_response, "200 OK", metadata)
+                return success_response(start_response, metadata)
 
             if method == "GET" and path == "/methods":
                 text = generate_methods(project=query_value(query, "project"))
-                return json_response(start_response, "200 OK", {"text": text})
+                return success_response(start_response, {"text": text})
+
+            if method == "POST" and path == "/resolve":
+                payload = load_json_body(environ)
+                return success_response(start_response, preview_resolution(payload))
 
             if method == "POST" and path == "/run":
                 payload = load_json_body(environ)
@@ -127,14 +215,27 @@ def make_app() -> WSGIApp:
                     pack_refs=payload.get("pack_refs"),
                     binding_ref=payload.get("binding_ref"),
                 )
-                return json_response(start_response, "200 OK", result)
+                return success_response(start_response, result)
+
+            if method == "POST" and path == "/test":
+                payload = load_json_body(environ)
+                template = payload.get("template")
+                if not isinstance(template, str) or not template:
+                    raise ProjectValidationError("Request field 'template' is required")
+                result = test_template(
+                    template,
+                    project=payload.get("project"),
+                    outdir=payload.get("outdir"),
+                    pack_refs=payload.get("pack_refs"),
+                )
+                return success_response(start_response, result)
 
             return not_found(start_response)
         except LinkarError as exc:
             return json_response(
                 start_response,
                 error_status(exc),
-                {"error": exc.code, "message": str(exc)},
+                {"ok": False, "error": {"code": exc.code, "message": str(exc)}},
             )
 
     return app

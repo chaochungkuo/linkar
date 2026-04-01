@@ -53,13 +53,18 @@ The first local API server should expose:
 
 - `GET /health`
 - `GET /templates`
+- `GET /templates/<template_id>`
 - `GET /projects/runs`
 - `GET /projects/assets`
 - `GET /runs/<run_ref>`
+- `GET /runs/<run_ref>/outputs`
+- `GET /runs/<run_ref>/runtime`
 - `GET /methods`
+- `POST /resolve`
 - `POST /run`
+- `POST /test`
 
-These operations already exist in the core API and should remain the semantic source of truth.
+These operations should remain thin wrappers over the same core semantics.
 
 ## Error Model
 The API server should map typed core errors to stable machine-facing responses.
@@ -78,6 +83,16 @@ The local API should:
 - return JSON only
 - map typed core errors to stable machine-facing error codes
 - avoid server-only response semantics that are not grounded in the core
+
+Recommended shapes:
+
+```json
+{"ok": true, "data": {...}}
+```
+
+```json
+{"ok": false, "error": {"code": "template_not_found", "message": "..."}}
+```
 
 ## Why This Doc Exists
 The purpose of this direction doc is to prevent two common mistakes:

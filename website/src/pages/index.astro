@@ -92,9 +92,10 @@ linkar inspect run fastqc_001</code></pre>
             <pre><code>linkar serve --port 8000
 
 GET  /templates
-GET  /projects/runs
+GET  /templates/&lcub;template_id&rcub;
+POST /resolve
 POST /run
-GET  /runs/&lcub;instance_id&rcub;</code></pre>
+GET  /runs/&lcub;run_ref&rcub;/outputs</code></pre>
           </article>
         </div>
       </section>

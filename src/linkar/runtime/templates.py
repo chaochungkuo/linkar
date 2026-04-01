@@ -210,3 +210,42 @@ def list_templates(
                 }
             )
     return templates
+
+
+def describe_template(
+    template_ref: str | Path,
+    pack_refs: str | Path | list[str | Path] | None = None,
+    project: str | Path | Project | None = None,
+) -> dict[str, Any]:
+    if isinstance(project, (str, Path)):
+        project_obj = load_project(project)
+    elif project is None:
+        project_obj = discover_project()
+    else:
+        project_obj = project
+    configured_entries, active_entry = combined_configured_pack_entries(project_obj)
+    explicit_pack_assets = resolve_asset_refs(pack_refs)
+    combined_pack_assets = unique_assets(explicit_pack_assets + [entry.asset for entry in configured_entries])
+    preferred_pack_ref = preferred_pack_ref_for_assets(explicit_pack_assets, active_entry)
+    template = load_template(
+        template_ref,
+        pack_assets=combined_pack_assets,
+        preferred_pack_ref=preferred_pack_ref,
+    )
+    return {
+        "id": template.id,
+        "description": template.description,
+        "version": template.version,
+        "path": str(template.root),
+        "run": {
+            "entry": template.run_entry,
+            "mode": template.run_mode,
+        },
+        "pack": (
+            {"ref": template.pack_ref, "revision": template.pack_revision}
+            if template.pack_ref is not None
+            else None
+        ),
+        "params": template.params,
+        "outputs": template.outputs or {"results_dir": {}},
+    }

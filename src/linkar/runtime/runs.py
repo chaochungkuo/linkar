@@ -305,6 +305,38 @@ def inspect_run(run_ref: str | Path, project: str | Path | Project | None = None
     raise ProjectValidationError(f"Run not found: {run_ref}")
 
 
+def inspect_runtime(run_ref: str | Path, project: str | Path | Project | None = None) -> dict[str, Any]:
+    ref_path = Path(run_ref)
+    if ref_path.exists():
+        target = ref_path.resolve()
+        runtime_path = target if target.is_file() else target / ".linkar" / "runtime.json"
+        if not runtime_path.exists():
+            raise ProjectValidationError(f"Run runtime not found: {runtime_path}")
+        with runtime_path.open("r", encoding="utf-8") as handle:
+            return json.load(handle)
+
+    runs = list_project_runs(project=project)
+    for entry in runs:
+        if entry.get("instance_id") != str(run_ref):
+            continue
+        if isinstance(project, Project):
+            project_root = project.root
+        elif isinstance(project, (str, Path)):
+            project_root = load_project(project).root
+        else:
+            project_obj = discover_project()
+            if project_obj is None:
+                break
+            project_root = project_obj.root
+        meta_path = (project_root / entry["meta"]).resolve()
+        runtime_path = meta_path.with_name("runtime.json")
+        if not runtime_path.exists():
+            raise ProjectValidationError(f"Run runtime not found: {runtime_path}")
+        with runtime_path.open("r", encoding="utf-8") as handle:
+            return json.load(handle)
+    raise ProjectValidationError(f"Run not found: {run_ref}")
+
+
 def generate_methods(project: str | Path | Project | None = None) -> str:
     runs = list_project_runs(project=project)
     if not runs:

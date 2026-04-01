@@ -188,12 +188,33 @@ def resolve_params_detailed(
     project: Project | None = None,
     binding_ref: str | Path | None = None,
 ) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    resolved, provenance, missing_required = preview_params_detailed(
+        template,
+        cli_params=cli_params,
+        project=project,
+        binding_ref=binding_ref,
+    )
+    if missing_required:
+        key = missing_required[0]
+        raise ParameterResolutionError(
+            f"Missing required param: {key}. Pass --{key.replace('_', '-')} VALUE, --param {key}=VALUE, add a binding, or define a default in linkar_template.yaml."
+        )
+    return resolved, provenance
+
+
+def preview_params_detailed(
+    template: TemplateSpec,
+    cli_params: dict[str, Any] | None = None,
+    project: Project | None = None,
+    binding_ref: str | Path | None = None,
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]], list[str]]:
     from linkar.runtime.projects import latest_project_output
 
     cli_params = cli_params or {}
     binding_root, binding_data = load_binding_config(binding_ref, template.pack_root)
     resolved: dict[str, Any] = {}
     provenance: dict[str, dict[str, Any]] = {}
+    missing_required: list[str] = []
 
     for key, raw_spec in template.params.items():
         spec = raw_spec or {}
@@ -221,16 +242,15 @@ def resolve_params_detailed(
                 raw_value = spec["default"]
                 raw_provenance = {"source": "default"}
             elif spec.get("required"):
-                raise ParameterResolutionError(
-                    f"Missing required param: {key}. Pass --{key.replace('_', '-')} VALUE, --param {key}=VALUE, add a binding, or define a default in linkar_template.yaml."
-                )
+                missing_required.append(key)
+                continue
             else:
                 continue
 
         resolved[key] = parse_param_value(raw_value, param_type)
         provenance[key] = raw_provenance
 
-    return resolved, provenance
+    return resolved, provenance, missing_required
 
 
 def resolve_params(
