@@ -59,6 +59,7 @@ curl -s -X POST "http://127.0.0.1:8000/run" \
   -H "Content-Type: application/json" \
   -d '{"template":"simple_echo","pack_refs":["./examples/packs/basic"],"params":{"name":"Agent"}}'
 curl -s "http://127.0.0.1:8000/runs/simple_echo_001/outputs?project=./study"
+curl -s "http://127.0.0.1:8000/runs/simple_echo_001/runtime?project=./study"
 ```
 
 Current local API surface:
