@@ -5,7 +5,7 @@ order: 4
 status: ready
 ---
 
-Linkar now ships example packs in tiers.
+Linkar ships example packs in tiers.
 
 Start with the basic pack:
 

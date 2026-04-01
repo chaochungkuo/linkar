@@ -11,4 +11,10 @@ Linkar resolves packs in this order:
 2. Project-configured packs
 3. Global packs from `linkar config pack ...`
 
-That keeps convenience available without weakening project reproducibility.
+This keeps convenience available without weakening project reproducibility.
+
+Use `--pack` for one-off runs.
+
+Use project packs when a study should stay reproducible on its own.
+
+Use global packs for personal defaults and convenience.

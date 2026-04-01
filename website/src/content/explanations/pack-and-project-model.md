@@ -6,4 +6,5 @@ order: 2
 
 A pack is an external asset. A project is local state.
 
-That separation matters because it keeps template sharing independent from project history and keeps `project.yaml` from becoming a workflow language.
+That separation keeps template sharing independent from project history. It also keeps
+`project.yaml` small and readable instead of turning it into a workflow language.

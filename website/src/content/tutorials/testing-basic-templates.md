@@ -5,7 +5,7 @@ order: 5
 status: ready
 ---
 
-The bundled basic examples are meant to be exercised through `linkar test` first.
+Start with `linkar test`.
 
 From the repository root:
 
@@ -44,13 +44,14 @@ cd examples/packs/basic/templates/pixi_pytest
 python test.py
 ```
 
-That local path is useful while authoring, but `linkar test` remains the better final check because it exercises the actual Linkar contract.
+That local path is useful while authoring, but `linkar test` is still the better final check
+because it exercises the actual Linkar contract.
 
 ## Which test entrypoint should a template use?
 
 Use `test.sh` when the template is naturally shell-oriented.
 
-Use `test.py` when the template test is more naturally expressed in Python, for example when:
+Use `test.py` when the template test is more natural in Python, for example when:
 
 - assertions are easier to write in Python
 - the template already uses Python tooling

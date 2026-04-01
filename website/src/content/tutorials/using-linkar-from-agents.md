@@ -5,12 +5,13 @@ order: 3
 status: ready
 ---
 
-Linkar is designed for two interfaces at once:
+Linkar is designed for two interfaces:
 
 - a short CLI for humans
 - a structured core and local API for machines and AI agents
 
-If you are building an agent or automation layer, prefer the machine-facing interfaces over shell scraping.
+If you are building an agent or automation layer, prefer the machine-facing interfaces over shell
+scraping.
 
 ## Best order of operations
 
@@ -72,4 +73,5 @@ The CLI is still the right interface for quick interactive work:
 linkar run simple_echo --pack ./examples/packs/basic --param name=Human
 ```
 
-But once an agent needs repeated inspection and execution, the core helpers or the local API are the cleaner path.
+But once an agent needs repeated inspection and execution, the core helpers or the local API are
+the cleaner path.

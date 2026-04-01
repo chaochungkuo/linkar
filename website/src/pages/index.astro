@@ -30,9 +30,9 @@ const docs = [
           <p class="eyebrow">Why Linkar</p>
           <h2>The space between scripts and workflow engines is a product surface.</h2>
           <p class="section-copy">
-            Scripts are flexible but opaque. Workflow systems are powerful but heavy. Linkar treats
-            that middle layer as a first-class runtime: explicit enough for automation, small enough
-            for daily use.
+            Scripts are easy to start and hard to reuse. Workflow systems are powerful and heavy.
+            Linkar keeps the middle simple: reusable templates, readable runs, and enough structure
+            for automation.
           </p>
         </div>
 
@@ -40,23 +40,23 @@ const docs = [
           <article class="feature-card">
             <h3>Templates stay standalone</h3>
             <p>
-              Each template is a normal directory with a small YAML interface and a runnable source
-              script. Template authors can validate templates through <code>test.sh</code> or <code>test.py</code>.
+              Each template is a normal directory with a small YAML contract and a real entry
+              script. Nothing important is hidden in framework internals.
             </p>
           </article>
           <article class="feature-card">
             <h3>Humans get a short CLI</h3>
             <p>
-              Linkar keeps the common path short: discover the current project, expose template
-              params as CLI options, and leave behind readable run artifacts instead of hidden state.
+              The common path stays short: discover the current project, expose template params as
+              flags, and write readable run artifacts instead of hidden state.
             </p>
           </article>
           <article class="feature-card">
             <h3>Agents get explicit structure</h3>
             <p>
               Every run lives in a normal directory with <code>results/</code>,
-              <code>.linkar/meta.json</code>, and runtime details that can be inspected later by tools,
-              APIs, and AI agents without shell scraping.
+              <code>.linkar/meta.json</code>, and runtime details that tools and agents can inspect
+              later without shell scraping.
             </p>
           </article>
         </div>
@@ -67,8 +67,8 @@ const docs = [
           <p class="eyebrow">Interfaces</p>
           <h2>One runtime, two excellent entrypoints.</h2>
           <p class="section-copy">
-            Linkar should feel natural in a terminal and equally natural inside automation or an
-            agent loop. The CLI and local API are thin skins over the same core behavior.
+            Linkar should feel natural in a terminal and just as natural inside automation. The CLI
+            and local API are thin skins over the same core behavior.
           </p>
         </div>
 
@@ -79,8 +79,8 @@ const docs = [
               <h3>Short CLI for real work</h3>
             </div>
             <p>
-              Discover the current project, expose template params as flags, and keep the common
-              path compact enough to use without fighting the tool.
+              Discover the current project, expose template params as flags, and keep the command
+              path short enough to use every day.
             </p>
             <pre><code>linkar project init --name study
 cd study
@@ -95,8 +95,8 @@ linkar inspect run fastqc_001</code></pre>
               <h3>Structured API for agents</h3>
             </div>
             <p>
-              Inspect templates, run work, and consume outputs through JSON instead of shell
-              scraping, while still writing the same on-disk artifacts.
+              Inspect templates, run work, and consume outputs through JSON while still writing the
+              same on-disk artifacts.
             </p>
             <pre><code>linkar serve --port 8000
 
@@ -113,8 +113,7 @@ GET  /runs/&lcub;instance_id&rcub;</code></pre>
           <p class="eyebrow">Quickstart</p>
           <h2>The shortest useful path.</h2>
           <p class="section-copy">
-            This is the happy path the product should optimize for: add a pack, run a template,
-            inspect the result, and keep going.
+            Add a pack, run a template, inspect the result, and keep going.
           </p>
         </div>
 
@@ -151,8 +150,7 @@ linkar inspect run fastqc_001</code></pre>
           <p class="eyebrow">Mental Model</p>
           <h2>Three layers, one runtime.</h2>
           <p class="section-copy">
-            Linkar stays coherent by keeping a small set of concepts sharp. Templates define one
-            computational step. Packs distribute them. Projects index what has actually happened.
+            Templates define one step. Packs distribute them. Projects record what actually ran.
           </p>
         </div>
 
@@ -195,7 +193,7 @@ linkar inspect run fastqc_001</code></pre>
           </article>
           <article class="feature-card">
             <h3>Machine interface</h3>
-            <p>A thin core and local API with structured params, outputs, and metadata designed for reliable agent use.</p>
+            <p>A thin core and local API with structured params, outputs, and metadata.</p>
           </article>
         </div>
       </section>
@@ -205,8 +203,8 @@ linkar inspect run fastqc_001</code></pre>
           <p class="eyebrow">Why It Matters</p>
           <h2>Designed for high-trust execution records.</h2>
           <p class="section-copy">
-            The point is not only to run something once. The point is to make the run usable later
-            by a colleague, by your future self, or by an AI system that needs grounded context.
+            The goal is not only to run something once. The goal is to make that run usable later
+            by a colleague, by your future self, or by an AI system.
           </p>
         </div>
 
@@ -214,7 +212,7 @@ linkar inspect run fastqc_001</code></pre>
           <article class="proof-card">
             <span class="proof-index">01</span>
             <h3>Clear contracts</h3>
-            <p>`linkar_template.yaml` declares params, outputs, and the real entrypoint.</p>
+            <p><code>linkar_template.yaml</code> declares params, outputs, and the real entrypoint.</p>
           </article>
           <article class="proof-card">
             <span class="proof-index">02</span>
@@ -239,8 +237,7 @@ linkar inspect run fastqc_001</code></pre>
           <p class="eyebrow">Tutorials</p>
           <h2>Practical guides for users and pack authors.</h2>
           <p class="section-copy">
-            Move from the shortest project path to authoring templates, using packs, and integrating
-            agents through the API.
+            Start with the basic project flow, then move into template authoring, packs, and agent use.
           </p>
         </div>
 
@@ -260,8 +257,8 @@ linkar inspect run fastqc_001</code></pre>
           <p class="eyebrow">Examples</p>
           <h2>Use the bundled packs as a progression.</h2>
           <p class="section-copy">
-            The examples are staged to teach the model from smallest shell template to chaining,
-            binding overrides, and remote asset references.
+            The examples move from the smallest shell template to chaining, binding overrides, and
+            remote asset references.
           </p>
         </div>
 
@@ -269,15 +266,15 @@ linkar inspect run fastqc_001</code></pre>
           <article class="feature-card">
             <h3>Basic pack</h3>
             <p>
-              Start with `simple_echo`, then move through file inputs, explicit boolean defaults,
-              lightweight downloading, FASTQ summaries, and pixi-backed templates.
+              Start with `simple_echo`, then move through file inputs, explicit defaults, light
+              downloads, FASTQ summaries, and pixi-backed templates.
             </p>
           </article>
           <article class="feature-card">
             <h3>Chaining and beyond</h3>
             <p>
               Continue with `examples/packs/chaining`, then inspect `pack_management` and `remote`
-              for active-pack selection and Git-backed asset behavior.
+              for active-pack selection and Git-backed assets.
             </p>
           </article>
         </div>
@@ -288,8 +285,8 @@ linkar inspect run fastqc_001</code></pre>
           <p class="eyebrow">Reference</p>
           <h2>Specs, rationale, and design notes.</h2>
           <p class="section-copy">
-            Linkar is meant to be inspectable all the way down. The docs expose the product model,
-            the core contracts, and the long-term direction in plain language.
+            Linkar is meant to be inspectable all the way down. The docs explain the model, the
+            contracts, and the long-term direction in plain language.
           </p>
         </div>
 
