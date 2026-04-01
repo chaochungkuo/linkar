@@ -17,7 +17,10 @@ const docs = [
 ];
 ---
 
-<BaseLayout title="Linkar Demo Site">
+<BaseLayout
+  title="Linkar | Template Runtime For Humans And Agents"
+  description="Linkar is a lightweight runtime for reusable computational templates, with a human-friendly CLI, a local API, and transparent run artifacts designed for reliable AI-agent use."
+>
   <div class="page-shell">
     <SiteHeader />
 
@@ -25,7 +28,12 @@ const docs = [
       <section id="why" class="section">
         <div class="section-heading">
           <p class="eyebrow">Why Linkar</p>
-          <h2>Small enough for humans, structured enough for agents.</h2>
+          <h2>The space between scripts and workflow engines is a product surface.</h2>
+          <p class="section-copy">
+            Scripts are flexible but opaque. Workflow systems are powerful but heavy. Linkar treats
+            that middle layer as a first-class runtime: explicit enough for automation, small enough
+            for daily use.
+          </p>
         </div>
 
         <div class="card-grid three-up">
@@ -54,10 +62,60 @@ const docs = [
         </div>
       </section>
 
+      <section id="interfaces" class="section section-dark">
+        <div class="section-heading">
+          <p class="eyebrow">Interfaces</p>
+          <h2>One runtime, two excellent entrypoints.</h2>
+          <p class="section-copy">
+            Linkar should feel natural in a terminal and equally natural inside automation or an
+            agent loop. The CLI and local API are thin skins over the same core behavior.
+          </p>
+        </div>
+
+        <div class="interface-grid">
+          <article class="interface-card">
+            <div class="interface-head">
+              <span class="interface-tag">Human</span>
+              <h3>Short CLI for real work</h3>
+            </div>
+            <p>
+              Discover the current project, expose template params as flags, and keep the common
+              path compact enough to use without fighting the tool.
+            </p>
+            <pre><code>linkar project init --name study
+cd study
+linkar run fastqc --input sample.fastq.gz
+linkar project runs
+linkar inspect run fastqc_001</code></pre>
+          </article>
+
+          <article class="interface-card">
+            <div class="interface-head">
+              <span class="interface-tag">Machine</span>
+              <h3>Structured API for agents</h3>
+            </div>
+            <p>
+              Inspect templates, run work, and consume outputs through JSON instead of shell
+              scraping, while still writing the same on-disk artifacts.
+            </p>
+            <pre><code>linkar serve --port 8000
+
+GET  /templates
+GET  /projects/runs
+POST /run
+GET  /runs/&lcub;instance_id&rcub;</code></pre>
+          </article>
+        </div>
+      </section>
+
       <section id="quickstart" class="section section-alt">
         <div class="section-heading">
           <p class="eyebrow">Quickstart</p>
           <h2>The shortest useful path.</h2>
+          <p class="section-copy">
+            This is the happy path the product should optimize for: add a pack, run a template,
+            inspect the result, and keep going.
+          </p>
         </div>
 
         <div class="split-grid">
@@ -92,6 +150,10 @@ linkar inspect run fastqc_001</code></pre>
         <div class="section-heading">
           <p class="eyebrow">Mental Model</p>
           <h2>Three layers, one runtime.</h2>
+          <p class="section-copy">
+            Linkar stays coherent by keeping a small set of concepts sharp. Templates define one
+            computational step. Packs distribute them. Projects index what has actually happened.
+          </p>
         </div>
 
         <div class="workflow-strip">
@@ -138,10 +200,48 @@ linkar inspect run fastqc_001</code></pre>
         </div>
       </section>
 
+      <section id="proof" class="section section-alt">
+        <div class="section-heading">
+          <p class="eyebrow">Why It Matters</p>
+          <h2>Designed for high-trust execution records.</h2>
+          <p class="section-copy">
+            The point is not only to run something once. The point is to make the run usable later
+            by a colleague, by your future self, or by an AI system that needs grounded context.
+          </p>
+        </div>
+
+        <div class="proof-grid">
+          <article class="proof-card">
+            <span class="proof-index">01</span>
+            <h3>Clear contracts</h3>
+            <p>`linkar_template.yaml` declares params, outputs, and the real entrypoint.</p>
+          </article>
+          <article class="proof-card">
+            <span class="proof-index">02</span>
+            <h3>Portable runs</h3>
+            <p>Every execution leaves behind results, metadata, and runtime facts in one place.</p>
+          </article>
+          <article class="proof-card">
+            <span class="proof-index">03</span>
+            <h3>Lightweight chaining</h3>
+            <p>Templates connect through recorded outputs and bindings, not a heavyweight DAG language.</p>
+          </article>
+          <article class="proof-card">
+            <span class="proof-index">04</span>
+            <h3>Agent-ready structure</h3>
+            <p>The same core semantics are available through Python helpers, the CLI, and the local API.</p>
+          </article>
+        </div>
+      </section>
+
       <section id="tutorials" class="section section-alt">
         <div class="section-heading">
           <p class="eyebrow">Tutorials</p>
           <h2>Practical guides for users and pack authors.</h2>
+          <p class="section-copy">
+            Move from the shortest project path to authoring templates, using packs, and integrating
+            agents through the API.
+          </p>
         </div>
 
         <div class="card-grid two-up">
@@ -159,6 +259,10 @@ linkar inspect run fastqc_001</code></pre>
         <div class="section-heading">
           <p class="eyebrow">Examples</p>
           <h2>Use the bundled packs as a progression.</h2>
+          <p class="section-copy">
+            The examples are staged to teach the model from smallest shell template to chaining,
+            binding overrides, and remote asset references.
+          </p>
         </div>
 
         <div class="card-grid two-up">
@@ -182,7 +286,11 @@ linkar inspect run fastqc_001</code></pre>
       <section id="docs" class="section">
         <div class="section-heading">
           <p class="eyebrow">Reference</p>
-          <h2>Design notes and explanations.</h2>
+          <h2>Specs, rationale, and design notes.</h2>
+          <p class="section-copy">
+            Linkar is meant to be inspectable all the way down. The docs expose the product model,
+            the core contracts, and the long-term direction in plain language.
+          </p>
         </div>
 
         <div class="card-grid two-up">

@@ -1,8 +1,10 @@
 ---
 const navItems = [
   { href: "#why", label: "Why" },
+  { href: "#interfaces", label: "Interfaces" },
   { href: "#quickstart", label: "Quickstart" },
-  { href: "#workflow", label: "Workflow" },
+  { href: "#workflow", label: "Model" },
+  { href: "#proof", label: "Proof" },
   { href: "#tutorials", label: "Tutorials" },
   { href: "#docs", label: "Docs" },
 ];
@@ -10,7 +12,10 @@ const navItems = [
 
 <header class="hero">
   <nav class="topbar">
-    <a class="brand" href="/">linkar</a>
+    <a class="brand" href="/">
+      <span class="brand-mark">lk</span>
+      <span class="brand-word">linkar</span>
+    </a>
     <div class="nav-links">
       {
         navItems.map((item) => (
@@ -22,16 +27,31 @@ const navItems = [
 
   <div class="hero-grid">
     <div class="hero-copy">
-      <p class="eyebrow">Filesystem-first template runtime</p>
-      <h1 class="hero-title">Reusable analysis templates, with transparent runs.</h1>
+      <div class="hero-badges">
+        <span class="hero-badge">Filesystem-first runtime</span>
+        <span class="hero-badge">CLI + local API</span>
+        <span class="hero-badge">Agent-ready metadata</span>
+      </div>
+      <p class="eyebrow">Reusable computational work, without a workflow language</p>
+      <h1 class="hero-title">A high-trust runtime for templates, humans, and agents.</h1>
       <p class="lede">
-        Linkar sits between ad hoc scripts and heavyweight workflow systems. It gives you reusable
-        templates, portable run artifacts, project-aware chaining, and metadata that humans and
-        agents can inspect.
+        Linkar sits between ad hoc scripts and heavyweight workflow systems. It gives teams a
+        short human CLI, a machine-readable local API, portable run artifacts, and enough structure
+        for AI agents to use reliably without shell scraping.
       </p>
       <div class="hero-actions">
         <a class="button button-primary" href="#quickstart">Start Here</a>
-        <a class="button button-secondary" href="#tutorials">Browse Tutorials</a>
+        <a class="button button-secondary" href="#interfaces">See The Interfaces</a>
+      </div>
+      <div class="hero-metrics">
+        <div class="metric-card">
+          <strong>1 runtime</strong>
+          <span>CLI, core, and API share the same execution semantics.</span>
+        </div>
+        <div class="metric-card">
+          <strong>0 hidden state</strong>
+          <span>Runs stay on disk as normal directories with inspectable metadata.</span>
+        </div>
       </div>
     </div>
 
@@ -40,13 +60,20 @@ const navItems = [
         <div class="terminal-bar">
           <span></span><span></span><span></span>
         </div>
-        <pre><code>linkar project init --name study
+        <pre><code>$ linkar project init --name study
 cd study
 
-linkar config pack add ~/github/izkf_genomics_pack
-linkar run fastqc --input sample.fastq.gz
-linkar run multiqc
-linkar methods</code></pre>
+$ linkar config pack add ~/github/izkf_genomics_pack
+$ linkar run fastqc --input sample.fastq.gz
+$ linkar run multiqc
+$ linkar inspect run multiqc_001
+
+study/
+  multiqc_001/
+    results/
+    .linkar/
+      meta.json
+      runtime.json</code></pre>
       </div>
     </div>
   </div>
