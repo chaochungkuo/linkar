@@ -10,8 +10,9 @@ Start with the shortest useful flow:
 ```bash
 linkar project init --name study
 cd study
-linkar config pack add ~/github/izkf_genomics_pack
+linkar pack add ~/github/izkf_genomics_pack --id izkf
 linkar run fastqc --input sample.fastq.gz
+linkar inspect run fastqc_001
 ```
 
 This gives you:
@@ -21,4 +22,7 @@ This gives you:
 - a recorded run directory
 - `.linkar/meta.json` for provenance
 
-For template authoring, start with the bundled examples under `examples/packs/basic` and then move to `examples/packs/chaining`.
+This is the Linkar user path.
+
+Template authoring is separate. Template repos can use `test.sh`, `test.py`, Pixi, pytest, or
+other local tooling, but that is template-author workflow rather than the main Linkar runtime path.

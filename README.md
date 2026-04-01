@@ -18,42 +18,22 @@ Linkar still accepts the legacy filenames `template.yaml` and `binding.yaml` for
 ## Quickstart
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e '.[dev]'
-pytest
-```
-
-Or with `pixi`:
-
-```bash
-pixi run test
-pixi run cli-help
-pixi run serve
-```
-
-Initialize a project:
-
-```bash
 linkar project init --name demo
+cd demo
+linkar pack add ./examples/packs/basic --id basic
+linkar run simple_echo --name Linkar
+linkar inspect run simple_echo_001
 ```
 
-Run the example template ad hoc from the bundled pack, without creating or using a project:
+In project mode, Linkar creates an instance directory in the project, writes results to `results/`, and records metadata in `.linkar/meta.json`.
+
+For ad hoc runs without a project:
 
 ```bash
 linkar run simple_echo \
   --pack ./examples/packs/basic \
   --param name=Linkar
 ```
-
-If a pack is saved in `project.yaml`, Linkar exposes template parameters as real CLI options:
-
-```bash
-linkar pack add ./examples/packs/basic --id basic
-linkar run simple_echo --name Linkar
-```
-
-In project mode, Linkar creates an instance directory in the project, writes results to `results/`, and records metadata in `.linkar/meta.json`.
 
 Pack scope is intentionally project-first:
 
@@ -76,6 +56,25 @@ linkar run fastqc --input sample.fastq.gz
 ```
 
 Use `linkar run TEMPLATE ...` when you want the generic path-or-pack execution interface.
+
+## Linkar Repo Development
+
+These commands are for working on the `linkar` engine repo itself, not for normal Linkar usage.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e '.[dev]'
+pytest
+```
+
+Or with `pixi`:
+
+```bash
+pixi run test
+pixi run cli-help
+pixi run serve
+```
 
 ## Example Packs
 

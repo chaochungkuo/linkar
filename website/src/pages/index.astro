@@ -104,34 +104,37 @@ GET  /runs/&lcub;instance_id&rcub;</code></pre>
           <p class="eyebrow">Quickstart</p>
           <h2>The shortest useful path.</h2>
           <p class="section-copy">
-            Add a pack, run a template, inspect the result, and keep going.
+            Start a project, attach a pack, run one template, then inspect the recorded result.
           </p>
         </div>
 
         <div class="split-grid">
           <div class="content-card">
-            <h3>1. Install and test</h3>
-            <pre><code>pixi run test
-pixi run cli-help</code></pre>
-          </div>
-
-          <div class="content-card">
-            <h3>2. Start a project</h3>
+            <h3>1. Start a project</h3>
             <pre><code>linkar project init --name demo
 cd demo</code></pre>
           </div>
 
           <div class="content-card">
-            <h3>3. Add a pack</h3>
-            <pre><code>linkar config pack add ~/github/izkf_genomics_pack
+            <h3>2. Add a pack</h3>
+            <pre><code>linkar pack add ~/github/izkf_genomics_pack --id izkf
 linkar templates</code></pre>
           </div>
 
           <div class="content-card">
-            <h3>4. Run a template</h3>
+            <h3>3. Run a template</h3>
             <pre><code>linkar run fastqc --input sample.fastq.gz
-linkar project runs
-linkar inspect run fastqc_001</code></pre>
+linkar project runs</code></pre>
+          </div>
+
+          <div class="content-card">
+            <h3>4. Inspect the run</h3>
+            <pre><code>linkar inspect run fastqc_001
+
+demo/
+  fastqc_001/
+    results/
+    .linkar/</code></pre>
           </div>
         </div>
       </section>
