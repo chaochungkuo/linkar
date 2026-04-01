@@ -17,7 +17,9 @@ def binding_asset_root(binding_ref: str | Path | None, pack_root: Path | None) -
         if pack_root is None:
             raise AssetResolutionError("Binding 'default' requires a selected pack")
         if find_pack_spec_path(pack_root) is None:
-            raise AssetResolutionError(f"Pack does not provide a default binding: {pack_root}")
+            raise AssetResolutionError(
+                f"Pack does not provide a default binding: {pack_root}. Expected linkar_pack.yaml (or legacy binding.yaml) at the pack root."
+            )
         return pack_root
     binding_asset = resolve_asset_ref(binding_ref)
     if find_pack_spec_path(binding_asset.root) is None:
@@ -219,7 +221,9 @@ def resolve_params_detailed(
                 raw_value = spec["default"]
                 raw_provenance = {"source": "default"}
             elif spec.get("required"):
-                raise ParameterResolutionError(f"Missing required param: {key}")
+                raise ParameterResolutionError(
+                    f"Missing required param: {key}. Pass --{key.replace('_', '-')} VALUE, --param {key}=VALUE, add a binding, or define a default in linkar_template.yaml."
+                )
             else:
                 continue
 

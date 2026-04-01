@@ -62,8 +62,9 @@ if hasattr(click, "rich_click"):
         "  linkar pack add /path/to/project-pack\n"
         "  linkar run fastqc --input sample.fastq.gz\n"
         "  linkar run simple_echo --pack ./examples/packs/basic --param name=Linkar\n"
-        "  linkar test fastqc\n\n"
-        "Linkar keeps the CLI thin over the core runtime semantics."
+        "  linkar test fastqc\n"
+        "  linkar serve --port 8000\n\n"
+        "Linkar keeps the CLI thin over the same core semantics used by the local API."
     )
 
 
@@ -74,7 +75,7 @@ if hasattr(click, "rich_click"):
 @click.version_option(__version__, prog_name="linkar")
 @click.pass_context
 def app(ctx: click.Context) -> None:
-    """Run reusable computational templates with transparent project state and provenance."""
+    """Run reusable computational templates with a human-friendly CLI and machine-readable local state."""
     if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())
         ctx.exit(0)

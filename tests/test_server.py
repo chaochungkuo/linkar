@@ -159,6 +159,27 @@ def test_server_returns_typed_error_payloads(tmp_path: Path) -> None:
     assert payload["error"] == "asset_resolution_error"
 
 
+def test_server_run_error_payload_includes_actionable_missing_param_message(tmp_path: Path) -> None:
+    app = make_app()
+
+    status, _, payload = call_app(
+        app,
+        method="POST",
+        path="/run",
+        body=json.dumps(
+            {
+                "template": "simple_echo",
+                "pack_refs": [str(ROOT / "examples" / "packs" / "basic")],
+            }
+        ).encode("utf-8"),
+    )
+
+    assert status == "400 Bad Request"
+    assert payload["error"] == "param_resolution_error"
+    assert "Missing required param: name" in payload["message"]
+    assert "--name VALUE" in payload["message"]
+
+
 def test_server_run_endpoint_supports_ephemeral_mode() -> None:
     app = make_app()
     status, _, payload = call_app(

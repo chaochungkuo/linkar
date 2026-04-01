@@ -12,6 +12,13 @@ The core API should provide:
 - functions small enough for AI agents and UIs to call directly
 - clean separation from presentation concerns
 
+This is not secondary to the CLI. The product goal is a dual-interface runtime:
+
+- a short, readable CLI for humans
+- a structured core and local API for machines and AI agents
+
+The core API is what makes those two interfaces share one execution model instead of drifting apart.
+
 ## Design Rules
 The core API should:
 
@@ -132,6 +139,45 @@ An AI agent or UI should be able to:
 - inspect results
 
 without relying on shell scraping or CLI-specific behavior.
+
+## Agent-Friendly Usage Pattern
+For an agent, the preferred order should be:
+
+1. inspect available templates
+2. inspect project runs and outputs
+3. resolve or choose explicit params
+4. run a template through the core or local API
+5. inspect the returned outdir, metadata, and outputs
+
+Representative core usage:
+
+```python
+from linkar.core import list_templates, run_template, inspect_run
+
+templates = list_templates(pack_refs=["./examples/packs/basic"])
+result = run_template(
+    "simple_echo",
+    params={"name": "Agent"},
+    pack_refs=["./examples/packs/basic"],
+)
+metadata = inspect_run(result["outdir"])
+```
+
+Representative local API usage:
+
+```bash
+linkar serve --port 8000
+```
+
+```bash
+curl -s http://127.0.0.1:8000/templates?pack=./examples/packs/basic
+curl -s http://127.0.0.1:8000/projects/runs?project=./study
+curl -s -X POST http://127.0.0.1:8000/run \
+  -H 'Content-Type: application/json' \
+  -d '{"template":"simple_echo","pack_refs":["./examples/packs/basic"],"params":{"name":"Agent"}}'
+```
+
+The important property is that the CLI, core, and server all drive the same runtime path.
 
 ## Summary
 The core API should be:

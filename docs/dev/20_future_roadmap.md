@@ -286,7 +286,7 @@ Make the core robust enough to support non-CLI consumers cleanly and give AI age
 ### Validation Checklist
 - [x] An AI agent can use the core without shell scraping
 - [x] The CLI remains a frontend over the same semantics
-- [ ] The structured interfaces are documented clearly enough for agent authors to adopt them directly
+- [x] The structured interfaces are documented clearly enough for agent authors to adopt them directly
 
 ### Explicit Deferrals
 - [ ] Do not build a multi-user system in this phase
@@ -370,8 +370,8 @@ Add broader distribution and richer user-facing surfaces after the local API lay
 
 ### Human and Agent UX
 - [ ] Tighten CLI wording and help text around the common project-first path
-- [ ] Add focused docs for agent-oriented use through the local API and core helpers
-- [ ] Add examples that show the same template flow through both CLI and API usage
+- [x] Add focused docs for agent-oriented use through the local API and core helpers
+- [x] Add examples that show the same template flow through both CLI and API usage
 - [ ] Keep website positioning explicit about the human CLI plus machine interface split
 
 ### Documentation

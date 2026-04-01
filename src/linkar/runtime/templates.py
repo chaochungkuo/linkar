@@ -52,7 +52,7 @@ def load_template(
                 candidate_assets.append(pack_asset)
         if not candidates:
             raise AssetResolutionError(
-                f"Template not found: {template_ref}. Pass a template path or use --pack."
+                f"Template not found: {template_ref}. Pass an explicit template path, use --pack REF for ad hoc lookup, or add/select a pack with 'linkar pack add REF' and 'linkar pack use PACK_ID'."
             )
         if len(candidates) > 1:
             if preferred_pack_ref is not None:
@@ -68,12 +68,12 @@ def load_template(
                 else:
                     joined = ", ".join(asset.ref for asset in candidate_assets)
                     raise AssetResolutionError(
-                        f"Template '{template_ref}' is ambiguous across packs: {joined}"
+                        f"Template '{template_ref}' is ambiguous across packs: {joined}. Use --pack REF for ad hoc lookup or select the active pack with 'linkar pack use PACK_ID' or 'linkar config pack use PACK_ID'."
                     )
             else:
                 joined = ", ".join(asset.ref for asset in candidate_assets)
                 raise AssetResolutionError(
-                    f"Template '{template_ref}' is ambiguous across packs: {joined}"
+                    f"Template '{template_ref}' is ambiguous across packs: {joined}. Use --pack REF for ad hoc lookup or select the active pack with 'linkar pack use PACK_ID' or 'linkar config pack use PACK_ID'."
                 )
         if candidates:
             root = candidates[0]
@@ -81,7 +81,9 @@ def load_template(
 
     spec_path = find_template_spec_path(root)
     if spec_path is None:
-        raise TemplateValidationError(f"linkar_template.yaml not found in {root}")
+        raise TemplateValidationError(
+            f"No template contract found in {root}. Expected linkar_template.yaml (or legacy template.yaml)."
+        )
 
     data = load_yaml(spec_path)
     template_id = data.get("id")

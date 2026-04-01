@@ -260,9 +260,11 @@ def test_project_init_rejects_path_and_name_together(tmp_path: Path) -> None:
 def test_help_output_is_clean_and_descriptive(tmp_path: Path) -> None:
     root_help = run_cli("--help", cwd=tmp_path)
     assert root_help.returncode == 0, root_help.stderr
-    assert "Run reusable computational templates" in root_help.stdout
+    assert "human-friendly CLI" in root_help.stdout
+    assert "machine-readable" in root_help.stdout
     assert "Commands" in root_help.stdout
     assert "linkar run simple_echo --pack" in root_help.stdout
+    assert "linkar serve --port 8000" in root_help.stdout
 
     run_help = run_cli("run", "--help", cwd=tmp_path)
     assert run_help.returncode == 0, run_help.stderr
@@ -937,6 +939,33 @@ printf 'two %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/out.txt"
     )
     assert completed.returncode == 1
     assert "ambiguous across packs" in completed.stderr
+    assert "Use --pack REF" in completed.stderr
+
+
+def test_missing_template_suggests_pack_or_path_resolution(tmp_path: Path) -> None:
+    completed = run_cli("run", "missing_template", cwd=tmp_path)
+
+    assert completed.returncode == 1
+    assert "Template not found: missing_template" in completed.stderr
+    assert "explicit template path" in completed.stderr
+    assert "linkar pack add REF" in completed.stderr
+
+
+def test_missing_required_param_suggests_cli_binding_or_default(tmp_path: Path) -> None:
+    template = make_template(
+        tmp_path / "templates",
+        "needs_name",
+        "  sample_name:\n    type: str\n    required: true",
+        "#!/usr/bin/env bash\nset -euo pipefail\n",
+    )
+
+    completed = run_cli("run", str(template), cwd=tmp_path)
+
+    assert completed.returncode == 1
+    assert "Missing required param: sample_name" in completed.stderr
+    assert "--sample-name VALUE" in completed.stderr
+    assert "--param sample_name=VALUE" in completed.stderr
+    assert "define a default in linkar_template.yaml" in completed.stderr
 
 
 def test_failed_run_writes_runtime_diagnostics(tmp_path: Path) -> None:
