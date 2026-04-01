@@ -2,19 +2,13 @@
   "yaml.schemas": {
     "./schemas/linkar-template.schema.json": [
       "examples/packs/basic/templates/*/linkar_template.yaml",
-      "examples/packs/basic/templates/*/template.yaml",
       "examples/packs/chaining/templates/*/linkar_template.yaml",
-      "examples/packs/chaining/templates/*/template.yaml",
-      "examples/packs/remote/templates/*/linkar_template.yaml",
-      "examples/packs/remote/templates/*/template.yaml"
+      "examples/packs/remote/templates/*/linkar_template.yaml"
     ],
     "./schemas/linkar-pack.schema.json": [
       "examples/packs/chaining/linkar_pack.yaml",
-      "examples/packs/chaining/binding.yaml",
       "examples/packs/binding_overrides/linkar_pack.yaml",
-      "examples/packs/binding_overrides/binding.yaml",
-      "examples/packs/binding_overrides/override_binding/linkar_pack.yaml",
-      "examples/packs/binding_overrides/override_binding/binding.yaml"
+      "examples/packs/binding_overrides/override_binding/linkar_pack.yaml"
     ]
   }
 }

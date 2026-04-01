@@ -589,7 +589,7 @@ def test_project_pack_configuration_is_used_for_template_lookup(tmp_path: Path) 
     hello_template = ROOT / "examples" / "packs" / "basic" / "templates" / "simple_echo"
     target_template = pack_root / "templates" / "simple_echo"
     target_template.mkdir(parents=True)
-    (target_template / "linkar_template.yaml").write_text((hello_template / "template.yaml").read_text())
+    (target_template / "linkar_template.yaml").write_text((hello_template / "linkar_template.yaml").read_text())
     run_script = target_template / "run.sh"
     run_script.write_text((hello_template / "run.sh").read_text())
     run_script.chmod(0o755)
@@ -624,7 +624,7 @@ def test_global_pack_configuration_is_used_for_template_lookup(tmp_path: Path) -
     hello_template = ROOT / "examples" / "packs" / "basic" / "templates" / "simple_echo"
     target_template = pack_root / "templates" / "simple_echo"
     target_template.mkdir(parents=True)
-    (target_template / "linkar_template.yaml").write_text((hello_template / "template.yaml").read_text())
+    (target_template / "linkar_template.yaml").write_text((hello_template / "linkar_template.yaml").read_text())
     run_script = target_template / "run.sh"
     run_script.write_text((hello_template / "run.sh").read_text())
     run_script.chmod(0o755)
