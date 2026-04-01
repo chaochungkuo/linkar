@@ -25,7 +25,7 @@ const docs = [
       <section id="why" class="section">
         <div class="section-heading">
           <p class="eyebrow">Why Linkar</p>
-          <h2>Keep the execution model small.</h2>
+          <h2>Small enough for humans, structured enough for agents.</h2>
         </div>
 
         <div class="card-grid three-up">
@@ -37,17 +37,18 @@ const docs = [
             </p>
           </article>
           <article class="feature-card">
-            <h3>Projects stay readable</h3>
+            <h3>Humans get a short CLI</h3>
             <p>
-              <code>project.yaml</code> records pack choices and run history without becoming a
-              hidden workflow engine or database.
+              Linkar keeps the common path short: discover the current project, expose template
+              params as CLI options, and leave behind readable run artifacts instead of hidden state.
             </p>
           </article>
           <article class="feature-card">
-            <h3>Artifacts stay inspectable</h3>
+            <h3>Agents get explicit structure</h3>
             <p>
               Every run lives in a normal directory with <code>results/</code>,
-              <code>.linkar/meta.json</code>, and runtime details that can be inspected later.
+              <code>.linkar/meta.json</code>, and runtime details that can be inspected later by tools,
+              APIs, and AI agents without shell scraping.
             </p>
           </article>
         </div>
@@ -90,7 +91,7 @@ linkar inspect run fastqc_001</code></pre>
       <section id="workflow" class="section">
         <div class="section-heading">
           <p class="eyebrow">Mental Model</p>
-          <h2>Three layers, one direction.</h2>
+          <h2>Three layers, one runtime.</h2>
         </div>
 
         <div class="workflow-strip">
@@ -123,6 +124,17 @@ linkar inspect run fastqc_001</code></pre>
     .linkar/
       meta.json
       runtime.json</code></pre>
+        </div>
+
+        <div class="card-grid two-up">
+          <article class="feature-card">
+            <h3>Human interface</h3>
+            <p>A thin CLI with project discovery, readable commands, and inspectable local state.</p>
+          </article>
+          <article class="feature-card">
+            <h3>Machine interface</h3>
+            <p>A thin core and local API with structured params, outputs, and metadata designed for reliable agent use.</p>
+          </article>
         </div>
       </section>
 

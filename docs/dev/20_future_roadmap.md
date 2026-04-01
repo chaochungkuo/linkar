@@ -14,6 +14,14 @@ The order should be:
 3. Make inspection and intelligence useful.
 4. Add product surfaces last.
 
+## Strategic Target
+Linkar should converge on a dual-interface runtime:
+
+- a short, readable CLI for humans
+- a structured core and API for machines and AI agents
+
+That means the roadmap should improve usability in both directions without splitting semantics. The CLI, core, and server should all remain thin layers over the same execution model.
+
 ## Phase 0: Spec Freeze and Development Baseline
 ### Objective
 Turn the current design docs into a stable baseline for implementation.
@@ -259,7 +267,7 @@ Turn structured provenance into useful narrative outputs.
 
 ## Phase 8: API and Agent Readiness
 ### Objective
-Make the core robust enough to support non-CLI consumers cleanly.
+Make the core robust enough to support non-CLI consumers cleanly and give AI agents a reliable machine interface.
 
 ### Scope Checklist
 - [x] Strengthen structured core return values
@@ -278,6 +286,7 @@ Make the core robust enough to support non-CLI consumers cleanly.
 ### Validation Checklist
 - [x] An AI agent can use the core without shell scraping
 - [x] The CLI remains a frontend over the same semantics
+- [ ] The structured interfaces are documented clearly enough for agent authors to adopt them directly
 
 ### Explicit Deferrals
 - [ ] Do not build a multi-user system in this phase
@@ -312,6 +321,7 @@ Add a thin local API server over the stable core so non-CLI consumers can integr
 - [x] The API server mirrors core semantics rather than redefining them
 - [x] An external consumer can inspect templates, runs, assets, and methods without shell parsing
 - [x] An external consumer can trigger local execution through the same runtime path used by the CLI
+- [ ] The API is easy enough for an agent author to prefer over shell command orchestration
 
 ### Explicit Deferrals
 - [ ] Do not add authentication or authorization in this phase
@@ -358,6 +368,12 @@ Add broader distribution and richer user-facing surfaces after the local API lay
 - [x] Add binding selection tests once binding support exists
 - [x] Add API server tests once the local API layer exists
 
+### Human and Agent UX
+- [ ] Tighten CLI wording and help text around the common project-first path
+- [ ] Add focused docs for agent-oriented use through the local API and core helpers
+- [ ] Add examples that show the same template flow through both CLI and API usage
+- [ ] Keep website positioning explicit about the human CLI plus machine interface split
+
 ### Documentation
 - [x] Keep `docs/dev` aligned with implementation
 - [x] Maintain example templates and packs
@@ -399,3 +415,5 @@ Add broader distribution and richer user-facing surfaces after the local API lay
 - [x] Project state stays transparent
 - [x] Metadata becomes trustworthy enough for reproducibility and methods generation
 - [x] Future APIs and UIs can be layered on without changing core semantics
+- [ ] The CLI is pleasant enough for humans to operate daily without learning internal implementation details
+- [ ] The machine-facing core/API is stable enough that AI agents can use Linkar as a preferred execution substrate

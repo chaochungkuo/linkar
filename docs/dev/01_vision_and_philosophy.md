@@ -1,7 +1,7 @@
 # Vision and Philosophy
 
 ## Vision
-Linkar is a lightweight execution engine for reusable computational templates.
+Linkar is a lightweight runtime for reusable computational templates, with a human-friendly CLI and a machine-readable execution model designed for reliable AI-agent use.
 
 Its purpose is to make analysis steps easy to run, easy to chain, and easy to understand later by both humans and AI systems. A Linkar run should produce not just files, but a self-describing artifact: what was run, with which parameters, in which context, and what it produced.
 
@@ -36,6 +36,8 @@ Linkar is:
 - A project-level state tracker
 - A metadata producer for reproducibility and downstream reasoning
 - A thin orchestration layer for chaining outputs across steps
+- A human-facing CLI that keeps the common path short and readable
+- A machine-facing core and API surface that avoids shell scraping
 - A foundation for future AI-assisted execution, inspection, and methods generation
 
 ## What Linkar Is Not
@@ -116,7 +118,7 @@ That includes:
 - Minimal hidden behavior
 
 ### 8. Thin Interfaces Win
-The CLI should stay thin. The future API server or UI should also stay thin. The important behavior belongs in the core so it can be reused consistently by humans, scripts, and agents.
+The CLI should stay thin and readable for humans. The API server or UI should also stay thin and structured for machines. The important behavior belongs in the core so it can be reused consistently by humans, scripts, and agents.
 
 ### 9. The Common Case Should Be Short
 For normal interactive use, Linkar should assume the current working directory is the project context and look for `project.yaml` there before asking for explicit project arguments.
@@ -138,6 +140,7 @@ These principles imply several concrete design choices:
 - Project binding should prefer explicit conventions over magical inference.
 - Ephemeral execution should exist for quick runs, but full chaining requires a project.
 - The core API should be clean enough that a future UI or agent can call it directly.
+- The CLI should remain pleasant enough that users can operate Linkar without memorizing internal concepts.
 
 ## Non-Goals for the Early Versions
 To keep the product sharp, the early versions should explicitly avoid:
@@ -158,6 +161,7 @@ Linkar is succeeding if the following are true:
 - A project operator can rerun and inspect work without guessing how a result was produced.
 - A multi-step analysis can be chained through project outputs with little manual bookkeeping.
 - An AI agent can inspect project state and metadata and make reliable next-step decisions.
+- The CLI stays concise enough that humans prefer using it over hand-assembling raw commands.
 - The system remains understandable from the filesystem layout and a few core APIs.
 
 ## Strategic Positioning
