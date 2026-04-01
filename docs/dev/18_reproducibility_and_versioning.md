@@ -65,7 +65,7 @@ Different layers may have different version identities:
 
 - Linkar version
 - pack version or Git revision
-- template version as declared in `template.yaml`, when provided
+- template version as declared in `linkar_template.yaml`, when provided
 - template version as implied by its source tree state when no explicit template version is declared
 - binding reference or revision when relevant
 - underlying domain tool versions

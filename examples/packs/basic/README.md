@@ -14,7 +14,7 @@ Suggested order:
 
 Each template keeps the same shape:
 
-- `template.yaml`
+- `linkar_template.yaml`
 - `run.sh`
 - `test.sh` or `test.py`
 - optional support files or `testdata/`

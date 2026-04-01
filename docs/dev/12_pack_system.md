@@ -2,6 +2,10 @@
 
 This document defines the role of packs in Linkar.
 
+Canonical pack contract filename: `linkar_pack.yaml`.
+
+Legacy compatibility: Linkar still accepts `binding.yaml`, but new packs and binding assets should use `linkar_pack.yaml`.
+
 A pack is the unit of distribution for reusable Linkar assets. Packs let users share templates and functions without putting domain-specific logic into the core.
 
 Packs are purposeful bundles. They may collect templates that belong together for a scientific or operational use case, and they may optionally ship a default binding profile that makes the bundle practical out of the box.
@@ -22,7 +26,7 @@ A pack should typically look like:
 pack/
   templates/
   functions/
-  binding.yaml   # optional default binding
+  linkar_pack.yaml   # optional default binding
 ```
 
 Example:
@@ -35,7 +39,7 @@ bio-pack/
     rnaseq/
   functions/
     get_latest_fastq.py
-  binding.yaml
+  linkar_pack.yaml
 ```
 
 ## Contents
@@ -51,7 +55,7 @@ Contains reusable functions used for:
 - binding logic
 - lightweight lifecycle assistance
 
-### `binding.yaml`
+### `linkar_pack.yaml`
 Optional.
 
 This may define the pack's default binding profile.

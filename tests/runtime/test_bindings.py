@@ -7,7 +7,7 @@ import pytest
 import yaml
 
 from linkar.errors import AssetResolutionError, ParameterResolutionError
-from linkar.runtime.bindings import resolve_params_detailed
+from linkar.runtime.bindings import load_binding_config, resolve_params_detailed
 from linkar.runtime.projects import init_project, load_project
 from linkar.runtime.shared import format_env_value, save_yaml
 from linkar.runtime.templates import load_template
@@ -16,7 +16,7 @@ from linkar.runtime.templates import load_template
 def make_template(root: Path, template_id: str, params: str, body: str) -> Path:
     template_dir = root / "templates" / template_id
     template_dir.mkdir(parents=True)
-    (template_dir / "template.yaml").write_text(
+    (template_dir / "linkar_template.yaml").write_text(
         "\n".join(
             [
                 f"id: {template_id}",
@@ -38,7 +38,18 @@ def make_template(root: Path, template_id: str, params: str, body: str) -> Path:
 
 
 def make_binding(root: Path, content: dict) -> None:
-    save_yaml(root / "binding.yaml", content)
+    save_yaml(root / "linkar_pack.yaml", content)
+
+
+def test_load_binding_config_accepts_legacy_binding_yaml_filename(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    pack_root.mkdir(parents=True)
+    save_yaml(pack_root / "binding.yaml", {"templates": {"demo": {"params": {"x": {"value": "y"}}}}})
+
+    root, data = load_binding_config(binding_ref="default", pack_root=pack_root)
+
+    assert root == pack_root
+    assert data["templates"]["demo"]["params"]["x"]["value"] == "y"
 
 
 def test_binding_output_rule_targets_specific_template_id(tmp_path: Path) -> None:

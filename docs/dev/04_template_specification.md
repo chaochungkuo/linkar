@@ -2,6 +2,10 @@
 
 This document defines the contract for a Linkar template.
 
+Canonical filename: `linkar_template.yaml`.
+
+Legacy compatibility: Linkar still accepts `template.yaml`, but new templates should use `linkar_template.yaml`.
+
 A template is the unit of reusable execution in Linkar. The purpose of the template specification is to keep that unit simple, portable, and easy for both humans and the core engine to understand.
 
 ## Design Goals
@@ -22,7 +26,7 @@ Minimum expected structure:
 
 ```text
 my_template/
-  template.yaml
+  linkar_template.yaml
   run.sh
 ```
 
@@ -30,7 +34,7 @@ Other supporting files may also exist:
 
 ```text
 my_template/
-  template.yaml
+  linkar_template.yaml
   run.sh
   test.sh or test.py
   supporting files...
@@ -40,13 +44,13 @@ my_template/
 The key point is that the template should remain understandable as a normal directory, not a generated or opaque bundle.
 
 ## Required Files
-### `template.yaml`
+### `linkar_template.yaml`
 This file defines the template interface and execution settings.
 
 It is required.
 
 ### Run Entrypoint
-The template must define a runnable entrypoint in `template.yaml`.
+The template must define a runnable entrypoint in `linkar_template.yaml`.
 
 Typical examples:
 
@@ -56,7 +60,7 @@ Typical examples:
 
 The entrypoint path is relative to the template root.
 
-## `template.yaml` Structure
+## `linkar_template.yaml` Structure
 The current minimal structure is:
 
 ```yaml
@@ -346,7 +350,7 @@ Template authors should follow these rules:
 ## Validation Rules
 The core should validate at least the following before execution:
 
-- `template.yaml` exists
+- `linkar_template.yaml` exists
 - `id` exists
 - `run.entry` exists
 - The referenced entrypoint exists
@@ -382,7 +386,7 @@ Example template:
 
 ```text
 bclconvert/
-  template.yaml
+  linkar_template.yaml
   run.sh
 ```
 
@@ -413,7 +417,7 @@ bcl-convert \
 ## Summary
 A Linkar template should remain a small, explicit execution unit:
 
-- defined by `template.yaml`
+- defined by `linkar_template.yaml`
 - run through a normal entrypoint
 - configured through declared parameters
 - executed inside a prepared output directory

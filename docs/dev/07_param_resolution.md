@@ -36,7 +36,7 @@ The resolution subsystem may draw from:
 - parameters supplied by CLI or API
 - binding definitions attached to the template or pack
 - previously recorded outputs in the active project
-- defaults declared in `template.yaml`
+- defaults declared in `linkar_template.yaml`
 
 Each source should be inspectable. Resolution should not depend on hidden ambient state.
 

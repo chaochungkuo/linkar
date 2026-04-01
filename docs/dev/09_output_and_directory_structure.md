@@ -144,7 +144,7 @@ The system should distinguish between:
 
 This distinction keeps downstream chaining predictable.
 
-When a template declares outputs in `template.yaml`, Linkar resolves them relative to `results/` by default:
+When a template declares outputs in `linkar_template.yaml`, Linkar resolves them relative to `results/` by default:
 
 - `results_dir` -> `results/`
 - `*_dir` -> `results/<name without _dir>`

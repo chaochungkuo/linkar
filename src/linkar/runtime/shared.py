@@ -13,6 +13,9 @@ from linkar.assets import ResolvedAsset
 from linkar.errors import LinkarError, ParameterResolutionError
 from linkar.runtime.models import PackEntry
 
+TEMPLATE_SPEC_FILENAMES = ("linkar_template.yaml", "template.yaml")
+PACK_SPEC_FILENAMES = ("linkar_pack.yaml", "binding.yaml")
+
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
@@ -43,6 +46,22 @@ def project_file(path: Path) -> Path:
     if path.is_dir():
         return path / "project.yaml"
     return path
+
+
+def find_template_spec_path(root: Path) -> Path | None:
+    for filename in TEMPLATE_SPEC_FILENAMES:
+        candidate = root / filename
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def find_pack_spec_path(root: Path) -> Path | None:
+    for filename in PACK_SPEC_FILENAMES:
+        candidate = root / filename
+        if candidate.exists():
+            return candidate
+    return None
 
 
 def derive_pack_id(ref: str) -> str:

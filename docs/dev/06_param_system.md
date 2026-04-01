@@ -7,14 +7,14 @@ Parameters are the main contract between the caller, the project context, and th
 ## Goals
 The parameter system should:
 
-- Be simple to author in `template.yaml`
+- Be simple to author in `linkar_template.yaml`
 - Be easy for the core to validate
 - Be easy for templates to consume
 - Work across CLI, API, and future agent use
 - Avoid hidden coercion rules
 
 ## Parameter Definition
-Parameters are declared under `params` in `template.yaml`.
+Parameters are declared under `params` in `linkar_template.yaml`.
 
 Example:
 

@@ -1,6 +1,8 @@
 # Binding Specification
 
-This document defines the MVP contract for `binding.yaml`.
+This document defines the MVP contract for `linkar_pack.yaml`.
+
+Legacy compatibility: Linkar still accepts `binding.yaml`, but new binding assets should use `linkar_pack.yaml`.
 
 The goal of the binding format is to stay small and explicit. A binding should help adapt reusable templates to a local workflow context without turning Linkar into a hidden rule engine.
 
@@ -14,7 +16,7 @@ A binding asset is a directory containing:
 
 ```text
 binding/
-  binding.yaml
+  linkar_pack.yaml
   functions/   # optional
 ```
 
@@ -22,7 +24,7 @@ A pack may also provide a default binding directly at:
 
 ```text
 pack/
-  binding.yaml
+  linkar_pack.yaml
   functions/   # optional
 ```
 

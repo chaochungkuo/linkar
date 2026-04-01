@@ -7,7 +7,7 @@ from typing import Any
 from linkar.assets import resolve_asset_ref
 from linkar.errors import AssetResolutionError, ParameterResolutionError
 from linkar.runtime.models import BindingContext, Project, TemplateSpec
-from linkar.runtime.shared import load_yaml, parse_param_value
+from linkar.runtime.shared import find_pack_spec_path, load_yaml, parse_param_value
 
 
 def binding_asset_root(binding_ref: str | Path | None, pack_root: Path | None) -> Path | None:
@@ -16,12 +16,12 @@ def binding_asset_root(binding_ref: str | Path | None, pack_root: Path | None) -
     if binding_ref == "default":
         if pack_root is None:
             raise AssetResolutionError("Binding 'default' requires a selected pack")
-        if not (pack_root / "binding.yaml").exists():
+        if find_pack_spec_path(pack_root) is None:
             raise AssetResolutionError(f"Pack does not provide a default binding: {pack_root}")
         return pack_root
     binding_asset = resolve_asset_ref(binding_ref)
-    if not (binding_asset.root / "binding.yaml").exists():
-        raise AssetResolutionError(f"binding.yaml not found in {binding_asset.root}")
+    if find_pack_spec_path(binding_asset.root) is None:
+        raise AssetResolutionError(f"linkar_pack.yaml not found in {binding_asset.root}")
     return binding_asset.root
 
 
@@ -29,10 +29,13 @@ def load_binding_config(binding_ref: str | Path | None, pack_root: Path | None) 
     root = binding_asset_root(binding_ref, pack_root)
     if root is None:
         return None, {}
-    data = load_yaml(root / "binding.yaml")
+    spec_path = find_pack_spec_path(root)
+    if spec_path is None:
+        raise AssetResolutionError(f"linkar_pack.yaml not found in {root}")
+    data = load_yaml(spec_path)
     templates = data.get("templates") or {}
     if not isinstance(templates, dict):
-        raise AssetResolutionError("binding.yaml field 'templates' must be a mapping")
+        raise AssetResolutionError(f"{spec_path.name} field 'templates' must be a mapping")
     return root, data
 
 
@@ -66,12 +69,12 @@ def resolve_bound_value(
     template_binding = templates.get(template.id) or {}
     if not isinstance(template_binding, dict):
         raise AssetResolutionError(
-            f"binding.yaml template entry must be a mapping for '{template.id}'"
+            f"linkar_pack.yaml template entry must be a mapping for '{template.id}'"
         )
     params = template_binding.get("params") or {}
     if not isinstance(params, dict):
         raise AssetResolutionError(
-            f"binding.yaml params entry must be a mapping for '{template.id}'"
+            f"linkar_pack.yaml params entry must be a mapping for '{template.id}'"
         )
     if key not in params:
         return False, None, None
@@ -79,7 +82,7 @@ def resolve_bound_value(
     rule = params[key] or {}
     if not isinstance(rule, dict):
         raise AssetResolutionError(
-            f"binding.yaml param rule must be a mapping for '{template.id}.{key}'"
+            f"linkar_pack.yaml param rule must be a mapping for '{template.id}.{key}'"
         )
     ctx = BindingContext(template=template, project=project, resolved_params=dict(resolved_params))
 

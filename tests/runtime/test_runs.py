@@ -21,7 +21,7 @@ from linkar.runtime.templates import load_template
 def make_template(root: Path, template_id: str, body: str, *, entry_name: str = "run.sh") -> Path:
     template_dir = root / template_id
     template_dir.mkdir(parents=True)
-    (template_dir / "template.yaml").write_text(
+    (template_dir / "linkar_template.yaml").write_text(
         "\n".join(
             [
                 f"id: {template_id}",
@@ -43,6 +43,30 @@ def make_template(root: Path, template_id: str, body: str, *, entry_name: str = 
     entry.write_text(body)
     entry.chmod(0o755)
     return template_dir
+
+
+def test_load_template_accepts_legacy_template_yaml_filename(tmp_path: Path) -> None:
+    template_dir = tmp_path / "legacy_template"
+    template_dir.mkdir(parents=True)
+    (template_dir / "template.yaml").write_text(
+        "\n".join(
+            [
+                "id: legacy_template",
+                "outputs:",
+                "  results_dir: {}",
+                "run:",
+                "  entry: run.sh",
+                "  mode: direct",
+                "",
+            ]
+        )
+    )
+    (template_dir / "run.sh").write_text("#!/usr/bin/env bash\nset -euo pipefail\n")
+    (template_dir / "run.sh").chmod(0o755)
+
+    template = load_template(template_dir)
+
+    assert template.id == "legacy_template"
 
 
 def test_next_instance_id_uses_project_history_count(tmp_path: Path) -> None:
@@ -160,7 +184,7 @@ def test_collect_declared_glob_output_returns_sorted_matches(tmp_path: Path) -> 
 
 def test_collect_outputs_uses_declared_relative_paths_when_present(tmp_path: Path) -> None:
     template_dir = make_template(tmp_path / "templates", "outputs_demo", "#!/usr/bin/env bash\n")
-    (template_dir / "template.yaml").write_text(
+    (template_dir / "linkar_template.yaml").write_text(
         "\n".join(
             [
                 "id: outputs_demo",
@@ -193,7 +217,7 @@ def test_collect_outputs_uses_declared_relative_paths_when_present(tmp_path: Pat
 
 def test_collect_outputs_records_declared_glob_outputs_as_lists(tmp_path: Path) -> None:
     template_dir = make_template(tmp_path / "templates", "glob_demo", "#!/usr/bin/env bash\n")
-    (template_dir / "template.yaml").write_text(
+    (template_dir / "linkar_template.yaml").write_text(
         "\n".join(
             [
                 "id: glob_demo",

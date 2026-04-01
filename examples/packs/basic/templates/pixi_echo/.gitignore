@@ -1,2 +1,3 @@
 .pixi/
+.rattler-cache/
 greeting.txt

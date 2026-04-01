@@ -112,7 +112,7 @@ Make reusable template collections practical without increasing semantic complex
 Add the smallest useful binding system without breaking template portability.
 
 ### Scope Checklist
-- [x] Define `binding.yaml`
+- [x] Define `linkar_pack.yaml`
 - [x] Implement pack-provided default binding
 - [x] Implement optional ad hoc binding selection
 - [x] Implement project-level per-pack binding choice
@@ -378,7 +378,7 @@ Add broader distribution and richer user-facing surfaces after the local API lay
 ## Recommended Immediate Build Order
 - [x] Finish Phase 1 completely before adding richer reuse layers
 - [x] Add only local path-based pack loading from Phase 2 first
-- [x] Define `binding.yaml` before implementing runtime binding behavior
+- [x] Define `linkar_pack.yaml` before implementing runtime binding behavior
 - [x] Add the smallest binding MVP from Phase 3
 - [x] Strengthen provenance before remote asset loading
 - [x] Add Git/GitHub asset loading only after the above are stable

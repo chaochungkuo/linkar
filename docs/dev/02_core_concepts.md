@@ -18,7 +18,7 @@ A template is a definition, not a run. It describes how one computational step s
 
 In practice, a template is usually a directory containing:
 
-- `template.yaml`
+- `linkar_template.yaml`
 - A runnable script or program such as `run.sh` or `run.py`
 
 Key properties of a template:
@@ -88,7 +88,7 @@ Typical structure:
 pack/
   templates/
   functions/
-  binding.yaml   # optional
+  linkar_pack.yaml   # optional
 ```
 
 A pack is a purposeful bundle, not just a storage folder. It may collect templates that are meant to work together for a specific analytical purpose, such as a genomics toolkit.

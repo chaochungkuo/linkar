@@ -8,7 +8,12 @@ from linkar.errors import AssetResolutionError, TemplateValidationError
 from linkar.runtime.config import get_active_global_pack_entry, global_pack_entries
 from linkar.runtime.models import PackEntry, Project, TemplateSpec
 from linkar.runtime.projects import get_active_pack_entry, load_project, project_pack_entries, discover_project
-from linkar.runtime.shared import load_yaml, preferred_pack_ref_for_assets, unique_assets
+from linkar.runtime.shared import (
+    find_template_spec_path,
+    load_yaml,
+    preferred_pack_ref_for_assets,
+    unique_assets,
+)
 
 
 def combined_configured_pack_entries(project_obj: Project | None) -> tuple[list[PackEntry], PackEntry | None]:
@@ -42,7 +47,7 @@ def load_template(
         candidate_assets: list[ResolvedAsset] = []
         for pack_asset in pack_assets or []:
             candidate = pack_asset.root / "templates" / str(template_ref)
-            if (candidate / "template.yaml").exists():
+            if find_template_spec_path(candidate) is not None:
                 candidates.append(candidate)
                 candidate_assets.append(pack_asset)
         if not candidates:
@@ -74,9 +79,9 @@ def load_template(
             root = candidates[0]
             pack_asset = candidate_assets[0]
 
-    spec_path = root / "template.yaml"
-    if not spec_path.exists():
-        raise TemplateValidationError(f"template.yaml not found in {root}")
+    spec_path = find_template_spec_path(root)
+    if spec_path is None:
+        raise TemplateValidationError(f"linkar_template.yaml not found in {root}")
 
     data = load_yaml(spec_path)
     template_id = data.get("id")
@@ -177,8 +182,8 @@ def list_templates(
         if not templates_dir.exists():
             continue
         for child in sorted(templates_dir.iterdir()):
-            spec_path = child / "template.yaml"
-            if not child.is_dir() or not spec_path.exists():
+            spec_path = find_template_spec_path(child)
+            if not child.is_dir() or spec_path is None:
                 continue
             spec = load_yaml(spec_path)
             template_id = spec.get("id") or child.name

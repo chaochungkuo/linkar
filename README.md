@@ -7,6 +7,13 @@
 - YAML-based templates and projects
 - Metadata and runtime capture under `.linkar/`
 
+New template and pack contracts should use:
+
+- `linkar_template.yaml`
+- `linkar_pack.yaml`
+
+Linkar still accepts the legacy filenames `template.yaml` and `binding.yaml` for backward compatibility.
+
 ## Quickstart
 
 ```bash
