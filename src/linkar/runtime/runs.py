@@ -746,9 +746,23 @@ def remove_project_run(
             "Removing a run requires an active project. Run it inside a directory containing project.yaml or pass --project PATH."
         )
 
-    ref_path = Path(run_ref).expanduser()
-    resolved_ref = ref_path.resolve() if ref_path.exists() else None
     templates = project_obj.data.setdefault("templates", [])
+    template_id_matches = [
+        entry for entry in templates if entry.get("id") == str(run_ref)
+    ]
+    is_bare_name = isinstance(run_ref, str) and not Path(run_ref).is_absolute() and os.sep not in run_ref
+    ref_path = Path(run_ref).expanduser()
+    resolved_ref = None if is_bare_name and template_id_matches else (ref_path.resolve() if ref_path.exists() else None)
+    matched_instance_id: str | None = None
+    if resolved_ref is None and template_id_matches:
+        if len(template_id_matches) > 1:
+            matching_instances = ", ".join(
+                str(entry.get("instance_id")) for entry in template_id_matches if entry.get("instance_id")
+            )
+            raise ProjectValidationError(
+                f"Run reference '{run_ref}' is ambiguous in this project. Matching instances: {matching_instances}"
+            )
+        matched_instance_id = str(template_id_matches[0].get("instance_id"))
     kept: list[dict[str, Any]] = []
     removed: dict[str, Any] | None = None
 
@@ -764,6 +778,8 @@ def remove_project_run(
         )
 
         matches = entry_instance_id == str(run_ref)
+        if matched_instance_id is not None and entry_instance_id == matched_instance_id:
+            matches = True
         if resolved_ref is not None:
             if entry_meta_path is not None and resolved_ref == entry_meta_path:
                 matches = True

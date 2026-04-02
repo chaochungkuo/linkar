@@ -416,6 +416,58 @@ def test_project_remove_run_can_delete_run_files(tmp_path: Path) -> None:
     assert not history_path.exists()
 
 
+def test_project_remove_run_accepts_unique_template_id(tmp_path: Path) -> None:
+    init = run_cli("project", "init", "--name", "study", cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    produced = run_cli(
+        "run",
+        "simple_echo",
+        "--pack",
+        str(ROOT / "examples" / "packs" / "basic"),
+        "--param",
+        "name=Detach",
+        cwd=tmp_path / "study",
+    )
+    assert produced.returncode == 0, produced.stderr
+
+    removed = run_cli("project", "remove-run", "simple_echo", cwd=tmp_path / "study")
+    assert removed.returncode == 0, removed.stderr
+    assert "simple_echo_001" in removed.stdout
+
+
+def test_project_remove_run_rejects_ambiguous_template_id(tmp_path: Path) -> None:
+    init = run_cli("project", "init", "--name", "study", cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    first = run_cli(
+        "run",
+        "simple_echo",
+        "--pack",
+        str(ROOT / "examples" / "packs" / "basic"),
+        "--param",
+        "name=One",
+        cwd=tmp_path / "study",
+    )
+    assert first.returncode == 0, first.stderr
+    second = run_cli(
+        "run",
+        "simple_echo",
+        "--pack",
+        str(ROOT / "examples" / "packs" / "basic"),
+        "--param",
+        "name=Two",
+        cwd=tmp_path / "study",
+    )
+    assert second.returncode == 0, second.stderr
+
+    removed = run_cli("project", "remove-run", "simple_echo", cwd=tmp_path / "study")
+    assert removed.returncode == 1
+    assert "ambiguous" in removed.stderr
+    assert "simple_echo_001" in removed.stderr
+    assert "simple_echo_002" in removed.stderr
+
+
 def test_pack_commands_manage_project_configuration(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
     init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
