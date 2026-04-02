@@ -234,16 +234,32 @@ def render_launcher(
 
 def resolve_render_command(
     command: str,
+    resolved_params: dict[str, Any],
+    instance_id: str,
+    project_obj: Project | None,
 ) -> str:
     substitutions = {
-        "LINKAR_OUTPUT_DIR": "${script_dir}",
-        "LINKAR_RESULTS_DIR": "${script_dir}/results",
+        "LINKAR_OUTPUT_DIR": ".",
+        "LINKAR_RESULTS_DIR": "./results",
+        "LINKAR_INSTANCE_ID": shlex.quote(instance_id),
+        "LINKAR_PROJECT_DIR": shlex.quote(str(project_obj.root)) if project_obj is not None else '""',
     }
 
     rendered = command
     for key, value in substitutions.items():
         rendered = rendered.replace(f"${{{key}}}", value)
         rendered = re.sub(rf"\${key}(?![A-Za-z0-9_])", value, rendered)
+    for key in sorted(resolved_params):
+        rendered = re.sub(
+            rf"\$\{{{env_key(key)}(?=[:}}])",
+            f"${{{key}",
+            rendered,
+        )
+        rendered = re.sub(
+            rf"\${env_key(key)}(?![A-Za-z0-9_])",
+            f"${key}",
+            rendered,
+        )
     return rendered
 
 
@@ -259,21 +275,17 @@ def write_render_script(
         "#!/usr/bin/env bash",
         "set -euo pipefail",
         '',
-        'script_dir="$(cd "$(dirname "$0")" && pwd)"',
-        'cd "${script_dir}"',
-        'mkdir -p "${script_dir}/results"',
+        'expected_dir="$(cd "$(dirname "$0")" && pwd)"',
+        'if [[ "$PWD" != "$expected_dir" ]]; then',
+        '  echo "Run ./run.sh from inside ${expected_dir}" >&2',
+        "  exit 1",
+        "fi",
+        'mkdir -p "./results"',
     ]
     if template.run_command is not None:
-        lines.extend(
-            [
-                f"LINKAR_INSTANCE_ID={shlex.quote(instance_id)}",
-            ]
-        )
-        if project_obj is not None:
-            lines.append(f"LINKAR_PROJECT_DIR={shlex.quote(str(project_obj.root))}")
         for key, value in sorted(resolved_params.items()):
-            lines.append(f"{env_key(key)}={shlex.quote(format_env_value(value))}")
-        lines.append(resolve_render_command(template.run_command))
+            lines.append(f"{key}={shlex.quote(format_env_value(value))}")
+        lines.append(resolve_render_command(template.run_command, resolved_params, instance_id, project_obj))
     else:
         entry_name = template.run_entry or "run.sh"
         if entry_name == "run.sh":
@@ -283,8 +295,8 @@ def write_render_script(
             entry_name = ".linkar/template-entry-run.sh"
         lines.extend(
             [
-                f'export LINKAR_OUTPUT_DIR="${{script_dir}}"',
-                f'export LINKAR_RESULTS_DIR="${{script_dir}}/results"',
+                'export LINKAR_OUTPUT_DIR="."',
+                'export LINKAR_RESULTS_DIR="./results"',
                 f"export LINKAR_INSTANCE_ID={shlex.quote(instance_id)}",
             ]
         )
@@ -292,7 +304,7 @@ def write_render_script(
             lines.append(f"export LINKAR_PROJECT_DIR={shlex.quote(str(project_obj.root))}")
         for key, value in sorted(resolved_params.items()):
             lines.append(f"export {env_key(key)}={shlex.quote(format_env_value(value))}")
-        lines.append(f'exec "${{script_dir}}/{entry_name}"')
+        lines.append(f'exec "./{entry_name}"')
     script_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     script_path.chmod(0o755)
     return script_path

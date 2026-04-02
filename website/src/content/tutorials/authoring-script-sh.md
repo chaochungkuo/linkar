@@ -107,6 +107,8 @@ fi
 
 `linkar render ...` stages the template bundle and writes one standalone `run.sh` without executing the template.
 
+The rendered script does not silently `cd` for you. It expects to be run from inside the rendered directory, so the artifact stays explicit and easy to inspect.
+
 That is especially useful for templates declared as one command:
 
 ```yaml

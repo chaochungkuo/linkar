@@ -353,8 +353,11 @@ def test_render_template_stages_bundle_and_writes_launcher_without_executing(tmp
     assert launcher.is_file()
     assert not (rendered_dir / "linkar_template.yaml").exists()
     assert not (rendered_dir / "results" / "executed.txt").exists()
-    assert 'export NAME=demo' in launcher.read_text(encoding="utf-8")
-    assert 'template-entry-run.sh' in launcher.read_text(encoding="utf-8")
+    text = launcher.read_text(encoding="utf-8")
+    assert 'Run ./run.sh from inside ${expected_dir}' in text
+    assert 'cd "${script_dir}"' not in text
+    assert 'export NAME=demo' in text
+    assert 'template-entry-run.sh' in text
 
 
 def test_render_template_does_not_update_project_history_or_alias(tmp_path: Path) -> None:
@@ -445,8 +448,11 @@ def test_render_template_with_run_command_writes_single_launcher(tmp_path: Path)
     assert not (outdir / "linkar_template.yaml").exists()
     assert "bash -lc" not in launcher.read_text(encoding="utf-8")
     text = launcher.read_text(encoding="utf-8")
-    assert "NAME=demo" in text
-    assert '${script_dir}/results' in text
+    assert 'Run ./run.sh from inside ${expected_dir}' in text
+    assert 'cd "${script_dir}"' not in text
+    assert "name=demo" in text
+    assert "NAME=demo" not in text
+    assert "./results" in text
     assert not (outdir / "results" / "name.txt").exists()
 
 
