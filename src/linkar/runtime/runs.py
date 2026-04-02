@@ -310,6 +310,57 @@ def write_render_script(
     return script_path
 
 
+def localized_render_path(
+    output_dir: Path,
+    param_name: str,
+    source_path: Path,
+    *,
+    index: int | None = None,
+) -> Path:
+    candidate_name = source_path.name
+    candidate = output_dir / candidate_name
+    if candidate.exists():
+        prefix = f"{param_name}_{index}" if index is not None else param_name
+        candidate = output_dir / f"{prefix}_{candidate_name}"
+    return candidate
+
+
+def localize_render_params(
+    template: TemplateSpec,
+    resolved_params: dict[str, Any],
+    param_provenance: dict[str, dict[str, Any]],
+    output_dir: Path,
+) -> dict[str, Any]:
+    localized = dict(resolved_params)
+    for key, spec in template.params.items():
+        provenance = param_provenance.get(key) or {}
+        if provenance.get("source") != "binding":
+            continue
+        param_type = (spec or {}).get("type", "str")
+        value = localized.get(key)
+        if param_type == "path" and isinstance(value, str):
+            source_path = Path(value)
+            if source_path.is_file():
+                target = localized_render_path(output_dir, key, source_path)
+                shutil.copy2(source_path, target)
+                localized[key] = f"./{target.name}"
+        elif param_type == "list[path]" and isinstance(value, list):
+            localized_items: list[str] = []
+            changed = False
+            for idx, item in enumerate(value, start=1):
+                source_path = Path(item)
+                if source_path.is_file():
+                    target = localized_render_path(output_dir, key, source_path, index=idx)
+                    shutil.copy2(source_path, target)
+                    localized_items.append(f"./{target.name}")
+                    changed = True
+                else:
+                    localized_items.append(item)
+            if changed:
+                localized[key] = localized_items
+    return localized
+
+
 def prepare_template_execution(
     template_ref: str | Path,
     params: dict[str, Any] | None,
@@ -849,6 +900,7 @@ def render_template(
         binding_ref,
         include_template_spec=False,
     )
+    resolved_params = localize_render_params(template, resolved_params, param_provenance, output_dir)
 
     command = [
         str(

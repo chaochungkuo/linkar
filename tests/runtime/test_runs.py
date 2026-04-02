@@ -6,6 +6,7 @@ import pytest
 
 from linkar.errors import ExecutionError, TemplateValidationError
 from linkar.runtime.projects import init_project, load_project
+from linkar.runtime.shared import save_yaml
 from linkar.runtime.runs import (
     collect_declared_glob_output,
     collect_outputs,
@@ -479,6 +480,59 @@ def test_run_template_executes_even_when_template_declares_legacy_render_mode(tm
 
     assert result["run_mode"] == "run"
     assert (outdir / "results" / "executed.txt").read_text() == "executed\n"
+
+
+def test_render_template_localizes_bound_file_params_into_render_dir(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    template_dir = pack_root / "templates" / "bound_file_render"
+    template_dir.mkdir(parents=True)
+    cached_dir = tmp_path / "cache"
+    cached_dir.mkdir()
+    cached_file = cached_dir / "samplesheet.csv"
+    cached_file.write_text("sample_id\nS1\n")
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: bound_file_render",
+                "params:",
+                "  samplesheet:",
+                "    type: path",
+                "    required: true",
+                "run:",
+                "  command: >-",
+                '    printf "%s\\n" "${samplesheet}" > "./results/path.txt"',
+                "",
+            ]
+        )
+    )
+    functions_dir = pack_root / "functions"
+    functions_dir.mkdir()
+    (functions_dir / "provide_samplesheet.py").write_text(
+        "def resolve(ctx):\n"
+        f"    return {cached_file.as_posix()!r}\n"
+    )
+    save_yaml(
+        pack_root / "linkar_pack.yaml",
+        {
+            "templates": {
+                "bound_file_render": {
+                    "params": {
+                        "samplesheet": {
+                            "function": "provide_samplesheet"
+                        }
+                    }
+                }
+            }
+        },
+    )
+
+    result = render_template(template_dir, binding_ref="default", outdir=tmp_path / "rendered")
+    outdir = Path(result["history_outdir"])
+
+    assert (outdir / "samplesheet.csv").read_text() == "sample_id\nS1\n"
+    text = (outdir / "run.sh").read_text(encoding="utf-8")
+    assert "samplesheet=./samplesheet.csv" in text
+    assert str(cached_file) not in text
 
 
 def test_load_template_parses_tool_requirements(tmp_path: Path) -> None:
