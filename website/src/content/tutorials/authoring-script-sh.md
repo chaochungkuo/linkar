@@ -105,7 +105,7 @@ fi
 
 ## Render command and launcher generation
 
-`linkar render ...` stages the template bundle and writes `linkar-run.sh` without executing the template.
+`linkar render ...` stages the template bundle and writes one standalone `run.sh` without executing the template.
 
 That is especially useful for templates declared as one command:
 

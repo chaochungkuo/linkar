@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -145,9 +146,16 @@ def should_exclude_runtime_path(path: Path) -> bool:
     return path.name in RUNTIME_BUNDLE_EXCLUDES
 
 
-def stage_runtime_bundle(template: TemplateSpec, output_dir: Path) -> None:
+def stage_runtime_bundle(
+    template: TemplateSpec,
+    output_dir: Path,
+    *,
+    include_template_spec: bool = True,
+) -> None:
     for child in template.root.iterdir():
         if should_exclude_runtime_path(child):
+            continue
+        if not include_template_spec and child.name in {"linkar_template.yaml", "template.yaml"}:
             continue
         destination = output_dir / child.name
         if child.is_dir():
@@ -162,7 +170,7 @@ def stage_runtime_bundle(template: TemplateSpec, output_dir: Path) -> None:
 
 
 def render_mode_launcher_path(output_dir: Path) -> Path:
-    return output_dir / "linkar-run.sh"
+    return output_dir / "run.sh"
 
 
 def ensure_required_tools_available(template: TemplateSpec) -> None:
@@ -224,6 +232,72 @@ def render_launcher(
     return launcher_path
 
 
+def resolve_render_command(
+    command: str,
+) -> str:
+    substitutions = {
+        "LINKAR_OUTPUT_DIR": "${script_dir}",
+        "LINKAR_RESULTS_DIR": "${script_dir}/results",
+    }
+
+    rendered = command
+    for key, value in substitutions.items():
+        rendered = rendered.replace(f"${{{key}}}", value)
+        rendered = re.sub(rf"\${key}(?![A-Za-z0-9_])", value, rendered)
+    return rendered
+
+
+def write_render_script(
+    script_path: Path,
+    template: TemplateSpec,
+    resolved_params: dict[str, Any],
+    instance_id: str,
+    project_obj: Project | None,
+    output_dir: Path,
+) -> Path:
+    lines = [
+        "#!/usr/bin/env bash",
+        "set -euo pipefail",
+        '',
+        'script_dir="$(cd "$(dirname "$0")" && pwd)"',
+        'cd "${script_dir}"',
+        'mkdir -p "${script_dir}/results"',
+    ]
+    if template.run_command is not None:
+        lines.extend(
+            [
+                f"LINKAR_INSTANCE_ID={shlex.quote(instance_id)}",
+            ]
+        )
+        if project_obj is not None:
+            lines.append(f"LINKAR_PROJECT_DIR={shlex.quote(str(project_obj.root))}")
+        for key, value in sorted(resolved_params.items()):
+            lines.append(f"{env_key(key)}={shlex.quote(format_env_value(value))}")
+        lines.append(resolve_render_command(template.run_command))
+    else:
+        entry_name = template.run_entry or "run.sh"
+        if entry_name == "run.sh":
+            internal_entry = output_dir / ".linkar" / "template-entry-run.sh"
+            staged_entry = output_dir / "run.sh"
+            shutil.move(str(staged_entry), str(internal_entry))
+            entry_name = ".linkar/template-entry-run.sh"
+        lines.extend(
+            [
+                f'export LINKAR_OUTPUT_DIR="${{script_dir}}"',
+                f'export LINKAR_RESULTS_DIR="${{script_dir}}/results"',
+                f"export LINKAR_INSTANCE_ID={shlex.quote(instance_id)}",
+            ]
+        )
+        if project_obj is not None:
+            lines.append(f"export LINKAR_PROJECT_DIR={shlex.quote(str(project_obj.root))}")
+        for key, value in sorted(resolved_params.items()):
+            lines.append(f"export {env_key(key)}={shlex.quote(format_env_value(value))}")
+        lines.append(f'exec "${{script_dir}}/{entry_name}"')
+    script_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    script_path.chmod(0o755)
+    return script_path
+
+
 def prepare_template_execution(
     template_ref: str | Path,
     params: dict[str, Any] | None,
@@ -231,6 +305,8 @@ def prepare_template_execution(
     outdir: str | Path | None,
     pack_refs: str | Path | list[str | Path] | None,
     binding_ref: str | Path | None,
+    *,
+    include_template_spec: bool = True,
 ) -> tuple[
     Project | None,
     TemplateSpec,
@@ -293,7 +369,7 @@ def prepare_template_execution(
     if project_obj is not None:
         env["LINKAR_PROJECT_DIR"] = str(project_obj.root)
 
-    stage_runtime_bundle(template, output_dir)
+    stage_runtime_bundle(template, output_dir, include_template_spec=include_template_spec)
 
     return (
         project_obj,
@@ -759,17 +835,18 @@ def render_template(
         outdir,
         pack_refs,
         binding_ref,
+        include_template_spec=False,
     )
 
     command = [
         str(
-            render_launcher(
+            write_render_script(
                 render_mode_launcher_path(output_dir),
                 template,
-                output_dir,
                 resolved_params,
                 instance_id,
                 project_obj,
+                output_dir,
             ).resolve()
         )
     ]

@@ -126,7 +126,7 @@ class CliUI:
     def print_render_completed(self, result: dict[str, Any]) -> None:
         outdir = Path(result["outdir"])
         history_outdir = Path(result.get("history_outdir", result["outdir"]))
-        launcher = history_outdir / "linkar-run.sh"
+        launcher = history_outdir / "run.sh"
         if not self.rich_enabled:
             self.plain_print(str(outdir))
             return

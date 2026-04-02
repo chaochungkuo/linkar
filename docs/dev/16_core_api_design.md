@@ -92,7 +92,7 @@ It should:
 
 - load and resolve the template the same way as `run_template(...)`
 - materialize the runtime directory
-- write `linkar-run.sh` and metadata
+- write one standalone `run.sh` plus metadata
 - skip project history updates because no execution happened
 
 ## `load_project(path)`

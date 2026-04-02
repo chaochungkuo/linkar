@@ -454,7 +454,8 @@ printf '%s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/name.txt"
 
     rendered_dir = tmp_path / "rendered"
     assert (rendered_dir / "run.sh").is_file()
-    assert (rendered_dir / "linkar-run.sh").is_file()
+    assert not (rendered_dir / "linkar-run.sh").exists()
+    assert not (rendered_dir / "linkar_template.yaml").exists()
     assert not (rendered_dir / "results" / "name.txt").exists()
 
 

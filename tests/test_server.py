@@ -300,5 +300,6 @@ def test_server_render_endpoint_stages_without_execution() -> None:
     assert status == "200 OK"
     outdir = Path(payload["data"]["outdir"])
     assert outdir.parent.name == "runs"
-    assert (outdir / "linkar-run.sh").exists()
+    assert (outdir / "run.sh").exists()
+    assert not (outdir / "linkar_template.yaml").exists()
     assert not (outdir / "results" / "greeting.txt").exists()

@@ -167,7 +167,7 @@ Example shape:
     "ref": "/opt/linkar/packs/genomics-pack"
   },
   "binding": null,
-  "command": ["linkar-run.sh"],
+  "command": ["run.sh"],
   "timestamp": "2026-03-26T15:30:00Z",
   "run_mode": "run"
 }
