@@ -36,6 +36,7 @@ Representative APIs include:
 ```python
 run_template(template_ref, params=None, project=None, outdir=None, pack_refs=None, binding_ref=None)
 render_template(template_ref, params=None, project=None, outdir=None, pack_refs=None, binding_ref=None)
+collect_run_outputs(run_ref, project=None)
 test_template(template_ref, project=None, outdir=None, pack_refs=None)
 load_project(path)
 init_project(path, project_id=None)
@@ -94,6 +95,16 @@ It should:
 - materialize the runtime directory
 - write one standalone `run.sh` plus metadata
 - skip project history updates because no execution happened
+
+## `collect_run_outputs(...)`
+This updates `.linkar/meta.json` after a rendered or manually executed run has finished outside `linkar run ...`.
+
+It should:
+
+- read the declared output contract captured in the run metadata
+- scan `results/` in the run directory
+- update recorded outputs in `.linkar/meta.json`
+- update the matching `project.yaml` entry when the run belongs to a project
 
 ## `load_project(path)`
 Loads and validates a project from `project.yaml`.
@@ -201,6 +212,9 @@ curl -s -X POST http://127.0.0.1:8000/run \
 curl -s -X POST http://127.0.0.1:8000/render \
   -H 'Content-Type: application/json' \
   -d '{"template":"simple_echo","pack_refs":["./examples/packs/basic"],"params":{"name":"Agent"},"outdir":"./simple_echo_bundle"}'
+curl -s -X POST http://127.0.0.1:8000/collect \
+  -H 'Content-Type: application/json' \
+  -d '{"run_ref":"./simple_echo_bundle"}'
 curl -s http://127.0.0.1:8000/runs/simple_echo_001/outputs?project=./study
 ```
 
@@ -221,6 +235,7 @@ Recommended MCP tool surface:
 - `linkar_resolve`
 - `linkar_run`
 - `linkar_render`
+- `linkar_collect`
 - `linkar_test`
 - `linkar_list_project_runs`
 - `linkar_list_project_assets`
@@ -248,6 +263,7 @@ Current local API surface:
 - `POST /resolve`
 - `POST /run`
 - `POST /render`
+- `POST /collect`
 - `POST /test`
 
 Success responses use:

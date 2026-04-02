@@ -8,6 +8,7 @@ from wsgiref.simple_server import make_server
 
 from linkar.assets import resolve_asset_refs
 from linkar.core import (
+    collect_run_outputs,
     describe_template,
     generate_methods,
     inspect_run,
@@ -230,6 +231,17 @@ def make_app() -> WSGIApp:
                     outdir=payload.get("outdir"),
                     pack_refs=payload.get("pack_refs"),
                     binding_ref=payload.get("binding_ref"),
+                )
+                return success_response(start_response, result)
+
+            if method == "POST" and path == "/collect":
+                payload = load_json_body(environ)
+                run_ref = payload.get("run_ref")
+                if not isinstance(run_ref, str) or not run_ref:
+                    raise ProjectValidationError("Request field 'run_ref' is required")
+                result = collect_run_outputs(
+                    run_ref,
+                    project=payload.get("project"),
                 )
                 return success_response(start_response, result)
 

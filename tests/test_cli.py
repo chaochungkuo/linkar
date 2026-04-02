@@ -459,6 +459,37 @@ printf '%s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/name.txt"
     assert not (rendered_dir / "results" / "name.txt").exists()
 
 
+def test_collect_command_updates_outputs_after_manual_run(tmp_path: Path) -> None:
+    completed = run_cli(
+        "render",
+        "simple_echo",
+        "--pack",
+        str(ROOT / "examples" / "packs" / "basic"),
+        "--param",
+        "name=Collected",
+        "--outdir",
+        str(tmp_path / "rendered"),
+        cwd=tmp_path,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+    rendered_dir = tmp_path / "rendered"
+    manual = subprocess.run(
+        [str(rendered_dir / "run.sh")],
+        cwd=rendered_dir,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert manual.returncode == 0, manual.stderr
+
+    collect = run_cli("collect", str(rendered_dir), cwd=tmp_path)
+    assert collect.returncode == 0, collect.stderr
+
+    meta = json.loads((rendered_dir / ".linkar" / "meta.json").read_text())
+    assert meta["outputs"]["greeting_file"] == str((rendered_dir / "results" / "greeting.txt").resolve())
+
+
 def test_run_command_executes_even_for_legacy_render_mode_template(tmp_path: Path) -> None:
     template = make_template(
         tmp_path / "templates",

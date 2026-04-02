@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from linkar.core import (
+    collect_run_outputs,
     describe_template,
     generate_methods,
     inspect_run,
@@ -90,6 +91,14 @@ def render_template_tool(
         pack_refs=pack_refs,
         binding_ref=binding_ref,
     )
+
+
+def collect_run_outputs_tool(
+    *,
+    run_ref: str | Path,
+    project: str | Path | None = None,
+) -> dict[str, Any]:
+    return collect_run_outputs(run_ref, project=project)
 
 
 def test_template_tool(

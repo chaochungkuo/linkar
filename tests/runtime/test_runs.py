@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -8,6 +10,7 @@ from linkar.errors import ExecutionError, TemplateValidationError
 from linkar.runtime.projects import init_project, load_project
 from linkar.runtime.shared import save_yaml
 from linkar.runtime.runs import (
+    collect_run_outputs,
     collect_declared_glob_output,
     collect_outputs,
     default_output_relative_path,
@@ -585,6 +588,36 @@ def test_render_template_overwrites_staged_file_when_bound_file_uses_same_name(t
 
     assert (outdir / "samplesheet.csv").read_text() == "from_api\n"
     assert not (outdir / "samplesheet_samplesheet.csv").exists()
+
+
+def test_collect_run_outputs_updates_rendered_meta_after_manual_execution(tmp_path: Path) -> None:
+    template_dir = tmp_path / "command_render_collect"
+    template_dir.mkdir(parents=True)
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: command_render_collect",
+                "outputs:",
+                "  report_file:",
+                "    path: report.txt",
+                "run:",
+                "  command: >-",
+                '    printf "done\\n" > "./results/report.txt"',
+                "",
+            ]
+        )
+    )
+
+    rendered = render_template(template_dir, outdir=tmp_path / "rendered")
+    outdir = Path(rendered["history_outdir"])
+    subprocess.run([str(outdir / "run.sh")], cwd=outdir, check=True)
+
+    result = collect_run_outputs(outdir)
+    meta = json.loads((outdir / ".linkar" / "meta.json").read_text(encoding="utf-8"))
+
+    assert result["outputs"]["report_file"] == str((outdir / "results" / "report.txt").resolve())
+    assert meta["outputs"]["report_file"] == str((outdir / "results" / "report.txt").resolve())
+    assert "collected_at" in meta
 
 
 def test_load_template_parses_tool_requirements(tmp_path: Path) -> None:

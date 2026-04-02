@@ -110,9 +110,20 @@ def collect_declared_glob_output(spec: dict[str, Any], outdir: Path) -> list[str
 
 
 def collect_outputs(template: TemplateSpec, outdir: Path) -> dict[str, Any]:
+    return collect_outputs_from_declared(template.outputs, outdir)
+
+
+def declared_outputs_or_default(declared_outputs: dict[str, dict[str, Any]] | None) -> dict[str, dict[str, Any]]:
+    return declared_outputs or {"results_dir": {}}
+
+
+def collect_outputs_from_declared(
+    declared_outputs: dict[str, dict[str, Any]] | None,
+    outdir: Path,
+) -> dict[str, Any]:
     outputs: dict[str, Any] = {}
     results_dir = (outdir / "results").resolve()
-    declared_outputs = template.outputs or {}
+    declared_outputs = declared_outputs_or_default(declared_outputs)
     if declared_outputs:
         for output_name, spec in declared_outputs.items():
             if "glob" in spec:
@@ -635,6 +646,80 @@ def inspect_runtime(run_ref: str | Path, project: str | Path | Project | None = 
     raise ProjectValidationError(f"Run not found: {run_ref}")
 
 
+def resolve_run_meta_path(run_ref: str | Path, project: str | Path | Project | None = None) -> Path:
+    ref_path = Path(run_ref)
+    if ref_path.exists():
+        target = ref_path.resolve()
+        meta_path = target if target.is_file() else target / ".linkar" / "meta.json"
+        if not meta_path.exists():
+            raise ProjectValidationError(f"Run metadata not found: {meta_path}")
+        return meta_path
+
+    runs = list_project_runs(project=project)
+    for entry in runs:
+        if entry.get("instance_id") != str(run_ref):
+            continue
+        if isinstance(project, Project):
+            project_root = project.root
+        elif isinstance(project, (str, Path)):
+            project_root = load_project(project).root
+        else:
+            project_obj = discover_project()
+            if project_obj is None:
+                break
+            project_root = project_obj.root
+        meta_path = (project_root / entry["meta"]).resolve()
+        if meta_path.exists():
+            return meta_path
+        break
+    raise ProjectValidationError(f"Run not found: {run_ref}")
+
+
+def maybe_update_project_outputs(meta_path: Path, outputs: dict[str, Any], project: Project | None) -> None:
+    if project is None:
+        return
+    from linkar.runtime.shared import save_yaml
+
+    relative_meta = os.path.relpath(meta_path, project.root)
+    templates = project.data.get("templates", [])
+    changed = False
+    for entry in templates:
+        if entry.get("meta") == relative_meta:
+            entry["outputs"] = outputs
+            changed = True
+            break
+    if changed:
+        save_yaml(project.root / "project.yaml", project.data)
+
+
+def collect_run_outputs(
+    run_ref: str | Path,
+    project: str | Path | Project | None = None,
+) -> dict[str, Any]:
+    if isinstance(project, (str, Path)):
+        project_obj = load_project(project)
+    elif project is None:
+        project_obj = discover_project()
+    else:
+        project_obj = project
+
+    meta_path = resolve_run_meta_path(run_ref, project=project_obj)
+    outdir = meta_path.parent.parent
+    metadata = json.loads(meta_path.read_text(encoding="utf-8"))
+    declared_outputs = metadata.get("declared_outputs") or {"results_dir": {}}
+    outputs = collect_outputs_from_declared(declared_outputs, outdir)
+    metadata["outputs"] = outputs
+    metadata["collected_at"] = utc_now().isoformat()
+    write_json(meta_path, metadata)
+    maybe_update_project_outputs(meta_path, outputs, project_obj)
+    return {
+        "run_ref": str(run_ref),
+        "outdir": str(outdir),
+        "meta": str(meta_path),
+        "outputs": outputs,
+    }
+
+
 def generate_methods(project: str | Path | Project | None = None) -> str:
     runs = list_project_runs(project=project)
     if not runs:
@@ -830,6 +915,7 @@ def run_template(
             "instance_id": instance_id,
             "params": resolved_params,
             "param_provenance": param_provenance,
+            "declared_outputs": declared_outputs_or_default(template.outputs),
             "outputs": outputs,
             "software": [{"name": "linkar", "version": __version__}],
             "pack": (
@@ -950,6 +1036,7 @@ def render_template(
             "instance_id": instance_id,
             "params": resolved_params,
             "param_provenance": param_provenance,
+            "declared_outputs": declared_outputs_or_default(template.outputs),
             "outputs": {},
             "software": [{"name": "linkar", "version": __version__}],
             "pack": (

@@ -151,6 +151,28 @@ class CliUI:
             )
         )
 
+    def print_collect_completed(self, result: dict[str, Any]) -> None:
+        outdir = Path(result["outdir"])
+        if not self.rich_enabled:
+            self.plain_print(str(outdir))
+            return
+        body = Text()
+        body.append("Run Dir", style="label")
+        body.append(": ", style="muted")
+        body.append(str(outdir), style="value")
+        body.append("\n")
+        body.append("Outputs", style="label")
+        body.append(": ", style="muted")
+        body.append(str(len(result.get("outputs", {}))), style="accent")
+        self.console.print(
+            Panel(
+                body,
+                title="[ok]Outputs Collected[/ok]",
+                border_style="ok",
+                box=box.ROUNDED,
+            )
+        )
+
     def print_test_completed(self, result: dict[str, Any]) -> None:
         outdir = Path(result["outdir"])
         if not self.rich_enabled:

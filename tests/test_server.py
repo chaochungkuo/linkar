@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import subprocess
 from pathlib import Path
 
 import yaml
@@ -303,3 +304,35 @@ def test_server_render_endpoint_stages_without_execution() -> None:
     assert (outdir / "run.sh").exists()
     assert not (outdir / "linkar_template.yaml").exists()
     assert not (outdir / "results" / "greeting.txt").exists()
+
+
+def test_server_collect_endpoint_updates_outputs_after_manual_run() -> None:
+    app = make_app()
+    status, _, payload = call_app(
+        app,
+        method="POST",
+        path="/render",
+        body=json.dumps(
+            {
+                "template": "simple_echo",
+                "pack_refs": [str(ROOT / "examples" / "packs" / "basic")],
+                "params": {"name": "CollectedServer"},
+            }
+        ).encode("utf-8"),
+    )
+    assert status == "200 OK"
+    outdir = Path(payload["data"]["outdir"])
+    subprocess.run([str(outdir / "run.sh")], cwd=outdir, check=True)
+
+    status, _, payload = call_app(
+        app,
+        method="POST",
+        path="/collect",
+        body=json.dumps(
+            {
+                "run_ref": str(outdir),
+            }
+        ).encode("utf-8"),
+    )
+    assert status == "200 OK"
+    assert payload["data"]["outputs"]["greeting_file"] == str((outdir / "results" / "greeting.txt").resolve())

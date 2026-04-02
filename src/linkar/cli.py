@@ -24,6 +24,7 @@ from linkar.cli_support.run_commands import (
 from linkar.core import (
     add_global_pack,
     add_project_pack,
+    collect_run_outputs,
     discover_project,
     generate_methods,
     get_active_global_pack_entry,
@@ -69,6 +70,7 @@ if hasattr(click, "rich_click"):
         "  linkar run fastqc --input sample.fastq.gz\n"
         "  linkar render demultiplex --outdir ./demux_bundle\n"
         "  linkar run simple_echo --pack ./examples/packs/basic --param name=Linkar\n"
+        "  linkar collect ./demux_bundle\n"
         "  linkar test fastqc\n"
         "  linkar serve --port 8000\n\n"
         "  linkar mcp serve\n\n"
@@ -337,6 +339,22 @@ render_group.add_command(render_raw_command)
 def templates_command(pack: tuple[str, ...], project: str | None, ui: CliUI) -> None:
     """List templates visible from explicit packs and the active project configuration."""
     ui.print_templates(list_templates(pack_refs=list(pack), project=project))
+
+
+@app.command("collect")
+@click.argument("run_ref")
+@click.option(
+    "--project",
+    type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+    help="Project directory or project.yaml path. Defaults to the current directory.",
+    show_default=False,
+)
+@handle_linkar_errors
+def collect_command(run_ref: str, project: str | None, ui: CliUI) -> None:
+    """Collect declared outputs for a previously rendered or manually executed run directory."""
+    with ui.status("Collecting outputs"):
+        result = collect_run_outputs(run_ref, project=project)
+    ui.print_collect_completed(result)
 
 
 @app.command("test")

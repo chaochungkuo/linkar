@@ -34,6 +34,7 @@ from linkar.runtime.projects import (
     set_active_pack,
 )
 from linkar.runtime.runs import (
+    collect_run_outputs,
     collect_outputs,
     determine_outdir,
     determine_test_dir,
@@ -73,6 +74,7 @@ __all__ = [
     "add_project_pack",
     "add_global_pack",
     "binding_asset_root",
+    "collect_run_outputs",
     "collect_outputs",
     "describe_template",
     "derive_pack_id",

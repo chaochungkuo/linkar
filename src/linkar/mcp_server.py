@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from linkar.mcp_tools import (
+    collect_run_outputs_tool,
     describe_template_tool,
     generate_methods_tool,
     get_run_outputs_tool,
@@ -99,6 +100,13 @@ def build_server() -> Any:
             pack_refs=pack_refs,
             binding_ref=binding_ref,
         )
+
+    @mcp.tool(description="Collect declared outputs for a rendered or manually executed run directory.")
+    def linkar_collect(
+        run_ref: str,
+        project: str | None = None,
+    ) -> dict[str, Any]:
+        return collect_run_outputs_tool(run_ref=run_ref, project=project)
 
     @mcp.tool(description="Run a template's local test entrypoint through Linkar.")
     def linkar_test(

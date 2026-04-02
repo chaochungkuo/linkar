@@ -100,6 +100,7 @@ Current agent-oriented endpoints:
 - `POST /resolve`
 - `POST /run`
 - `POST /render`
+- `POST /collect`
 - `POST /test`
 
 Success responses use:
@@ -143,6 +144,7 @@ High-value MCP tools include:
 - `linkar_resolve`
 - `linkar_run`
 - `linkar_render`
+- `linkar_collect`
 - `linkar_test`
 - `linkar_inspect_run`
 - `linkar_get_run_outputs`
