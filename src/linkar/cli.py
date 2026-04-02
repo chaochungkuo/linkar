@@ -6,6 +6,7 @@ except ImportError:
     import click
 
 from pathlib import Path
+from click.shell_completion import get_completion_class
 
 from linkar import __version__
 from linkar.cli_support.common import (
@@ -304,6 +305,30 @@ def mcp_serve_command() -> None:
         serve_mcp()
     except RuntimeError as exc:
         raise click.ClickException(str(exc)) from exc
+
+
+@app.group("completion")
+def completion_group() -> None:
+    """Print shell completion scripts for supported shells."""
+
+
+def _print_completion_script(shell: str) -> None:
+    cls = get_completion_class(shell)
+    if cls is None:
+        raise click.ClickException(f"Unsupported shell for completion: {shell}")
+    click.echo(cls(app, {}, "linkar", "_LINKAR_COMPLETE").source())
+
+
+@completion_group.command("bash")
+def completion_bash_command() -> None:
+    """Print the bash completion script."""
+    _print_completion_script("bash")
+
+
+@completion_group.command("zsh")
+def completion_zsh_command() -> None:
+    """Print the zsh completion script."""
+    _print_completion_script("zsh")
 
 
 @project_group.command("init")

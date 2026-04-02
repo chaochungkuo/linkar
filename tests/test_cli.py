@@ -147,6 +147,22 @@ def test_project_init(tmp_path: Path) -> None:
     assert data["templates"] == []
 
 
+def test_completion_bash_prints_completion_script(tmp_path: Path) -> None:
+    completed = run_cli("completion", "bash", cwd=tmp_path)
+    assert completed.returncode == 0, completed.stderr
+    assert "_LINKAR_COMPLETE" in completed.stdout
+    assert "complete -o nosort -F" in completed.stdout
+    assert "linkar" in completed.stdout
+
+
+def test_completion_zsh_prints_completion_script(tmp_path: Path) -> None:
+    completed = run_cli("completion", "zsh", cwd=tmp_path)
+    assert completed.returncode == 0, completed.stderr
+    assert "_LINKAR_COMPLETE" in completed.stdout
+    assert "#compdef linkar" in completed.stdout
+    assert "compdef" in completed.stdout
+
+
 def test_project_init_with_name_creates_directory(tmp_path: Path) -> None:
     completed = run_cli("project", "init", "--name", "PROJECT1", cwd=tmp_path)
     assert completed.returncode == 0, completed.stderr
