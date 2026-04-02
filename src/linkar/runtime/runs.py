@@ -290,6 +290,17 @@ def resolve_render_command(
     return rendered
 
 
+def render_command_param_keys(command: str, resolved_params: dict[str, Any]) -> list[str]:
+    keys: list[str] = []
+    for key in resolved_params:
+        if re.search(rf"\$\{{{re.escape(key)}(?=[:}}])", command) or re.search(
+            rf"\${re.escape(key)}(?![A-Za-z0-9_])",
+            command,
+        ):
+            keys.append(key)
+    return keys
+
+
 def write_render_script(
     script_path: Path,
     template: TemplateSpec,
@@ -310,9 +321,26 @@ def write_render_script(
         'mkdir -p "./results"',
     ]
     if template.run_command is not None:
-        for key, value in sorted(resolved_params.items()):
+        rendered_command = resolve_render_command(template.run_command, resolved_params, instance_id, project_obj)
+        used_keys = render_command_param_keys(rendered_command, resolved_params)
+        if used_keys:
+            lines.extend(
+                [
+                    "",
+                    "# Editable values",
+                ]
+            )
+        for key in used_keys:
+            value = resolved_params[key]
             lines.append(f"{key}={shlex.quote(format_env_value(value))}")
-        lines.append(resolve_render_command(template.run_command, resolved_params, instance_id, project_obj))
+        if used_keys:
+            lines.extend(
+                [
+                    "",
+                    "# Execution",
+                ]
+            )
+        lines.append(rendered_command)
     else:
         entry_name = template.run_entry or "run.sh"
         if entry_name == "run.sh":

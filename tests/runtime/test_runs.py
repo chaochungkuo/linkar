@@ -395,8 +395,8 @@ def test_render_template_does_not_update_project_history_or_alias(tmp_path: Path
 
     project_after = load_project(project.root)
     assert project_after.data["templates"] == []
-    assert not (project.root / "render_project_demo").exists()
-    assert Path(result["history_outdir"]).is_dir()
+    assert (project.root / "render_project_demo").is_dir()
+    assert Path(result["history_outdir"]) == (project.root / "render_project_demo").resolve()
 
 
 def test_direct_run_command_executes_without_template_wrapper_script(tmp_path: Path) -> None:
