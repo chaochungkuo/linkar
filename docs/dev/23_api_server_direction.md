@@ -65,6 +65,7 @@ The first local API server should expose:
 - `GET /methods`
 - `POST /resolve`
 - `POST /run`
+- `POST /render`
 - `POST /test`
 
 These operations should remain thin wrappers over the same core semantics.

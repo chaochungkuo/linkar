@@ -1,28 +1,28 @@
 ---
-title: Authoring a template with run.sh
-description: Keep templates small with a real run.sh and either test.sh or test.py for local validation.
+title: Authoring a Template Runtime
+description: Use run.command for thin wrappers and run.sh only when the template needs real script logic.
 order: 3
 status: ready
 ---
 
 Linkar templates should stay small enough to read in one sitting.
 
-For a shell-based template, the normal shape is:
+The default decision is:
+
+- use `run.command` for a thin one-command wrapper
+- use `run.sh` when the template needs real shell logic
+
+## Start with the smallest useful contract
+
+The smallest useful template is often just `linkar_template.yaml` plus a local test:
 
 ```text
 my_template/
   linkar_template.yaml
-  run.sh
-  test.sh   or   test.py
-  optional support files...
+  test.py
 ```
 
-`run.sh` is the real runtime entrypoint. Linkar resolves parameters, stages the template runtime
-bundle into the run artifact, and executes `run.sh` there.
-
-## Start with the smallest useful contract
-
-`linkar_template.yaml` should describe only what the runtime actually needs.
+Example:
 
 ```yaml
 id: simple_echo
@@ -34,24 +34,15 @@ params:
     required: true
 outputs:
   greeting_file:
-    path: greeting.txt
+    path: greeting_file
 run:
-  entry: run.sh
-  mode: direct
+  command: >-
+    printf 'hello %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/greeting_file"
 ```
 
-And the runtime script can stay normal:
+That is cleaner than creating a `run.sh` whose only job is to forward one command.
 
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-printf 'hello %s\n' "${NAME}" > greeting.txt
-```
-
-The important point is that Linkar should not own the script logic. The template does.
-
-## How parameters arrive in `run.sh`
+## How parameters arrive in `run.command` and `run.sh`
 
 Linkar exposes resolved parameters as environment variables.
 
@@ -67,63 +58,75 @@ params:
     default: 4
 ```
 
-then `run.sh` can read:
+then the runtime can read:
+
+- `${INPUT_FASTQ}`
+- `${THREADS}`
+
+Use explicit defaults in the schema whenever possible. That keeps runtime logic small and readable.
+
+## When `run.sh` is the better tool
+
+Use `run.sh` when the template needs:
+
+- branching
+- temp files
+- generated config files
+- multiple local commands
+- traps and cleanup
+
+Typical shape:
+
+```text
+my_template/
+  linkar_template.yaml
+  run.sh
+  test.sh   or   test.py
+  optional support files...
+```
+
+Example:
+
+```yaml
+run:
+  entry: run.sh
+```
 
 ```bash
-"${INPUT_FASTQ}"
-"${THREADS}"
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${PAIRED_END:-true}" == "true" ]]; then
+  mytool --r1 "${R1}" --r2 "${R2}" --out "${LINKAR_RESULTS_DIR}"
+else
+  mytool --r1 "${R1}" --out "${LINKAR_RESULTS_DIR}"
+fi
 ```
 
-Use explicit defaults in the schema whenever possible. That keeps shell logic small and readable.
+## Render command and launcher generation
 
-## How outputs are found
+`linkar render ...` stages the template bundle and writes `linkar-run.sh` without executing the template.
 
-Declared outputs are resolved from the run artifact. By default, Linkar looks under `results/`.
-
-Examples:
-
-- `results_dir` resolves to `results/`
-- `fastqc_dir` resolves to `results/fastqc`
-- `report_html` resolves to `results/report_html`
-
-Use `path` when the output lives somewhere more specific:
+That is especially useful for templates declared as one command:
 
 ```yaml
-outputs:
-  multiqc_report:
-    path: multiqc/multiqc_report.html
+run:
+  command: >-
+    pixi run python -m demux_pipeline.cli
+    --outdir "${LINKAR_RESULTS_DIR}"
+    --bcl_dir "${BCL_DIR}"
+    --samplesheet "${SAMPLESHEET}"
 ```
 
-Use `glob` when one output name should expose a collection:
-
-```yaml
-outputs:
-  fastqc_reports:
-    glob: fastqc/*_fastqc.html
-```
-
-Linkar records the matched paths as a list.
-
-## How downstream templates consume collections
-
-If a later template needs many files, declare a `list[path]` param:
-
-```yaml
-params:
-  fastqc_reports:
-    type: list[path]
-    required: true
-```
-
-Linkar transports that list into the runtime environment as an `os.pathsep`-joined string. Shell
-and Python entrypoints can both decode it predictably.
+The rendered directory then contains one launcher, not a template-local wrapper plus a second outer
+wrapper.
 
 ## Keep testing local and simple
 
 Use one local test entrypoint:
 
-- `test.sh` for shell-oriented templates
-- `test.py` for Python-oriented templates
+- `test.sh` for script-oriented templates
+- `test.py` for contract inspection, filesystem assertions, and more involved mocking
 
 Normal validation path:
 
@@ -131,22 +134,8 @@ Normal validation path:
 linkar test simple_echo --pack ./examples/packs/basic
 ```
 
-Faster author loop while editing:
+## Rule of thumb
 
-```bash
-cd examples/packs/basic/templates/simple_echo
-bash test.sh
-```
-
-## When to switch to `run.py`
-
-Use `run.sh` by default for shell-oriented templates.
-
-Switch to `run.py` when:
-
-- argument assembly becomes hard to read in shell
-- validation logic is non-trivial
-- the wrapped tool is already Python-native
-- file inspection and structured errors matter
-
-The goal is not to force shell. The goal is to keep the runtime entrypoint direct and readable.
+- prefer `run.command` when one command is enough
+- prefer `run.sh` when logic is real and local
+- switch to `run.py` when shell stops being clearer

@@ -9,4 +9,3 @@ outputs:
   results_dir: {}
 run:
   entry: run.sh
-  mode: direct

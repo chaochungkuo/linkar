@@ -98,11 +98,19 @@ def load_template(
 
     run = data.get("run") or {}
     entry = run.get("entry")
-    if not entry:
-        raise TemplateValidationError(f"Template run.entry missing in {spec_path}")
-    entry_path = root / entry
-    if not entry_path.exists():
-        raise TemplateValidationError(f"Template entrypoint not found: {entry_path}")
+    command = run.get("command")
+    if entry is not None and (not isinstance(entry, str) or not entry.strip()):
+        raise TemplateValidationError(f"Template run.entry must be a non-empty string in {spec_path}")
+    if command is not None and (not isinstance(command, str) or not command.strip()):
+        raise TemplateValidationError(f"Template run.command must be a non-empty string in {spec_path}")
+    if not entry and not command:
+        raise TemplateValidationError(f"Template run.entry or run.command is required in {spec_path}")
+    if entry and command:
+        raise TemplateValidationError(f"Template cannot declare both run.entry and run.command in {spec_path}")
+    if entry:
+        entry_path = root / entry
+        if not entry_path.exists():
+            raise TemplateValidationError(f"Template entrypoint not found: {entry_path}")
 
     params = data.get("params") or {}
     if not isinstance(params, dict):
@@ -149,6 +157,33 @@ def load_template(
                 f"Template output '{key}' glob must be a non-empty string in {spec_path}"
             )
 
+    tools = data.get("tools") or {}
+    if not isinstance(tools, dict):
+        raise TemplateValidationError(f"Template tools must be a mapping in {spec_path}")
+
+    tools_required = tools.get("required") or []
+    if not isinstance(tools_required, list):
+        raise TemplateValidationError(f"Template tools.required must be a list in {spec_path}")
+    for item in tools_required:
+        if not isinstance(item, str) or not item.strip():
+            raise TemplateValidationError(
+                f"Template tools.required entries must be non-empty strings in {spec_path}"
+            )
+
+    tools_required_any = tools.get("required_any") or []
+    if not isinstance(tools_required_any, list):
+        raise TemplateValidationError(f"Template tools.required_any must be a list in {spec_path}")
+    for group in tools_required_any:
+        if not isinstance(group, list) or not group:
+            raise TemplateValidationError(
+                f"Template tools.required_any entries must be non-empty lists in {spec_path}"
+            )
+        for item in group:
+            if not isinstance(item, str) or not item.strip():
+                raise TemplateValidationError(
+                    f"Template tools.required_any command entries must be non-empty strings in {spec_path}"
+                )
+
     return TemplateSpec(
         id=template_id,
         version=template_version,
@@ -156,7 +191,10 @@ def load_template(
         root=root,
         params=params,
         outputs=outputs,
+        tools_required=[item.strip() for item in tools_required],
+        tools_required_any=[[item.strip() for item in group] for group in tools_required_any],
         run_entry=entry,
+        run_command=command.strip() if isinstance(command, str) else None,
         run_mode=run.get("mode", "direct"),
         pack_root=root.parent.parent if root.parent.name == "templates" else None,
         pack_ref=pack_asset.ref if pack_asset is not None else None,
@@ -239,6 +277,7 @@ def describe_template(
         "path": str(template.root),
         "run": {
             "entry": template.run_entry,
+            "command": template.run_command,
             "mode": template.run_mode,
         },
         "pack": (
@@ -248,4 +287,8 @@ def describe_template(
         ),
         "params": template.params,
         "outputs": template.outputs or {"results_dir": {}},
+        "tools": {
+            "required": template.tools_required,
+            "required_any": template.tools_required_any,
+        },
     }

@@ -42,6 +42,7 @@ At minimum, `meta.json` should capture:
 - `binding` when applicable
 - `command`
 - `timestamp`
+- `run_mode`
 
 ## Field Semantics
 ### `template`
@@ -120,6 +121,14 @@ The execution completion time or another clearly defined run timestamp.
 
 The timestamp format should be stable and machine-readable.
 
+### `run_mode`
+The Linkar action used to produce the artifact.
+
+Current values are:
+
+- `run`
+- `render`
+
 ## Recommended Additional Fields
 Future versions may include fields such as:
 
@@ -158,8 +167,9 @@ Example shape:
     "ref": "/opt/linkar/packs/genomics-pack"
   },
   "binding": null,
-  "command": ["run.sh"],
-  "timestamp": "2026-03-26T15:30:00Z"
+  "command": ["linkar-run.sh"],
+  "timestamp": "2026-03-26T15:30:00Z",
+  "run_mode": "run"
 }
 ```
 

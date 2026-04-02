@@ -12,9 +12,21 @@ Suggested order:
 6. `pixi_echo`
 7. `pixi_pytest`
 
-Each template keeps the same shape:
+Most templates keep the same shape:
 
 - `linkar_template.yaml`
 - `run.sh`
 - `test.sh` or `test.py`
 - optional support files or `testdata/`
+
+The smallest example, `simple_echo`, now uses `run.command` directly in `linkar_template.yaml` so
+the pack shows both authoring styles:
+
+- `run.command` for thin one-command wrappers
+- `run.sh` when real script logic is needed
+
+To stage a runnable bundle without executing it, use:
+
+```bash
+linkar render simple_echo --pack ./examples/packs/basic --param name=Linkar --outdir ./simple_echo_bundle
+```

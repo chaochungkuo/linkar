@@ -54,9 +54,10 @@ Finally, inspect the other example sets:
 Use this pack first. It covers:
 
 - the smallest template contract
+- `run.command` vs `run.sh`
+- `linkar run ...` vs `linkar render ...`
 - file inputs
 - explicit defaults
-- `run.py` vs `run.sh`
 - `test.py` vs `test.sh`
 - declared outputs with `path` and `glob`
 

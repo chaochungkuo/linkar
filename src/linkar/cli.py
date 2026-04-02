@@ -15,7 +15,12 @@ from linkar.cli_support.common import (
     shell_complete_filesystem_ref,
     shell_complete_template_ref,
 )
-from linkar.cli_support.run_commands import DynamicRunGroup, raw_run_command
+from linkar.cli_support.run_commands import (
+    DynamicRenderGroup,
+    DynamicRunGroup,
+    raw_run_command,
+    render_raw_command,
+)
 from linkar.core import (
     add_global_pack,
     add_project_pack,
@@ -62,6 +67,7 @@ if hasattr(click, "rich_click"):
         "  linkar config pack add ~/github/izkf_genomics_pack\n"
         "  linkar pack add /path/to/project-pack\n"
         "  linkar run fastqc --input sample.fastq.gz\n"
+        "  linkar render demultiplex --outdir ./demux_bundle\n"
         "  linkar run simple_echo --pack ./examples/packs/basic --param name=Linkar\n"
         "  linkar test fastqc\n"
         "  linkar serve --port 8000\n\n"
@@ -296,6 +302,20 @@ def run_group(ctx: click.Context) -> None:
 
 
 run_group.add_command(raw_run_command)
+
+
+@app.group(
+    "render",
+    cls=DynamicRenderGroup,
+    invoke_without_command=True,
+    no_args_is_help=True,
+)
+@click.pass_context
+def render_group(ctx: click.Context) -> None:
+    """Render template bundles with template-aware options or the generic TEMPLATE interface."""
+
+
+render_group.add_command(render_raw_command)
 
 
 @app.command("templates")

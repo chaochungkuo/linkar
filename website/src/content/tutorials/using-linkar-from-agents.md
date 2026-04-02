@@ -26,7 +26,7 @@ scraping.
 For Python-based agents, use the core helpers directly:
 
 ```python
-from linkar.core import inspect_run, list_templates, run_template
+from linkar.core import inspect_run, list_templates, render_template, run_template
 
 templates = list_templates(pack_refs=["./examples/packs/basic"])
 result = run_template(
@@ -35,6 +35,12 @@ result = run_template(
     pack_refs=["./examples/packs/basic"],
 )
 metadata = inspect_run(result["outdir"])
+bundle = render_template(
+    "simple_echo",
+    params={"name": "Agent"},
+    pack_refs=["./examples/packs/basic"],
+    outdir="./simple_echo_bundle",
+)
 ```
 
 This avoids terminal parsing and keeps the semantics aligned with the CLI.
@@ -58,6 +64,9 @@ curl -s -X POST "http://127.0.0.1:8000/resolve" \
 curl -s -X POST "http://127.0.0.1:8000/run" \
   -H "Content-Type: application/json" \
   -d '{"template":"simple_echo","pack_refs":["./examples/packs/basic"],"params":{"name":"Agent"}}'
+curl -s -X POST "http://127.0.0.1:8000/render" \
+  -H "Content-Type: application/json" \
+  -d '{"template":"simple_echo","pack_refs":["./examples/packs/basic"],"params":{"name":"Agent"},"outdir":"./simple_echo_bundle"}'
 curl -s "http://127.0.0.1:8000/runs/simple_echo_001/outputs?project=./study"
 curl -s "http://127.0.0.1:8000/runs/simple_echo_001/runtime?project=./study"
 ```
@@ -74,6 +83,7 @@ Current local API surface:
 - `GET /methods`
 - `POST /resolve`
 - `POST /run`
+- `POST /render`
 - `POST /test`
 
 Success responses use:
@@ -135,6 +145,7 @@ The MCP tool surface mirrors the same high-value operations:
 - `linkar_describe_template`
 - `linkar_resolve`
 - `linkar_run`
+- `linkar_render`
 - `linkar_test`
 - `linkar_inspect_run`
 - `linkar_get_run_outputs`

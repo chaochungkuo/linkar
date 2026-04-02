@@ -9,4 +9,3 @@ outputs:
   pytest_report: {}
 run:
   entry: run.sh
-  mode: direct

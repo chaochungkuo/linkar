@@ -10,6 +10,7 @@ from linkar.core import (
     inspect_runtime,
     list_project_runs,
     list_templates,
+    render_template,
     resolve_project_assets,
     run_template,
     test_template,
@@ -63,6 +64,25 @@ def run_template_tool(
     binding_ref: str | Path | None = None,
 ) -> dict[str, Any]:
     return run_template(
+        template,
+        params=params,
+        project=project,
+        outdir=outdir,
+        pack_refs=pack_refs,
+        binding_ref=binding_ref,
+    )
+
+
+def render_template_tool(
+    *,
+    template: str,
+    params: dict[str, Any] | None = None,
+    project: str | Path | None = None,
+    outdir: str | Path | None = None,
+    pack_refs: list[str | Path] | None = None,
+    binding_ref: str | Path | None = None,
+) -> dict[str, Any]:
+    return render_template(
         template,
         params=params,
         project=project,

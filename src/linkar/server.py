@@ -16,6 +16,7 @@ from linkar.core import (
     list_templates,
     load_template,
     preview_params_detailed,
+    render_template,
     resolve_project_assets,
     run_template,
     test_template,
@@ -208,6 +209,21 @@ def make_app() -> WSGIApp:
                 if not isinstance(template, str) or not template:
                     raise ProjectValidationError("Request field 'template' is required")
                 result = run_template(
+                    template,
+                    params=payload.get("params"),
+                    project=payload.get("project"),
+                    outdir=payload.get("outdir"),
+                    pack_refs=payload.get("pack_refs"),
+                    binding_ref=payload.get("binding_ref"),
+                )
+                return success_response(start_response, result)
+
+            if method == "POST" and path == "/render":
+                payload = load_json_body(environ)
+                template = payload.get("template")
+                if not isinstance(template, str) or not template:
+                    raise ProjectValidationError("Request field 'template' is required")
+                result = render_template(
                     template,
                     params=payload.get("params"),
                     project=payload.get("project"),

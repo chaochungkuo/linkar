@@ -12,4 +12,3 @@ outputs:
   results_dir: {}
 run:
   entry: run.py
-  mode: direct

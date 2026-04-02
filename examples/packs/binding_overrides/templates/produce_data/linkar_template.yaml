@@ -11,4 +11,3 @@ outputs:
     path: dataset
 run:
   entry: run.sh
-  mode: direct

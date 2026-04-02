@@ -35,7 +35,7 @@ from linkar.runtime.templates import combined_configured_pack_entries, load_temp
 
 def next_instance_id(template_id: str, project: Project | None = None) -> str:
     if project is None:
-        stamp = utc_now().strftime("%Y%m%d_%H%M%S")
+        stamp = utc_now().strftime("%Y%m%d_%H%M%S_%f")
         return f"{template_id}_{stamp}"
 
     matches = 0
@@ -71,7 +71,7 @@ def determine_test_dir(
 ) -> Path:
     if outdir is not None:
         return Path(outdir).resolve()
-    stamp = utc_now().strftime("%Y%m%d_%H%M%S")
+    stamp = utc_now().strftime("%Y%m%d_%H%M%S_%f")
     if project is not None:
         return (project.root / ".linkar" / "tests" / f"{template.id}_{stamp}").resolve()
     return (Path.cwd() / ".linkar" / "tests" / f"{template.id}_{stamp}").resolve()
@@ -132,6 +132,7 @@ def collect_outputs(template: TemplateSpec, outdir: Path) -> dict[str, Any]:
 RUNTIME_BUNDLE_EXCLUDES = {
     ".git",
     ".pixi",
+    ".rattler-cache",
     ".pytest_cache",
     "__pycache__",
     "test.sh",
@@ -160,18 +161,44 @@ def stage_runtime_bundle(template: TemplateSpec, output_dir: Path) -> None:
             shutil.copy2(child, destination)
 
 
+def render_mode_launcher_path(output_dir: Path) -> Path:
+    return output_dir / "linkar-run.sh"
+
+
+def ensure_required_tools_available(template: TemplateSpec) -> None:
+    missing_required = [tool for tool in template.tools_required if shutil.which(tool) is None]
+    missing_required_any = [
+        group for group in template.tools_required_any if not any(shutil.which(tool) is not None for tool in group)
+    ]
+    if not missing_required and not missing_required_any:
+        return
+
+    parts: list[str] = []
+    if missing_required:
+        parts.append(f"missing required commands: {', '.join(missing_required)}")
+    if missing_required_any:
+        parts.extend(
+            f"missing any of: {', '.join(group)}"
+            for group in missing_required_any
+        )
+    raise ExecutionError(
+        f"Template '{template.id}' cannot run because required tools are unavailable: {'; '.join(parts)}"
+    )
+
+
 def should_render_shell_wrapper(template: TemplateSpec) -> bool:
-    return Path(template.run_entry).name == "script.sh"
+    return template.run_entry is not None and Path(template.run_entry).name == "script.sh"
 
 
-def render_shell_wrapper(
+def render_launcher(
+    launcher_path: Path,
     template: TemplateSpec,
     output_dir: Path,
     resolved_params: dict[str, Any],
     instance_id: str,
     project_obj: Project | None,
+    target_entry: str | None = None,
 ) -> Path:
-    launcher = output_dir / "run.sh"
     lines = [
         "#!/usr/bin/env bash",
         "set -euo pipefail",
@@ -185,10 +212,140 @@ def render_shell_wrapper(
         lines.append(f"export LINKAR_PROJECT_DIR={shlex.quote(str(project_obj.root))}")
     for key, value in sorted(resolved_params.items()):
         lines.append(f"export {env_key(key)}={shlex.quote(format_env_value(value))}")
-    lines.append('exec "${script_dir}/script.sh"')
-    launcher.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    launcher.chmod(0o755)
-    return launcher
+    if template.run_command is not None:
+        lines.append(f"exec bash -lc {shlex.quote(template.run_command)}")
+    else:
+        entry_name = target_entry or template.run_entry
+        if entry_name is None:
+            raise ExecutionError(f"Template '{template.id}' is missing a runnable entrypoint")
+        lines.append(f'exec "${{script_dir}}/{entry_name}"')
+    launcher_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    launcher_path.chmod(0o755)
+    return launcher_path
+
+
+def prepare_template_execution(
+    template_ref: str | Path,
+    params: dict[str, Any] | None,
+    project: str | Path | Project | None,
+    outdir: str | Path | None,
+    pack_refs: str | Path | list[str | Path] | None,
+    binding_ref: str | Path | None,
+) -> tuple[
+    Project | None,
+    TemplateSpec,
+    dict[str, Any],
+    dict[str, Any],
+    str | Path | None,
+    str,
+    Path,
+    Path,
+    Path,
+    dict[str, str],
+]:
+    if isinstance(project, (str, Path)):
+        project_obj = load_project(project)
+    elif project is None:
+        project_obj = discover_project()
+    else:
+        project_obj = project
+    configured_entries, active_entry = combined_configured_pack_entries(project_obj)
+    explicit_pack_assets = resolve_asset_refs(pack_refs)
+    combined_pack_assets = unique_assets(
+        explicit_pack_assets + [entry.asset for entry in configured_entries]
+    )
+    preferred_pack_ref = preferred_pack_ref_for_assets(explicit_pack_assets, active_entry)
+    template = load_template(
+        template_ref,
+        pack_assets=combined_pack_assets,
+        preferred_pack_ref=preferred_pack_ref,
+    )
+    selected_binding_ref = normalize_binding_ref(binding_ref)
+    if selected_binding_ref is None and template.pack_root is not None:
+        for entry in configured_entries:
+            if entry.asset.root == template.pack_root:
+                selected_binding_ref = normalize_binding_ref(entry.binding)
+                break
+    resolved_params, param_provenance = resolve_params_detailed(
+        template,
+        cli_params=params,
+        project=project_obj,
+        binding_ref=selected_binding_ref,
+    )
+    instance_id = next_instance_id(template.id, project_obj)
+    output_dir = determine_outdir(template, project_obj, outdir, instance_id)
+    display_dir = determine_project_alias_dir(template, project_obj) if outdir is None else output_dir
+    if display_dir is None:
+        display_dir = output_dir
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "results").mkdir(exist_ok=True)
+    linkar_dir = output_dir / ".linkar"
+    linkar_dir.mkdir(exist_ok=True)
+
+    ensure_required_tools_available(template)
+
+    env = os.environ.copy()
+    for key, value in resolved_params.items():
+        env[env_key(key)] = format_env_value(value)
+    env["LINKAR_OUTPUT_DIR"] = str(output_dir)
+    env["LINKAR_RESULTS_DIR"] = str(output_dir / "results")
+    env["LINKAR_INSTANCE_ID"] = instance_id
+    if project_obj is not None:
+        env["LINKAR_PROJECT_DIR"] = str(project_obj.root)
+
+    stage_runtime_bundle(template, output_dir)
+
+    return (
+        project_obj,
+        template,
+        resolved_params,
+        param_provenance,
+        selected_binding_ref,
+        instance_id,
+        output_dir,
+        display_dir,
+        linkar_dir,
+        env,
+    )
+
+
+def build_run_command(
+    template: TemplateSpec,
+    output_dir: Path,
+    resolved_params: dict[str, Any],
+    instance_id: str,
+    project_obj: Project | None,
+) -> list[str]:
+    if template.run_command is not None:
+        return [
+            str(
+                render_launcher(
+                    output_dir / "run.sh",
+                    template,
+                    output_dir,
+                    resolved_params,
+                    instance_id,
+                    project_obj,
+                ).resolve()
+            )
+        ]
+    if should_render_shell_wrapper(template):
+        return [
+            str(
+                render_launcher(
+                    output_dir / "run.sh",
+                    template,
+                    output_dir,
+                    resolved_params,
+                    instance_id,
+                    project_obj,
+                    target_entry="script.sh",
+                ).resolve()
+            )
+        ]
+    if template.run_entry is None:
+        raise ExecutionError(f"Template '{template.id}' is missing a runnable entrypoint")
+    return [str((output_dir / template.run_entry).resolve())]
 
 
 def update_project(
@@ -468,73 +625,27 @@ def run_template(
     pack_refs: str | Path | list[str | Path] | None = None,
     binding_ref: str | Path | None = None,
 ) -> dict[str, Any]:
-    if isinstance(project, (str, Path)):
-        project_obj = load_project(project)
-    elif project is None:
-        project_obj = discover_project()
-    else:
-        project_obj = project
-    configured_entries, active_entry = combined_configured_pack_entries(project_obj)
-    explicit_pack_assets = resolve_asset_refs(pack_refs)
-    combined_pack_assets = unique_assets(
-        explicit_pack_assets + [entry.asset for entry in configured_entries]
-    )
-    preferred_pack_ref = preferred_pack_ref_for_assets(explicit_pack_assets, active_entry)
-    template = load_template(
-        template_ref,
-        pack_assets=combined_pack_assets,
-        preferred_pack_ref=preferred_pack_ref,
-    )
-    selected_binding_ref = normalize_binding_ref(binding_ref)
-    if selected_binding_ref is None and template.pack_root is not None:
-        for entry in configured_entries:
-            if entry.asset.root == template.pack_root:
-                selected_binding_ref = normalize_binding_ref(entry.binding)
-                break
-    resolved_params, param_provenance = resolve_params_detailed(
+    (
+        project_obj,
         template,
-        cli_params=params,
-        project=project_obj,
-        binding_ref=selected_binding_ref,
+        resolved_params,
+        param_provenance,
+        selected_binding_ref,
+        instance_id,
+        output_dir,
+        display_dir,
+        linkar_dir,
+        env,
+    ) = prepare_template_execution(
+        template_ref,
+        params,
+        project,
+        outdir,
+        pack_refs,
+        binding_ref,
     )
-    instance_id = next_instance_id(template.id, project_obj)
-    output_dir = determine_outdir(template, project_obj, outdir, instance_id)
-    display_dir = determine_project_alias_dir(template, project_obj) if outdir is None else output_dir
-    if display_dir is None:
-        display_dir = output_dir
-    output_dir.mkdir(parents=True, exist_ok=True)
-    (output_dir / "results").mkdir(exist_ok=True)
-    linkar_dir = output_dir / ".linkar"
-    linkar_dir.mkdir(exist_ok=True)
 
-    if template.run_mode != "direct":
-        raise ExecutionError(f"Unsupported run mode: {template.run_mode}")
-
-    env = os.environ.copy()
-    for key, value in resolved_params.items():
-        env[env_key(key)] = format_env_value(value)
-    env["LINKAR_OUTPUT_DIR"] = str(output_dir)
-    env["LINKAR_RESULTS_DIR"] = str(output_dir / "results")
-    env["LINKAR_INSTANCE_ID"] = instance_id
-    if project_obj is not None:
-        env["LINKAR_PROJECT_DIR"] = str(project_obj.root)
-
-    stage_runtime_bundle(template, output_dir)
-
-    if should_render_shell_wrapper(template):
-        command = [
-            str(
-                render_shell_wrapper(
-                    template,
-                    output_dir,
-                    resolved_params,
-                    instance_id,
-                    project_obj,
-                ).resolve()
-            )
-        ]
-    else:
-        command = [str((output_dir / template.run_entry).resolve())]
+    command = build_run_command(template, output_dir, resolved_params, instance_id, project_obj)
     started_at = utc_now()
     completed = subprocess.run(
         command,
@@ -592,6 +703,8 @@ def run_template(
             ),
             "command": command,
             "timestamp": finished_at.isoformat(),
+            "run_mode": "run",
+            "template_run_mode": template.run_mode,
         },
     )
 
@@ -615,4 +728,111 @@ def run_template(
         "history_outdir": str(output_dir),
         "meta": str(meta_path),
         "runtime": str(runtime_path),
+        "run_mode": "run",
+        "template_run_mode": template.run_mode,
+    }
+
+
+def render_template(
+    template_ref: str | Path,
+    params: dict[str, Any] | None = None,
+    project: str | Path | Project | None = None,
+    outdir: str | Path | None = None,
+    pack_refs: str | Path | list[str | Path] | None = None,
+    binding_ref: str | Path | None = None,
+) -> dict[str, Any]:
+    (
+        project_obj,
+        template,
+        resolved_params,
+        param_provenance,
+        selected_binding_ref,
+        instance_id,
+        output_dir,
+        display_dir,
+        linkar_dir,
+        _env,
+    ) = prepare_template_execution(
+        template_ref,
+        params,
+        project,
+        outdir,
+        pack_refs,
+        binding_ref,
+    )
+
+    command = [
+        str(
+            render_launcher(
+                render_mode_launcher_path(output_dir),
+                template,
+                output_dir,
+                resolved_params,
+                instance_id,
+                project_obj,
+            ).resolve()
+        )
+    ]
+    started_at = utc_now()
+    finished_at = started_at
+    completed = subprocess.CompletedProcess(
+        args=command,
+        returncode=0,
+        stdout=f"Rendered template bundle to {output_dir}\n",
+        stderr="",
+    )
+
+    runtime_path = linkar_dir / "runtime.json"
+    write_json(
+        runtime_path,
+        {
+            "command": command,
+            "cwd": str(output_dir),
+            "returncode": completed.returncode,
+            "success": completed.returncode == 0,
+            "started_at": started_at.isoformat(),
+            "finished_at": finished_at.isoformat(),
+            "duration_seconds": (finished_at - started_at).total_seconds(),
+            "stdout": completed.stdout,
+            "stderr": completed.stderr,
+        },
+    )
+
+    meta_path = linkar_dir / "meta.json"
+    write_json(
+        meta_path,
+        {
+            "template": template.id,
+            "template_version": template.version,
+            "instance_id": instance_id,
+            "params": resolved_params,
+            "param_provenance": param_provenance,
+            "outputs": {},
+            "software": [{"name": "linkar", "version": __version__}],
+            "pack": (
+                {"ref": template.pack_ref, "revision": template.pack_revision}
+                if template.pack_root is not None
+                else None
+            ),
+            "binding": (
+                {"ref": str(selected_binding_ref)}
+                if selected_binding_ref is not None
+                else None
+            ),
+            "command": command,
+            "timestamp": finished_at.isoformat(),
+            "run_mode": "render",
+            "template_run_mode": template.run_mode,
+        },
+    )
+
+    return {
+        "template": template.id,
+        "instance_id": instance_id,
+        "outdir": str(display_dir),
+        "history_outdir": str(output_dir),
+        "meta": str(meta_path),
+        "runtime": str(runtime_path),
+        "run_mode": "render",
+        "template_run_mode": template.run_mode,
     }

@@ -76,7 +76,6 @@ params:
     default: 8
 run:
   entry: run.sh
-  mode: direct
 ```
 
 ## Top-Level Fields
@@ -130,7 +129,8 @@ This defines how the template should be executed.
 Current expected fields:
 
 - `entry`: relative path to the executable entrypoint
-- `mode`: execution mode, typically `direct`
+- `command`: shell command string executed by Linkar
+- `mode`: optional legacy field kept for backward compatibility
 
 ### `description`
 Optional.
@@ -192,6 +192,30 @@ outputs:
 ```
 
 In that case, Linkar evaluates the glob relative to `results/` and records a sorted list of matched paths. `glob` is intended for collection-style outputs, while `path` and the default output-name mapping remain the preferred way to expose single files or directories.
+
+### `tools`
+Optional.
+
+This declares external commands that must be available before Linkar starts template execution.
+
+Example:
+
+```yaml
+tools:
+  required:
+    - pixi
+  required_any:
+    - [bcl-convert, bcl_convert]
+```
+
+Rules:
+
+- `required` is a list of exact command names that must all be present on `PATH`
+- `required_any` is a list of alternative groups where at least one command in each group must be present
+- Linkar checks these before normal template execution
+- this is an execution preflight only; it does not install tools or manage versions
+
+This is useful when a template depends on host binaries such as `pixi`, `fastqc`, or platform-specific command aliases.
 
 ## Parameter Specification
 Each parameter entry may define:
@@ -274,16 +298,36 @@ This keeps authoring simple while preserving self-contained run artifacts.
 
 This keeps the runtime contract small and keeps template authoring close to a normal directory-based tool layout.
 
-## Execution Modes
-### `direct`
-In `direct` mode, Linkar executes the entrypoint directly.
+For simple wrappers, a template may declare `run.command` instead of a separate `run.sh`.
 
-This should be the common and default mode.
+Example:
+
+```yaml
+run:
+  command: >-
+    pixi run python -m demux_pipeline.cli
+    --outdir "${LINKAR_RESULTS_DIR}"
+    --bcl_dir "${BCL_DIR}"
+    --samplesheet "${SAMPLESHEET}"
+```
+
+In that case Linkar can execute the command through `linkar run ...` or stage a launcher script through `linkar render ...`.
+
+## CLI Actions
+### `run`
+`linkar run ...` stages the runtime bundle and executes the entrypoint or command launcher.
+
+This should be the common and default action.
 
 ### `render`
-`render` may exist in future versions for cases where Linkar first renders an execution artifact before running.
+`linkar render ...` stages the runtime bundle and writes a runnable launcher script, but does not execute the template.
 
-It should remain optional and should not complicate the common template authoring path.
+This is useful when you want a concrete, inspectable run directory that can be executed later.
+
+### Legacy `run.mode`
+Existing templates may still carry `run.mode`, including `mode: direct` or `mode: render`.
+
+That field is now treated as legacy compatibility metadata. The CLI verb determines whether Linkar runs or only renders the template artifact.
 
 ## Parameter Transport
 Resolved parameters are passed to the template through environment variables.
@@ -341,7 +385,8 @@ The template should not write metadata files that duplicate or conflict with the
 ## Authoring Rules
 Template authors should follow these rules:
 
-- The run entrypoint must be executable in a normal shell or interpreter context.
+- A declared `run.entry` must be executable in a normal shell or interpreter context.
+- A declared `run.command` should remain readable as one explicit shell command.
 - The template should not assume a specific project path layout beyond the provided environment variables.
 - The template should treat resolved parameters as the full execution contract.
 - The template should produce deterministic outputs as far as practical for the same inputs and environment.
@@ -352,8 +397,8 @@ The core should validate at least the following before execution:
 
 - `linkar_template.yaml` exists
 - `id` exists
-- `run.entry` exists
-- The referenced entrypoint exists
+- `run.entry` or `run.command` exists
+- If `run.entry` is used, the referenced entrypoint exists
 - Declared parameter specs are structurally valid
 - The execution mode is supported
 
@@ -387,7 +432,6 @@ Example template:
 ```text
 bclconvert/
   linkar_template.yaml
-  run.sh
 ```
 
 ```yaml
@@ -400,18 +444,11 @@ params:
     type: int
     default: 8
 run:
-  entry: run.sh
-  mode: direct
-```
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-bcl-convert \
-  --input-dir "${BCL_DIR}" \
-  --output-directory "${LINKAR_RESULTS_DIR}" \
-  --bcl-num-conversion-threads "${THREADS}"
+  command: >-
+    bcl-convert
+    --input-dir "${BCL_DIR}"
+    --output-directory "${LINKAR_RESULTS_DIR}"
+    --bcl-num-conversion-threads "${THREADS}"
 ```
 
 ## Summary

@@ -35,6 +35,7 @@ Representative APIs include:
 
 ```python
 run_template(template_ref, params=None, project=None, outdir=None, pack_refs=None, binding_ref=None)
+render_template(template_ref, params=None, project=None, outdir=None, pack_refs=None, binding_ref=None)
 test_template(template_ref, project=None, outdir=None, pack_refs=None)
 load_project(path)
 init_project(path, project_id=None)
@@ -69,6 +70,8 @@ For the simple ad hoc case, `pack_refs` and `binding_ref` may be used as one-off
 
 For repeated use, project configuration should remain the primary place where per-pack binding choices are recorded. The API should not force callers to reconstruct long-lived project asset configuration on every call.
 
+`run_template(...)` should always execute. Render-only behavior belongs to `render_template(...)`, not to a template-level run-mode override.
+
 Example result shape:
 
 ```python
@@ -81,6 +84,16 @@ Example result shape:
     "runtime": "/path/to/project/.linkar/runs/fastqc_001/.linkar/runtime.json",
 }
 ```
+
+## `render_template(...)`
+This stages the runtime bundle without executing it.
+
+It should:
+
+- load and resolve the template the same way as `run_template(...)`
+- materialize the runtime directory
+- write `linkar-run.sh` and metadata
+- skip project history updates because no execution happened
 
 ## `load_project(path)`
 Loads and validates a project from `project.yaml`.
@@ -133,7 +146,6 @@ The core API should raise structured errors for:
 - invalid templates
 - invalid projects
 - unresolved required parameters
-- unsupported execution modes
 - execution failures
 
 The API should not mix semantic behavior with terminal formatting.
@@ -186,6 +198,9 @@ curl -s -X POST http://127.0.0.1:8000/resolve \
 curl -s -X POST http://127.0.0.1:8000/run \
   -H 'Content-Type: application/json' \
   -d '{"template":"simple_echo","pack_refs":["./examples/packs/basic"],"params":{"name":"Agent"}}'
+curl -s -X POST http://127.0.0.1:8000/render \
+  -H 'Content-Type: application/json' \
+  -d '{"template":"simple_echo","pack_refs":["./examples/packs/basic"],"params":{"name":"Agent"},"outdir":"./simple_echo_bundle"}'
 curl -s http://127.0.0.1:8000/runs/simple_echo_001/outputs?project=./study
 ```
 
@@ -205,6 +220,7 @@ Recommended MCP tool surface:
 - `linkar_describe_template`
 - `linkar_resolve`
 - `linkar_run`
+- `linkar_render`
 - `linkar_test`
 - `linkar_list_project_runs`
 - `linkar_list_project_assets`
@@ -231,6 +247,7 @@ Current local API surface:
 - `GET /methods`
 - `POST /resolve`
 - `POST /run`
+- `POST /render`
 - `POST /test`
 
 Success responses use:

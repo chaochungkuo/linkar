@@ -16,6 +16,7 @@ from linkar.core import (
     load_project,
     load_template,
     preferred_pack_ref_for_assets,
+    render_template,
     run_template,
     unique_assets,
 )
@@ -93,7 +94,7 @@ def can_prompt() -> bool:
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
-def run_with_optional_prompts(
+def execute_with_optional_prompts(
     template_ref: str,
     *,
     params: dict[str, Any],
@@ -102,14 +103,16 @@ def run_with_optional_prompts(
     pack_refs: list[str] | None,
     binding_ref: str | None,
     prompt_missing: bool,
+    action: str = "run",
 ):
     template, _ = load_template_for_cli(template_ref, project=project, pack_refs=pack_refs)
     pending_params = dict(params)
     prompted: set[str] = set()
+    execute = render_template if action == "render" else run_template
 
     while True:
         try:
-            return run_template(
+            return execute(
                 template_ref,
                 params=pending_params,
                 project=project,
@@ -126,6 +129,28 @@ def run_with_optional_prompts(
                 raise
             pending_params[missing_key] = prompt_for_param(missing_key, template.params[missing_key])
             prompted.add(missing_key)
+
+
+def run_with_optional_prompts(
+    template_ref: str,
+    *,
+    params: dict[str, Any],
+    project: str | None,
+    outdir: str | None,
+    pack_refs: list[str] | None,
+    binding_ref: str | None,
+    prompt_missing: bool,
+):
+    return execute_with_optional_prompts(
+        template_ref,
+        params=params,
+        project=project,
+        outdir=outdir,
+        pack_refs=pack_refs,
+        binding_ref=binding_ref,
+        prompt_missing=prompt_missing,
+        action="run",
+    )
 
 
 def shell_complete_template_ref(

@@ -15,7 +15,10 @@ class TemplateSpec:
     root: Path
     params: dict[str, dict[str, Any]]
     outputs: dict[str, dict[str, Any]]
-    run_entry: str
+    tools_required: list[str]
+    tools_required_any: list[list[str]]
+    run_entry: str | None
+    run_command: str | None
     run_mode: str
     pack_root: Path | None = None
     pack_ref: str | None = None

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -264,6 +265,7 @@ def test_help_output_is_clean_and_descriptive(tmp_path: Path) -> None:
     assert "machine-readable" in root_help.stdout
     assert "Commands" in root_help.stdout
     assert "linkar run simple_echo --pack" in root_help.stdout
+    assert "linkar render demultiplex --outdir" in root_help.stdout
     assert "linkar serve --port 8000" in root_help.stdout
     assert "linkar mcp serve" in root_help.stdout
     assert "╭─ Options" in root_help.stdout
@@ -274,6 +276,13 @@ def test_help_output_is_clean_and_descriptive(tmp_path: Path) -> None:
     assert "raw" not in run_help.stdout
     assert "╭─ Options" in run_help.stdout
     assert "╭─ Commands" in run_help.stdout
+
+    render_help = run_cli("render", "--help", cwd=tmp_path)
+    assert render_help.returncode == 0, render_help.stderr
+    assert "Render template bundles with template-aware options" in render_help.stdout
+    assert "raw" not in render_help.stdout
+    assert "╭─ Options" in render_help.stdout
+    assert "╭─ Commands" in render_help.stdout
 
     mcp_help = run_cli("mcp", "--help", cwd=tmp_path)
     assert mcp_help.returncode == 0, mcp_help.stderr
@@ -304,9 +313,14 @@ def test_bare_cli_shows_helpful_guidance(tmp_path: Path) -> None:
 
 def test_parser_errors_show_contextual_help(tmp_path: Path) -> None:
     completed = run_cli("run", cwd=tmp_path)
-    assert completed.returncode == 2
+    assert completed.returncode == 0
     assert "Usage: linkar run" in completed.stdout
     assert "Commands" in completed.stdout
+
+    rendered = run_cli("render", cwd=tmp_path)
+    assert rendered.returncode == 0
+    assert "Usage: linkar render" in rendered.stdout
+    assert "Commands" in rendered.stdout
 
 
 def test_run_template_updates_project(tmp_path: Path) -> None:
@@ -331,7 +345,7 @@ def test_run_template_updates_project(tmp_path: Path) -> None:
     assert len(project["templates"]) == 1
     instance = project["templates"][0]
     assert instance["id"] == "simple_echo"
-    results_file = project_dir / instance["path"] / "greeting.txt"
+    results_file = project_dir / instance["path"] / "results" / "greeting.txt"
     assert results_file.read_text().strip() == "Hello, Linkar"
 
     meta = json.loads((project_dir / instance["meta"]).read_text())
@@ -416,6 +430,58 @@ printf '%s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/name.txt"
     assert (outdir / "results" / "name.txt").read_text().strip() == "Rendered"
 
 
+def test_render_command_only_stages_launcher_without_running(tmp_path: Path) -> None:
+    template = make_template(
+        tmp_path / "templates",
+        "render_only_cli",
+        "  name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/name.txt"
+""",
+    )
+
+    completed = run_cli(
+        "render",
+        str(template),
+        "--param",
+        "name=Rendered",
+        "--outdir",
+        str(tmp_path / "rendered"),
+        cwd=tmp_path,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+    rendered_dir = tmp_path / "rendered"
+    assert (rendered_dir / "run.sh").is_file()
+    assert (rendered_dir / "linkar-run.sh").is_file()
+    assert not (rendered_dir / "results" / "name.txt").exists()
+
+
+def test_run_command_executes_even_for_legacy_render_mode_template(tmp_path: Path) -> None:
+    template = make_template(
+        tmp_path / "templates",
+        "legacy_render_cli",
+        "",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'executed\n' > "${LINKAR_RESULTS_DIR}/name.txt"
+""",
+    )
+    spec_path = template / "linkar_template.yaml"
+    spec_path.write_text(spec_path.read_text().replace("mode: direct", "mode: render"))
+
+    completed = run_cli(
+        "run",
+        str(template),
+        "--outdir",
+        str(tmp_path / "executed"),
+        cwd=tmp_path,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert (tmp_path / "executed" / "results" / "name.txt").read_text().strip() == "executed"
+
+
 def test_run_discovers_project_from_current_directory(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
     init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
@@ -457,7 +523,7 @@ def test_project_run_uses_stable_project_path_and_history_dir(tmp_path: Path) ->
     assert outdir == (project_dir / "simple_echo")
     assert outdir.is_symlink()
     assert outdir.resolve().parent.name == "runs"
-    assert (outdir / "greeting.txt").read_text().strip() == "Hello, StablePath"
+    assert (outdir / "results" / "greeting.txt").read_text().strip() == "Hello, StablePath"
 
     project = yaml.safe_load((project_dir / "project.yaml").read_text())
     entry = project["templates"][0]
@@ -528,7 +594,7 @@ def test_ephemeral_run_uses_linkar_runs(tmp_path: Path) -> None:
     outdir = Path(completed.stdout.strip())
     assert outdir.parent.name == "runs"
     assert outdir.parent.parent.name == ".linkar"
-    assert (outdir / "greeting.txt").read_text().strip() == "Hello, Ephemeral"
+    assert (outdir / "results" / "greeting.txt").read_text().strip() == "Hello, Ephemeral"
 
 
 def test_pixi_echo_can_run_as_real_template(tmp_path: Path) -> None:
@@ -628,11 +694,7 @@ def test_project_pack_configuration_is_used_for_template_lookup(tmp_path: Path) 
     pack_root = tmp_path / "pack"
     hello_template = ROOT / "examples" / "packs" / "basic" / "templates" / "simple_echo"
     target_template = pack_root / "templates" / "simple_echo"
-    target_template.mkdir(parents=True)
-    (target_template / "linkar_template.yaml").write_text((hello_template / "linkar_template.yaml").read_text())
-    run_script = target_template / "run.sh"
-    run_script.write_text((hello_template / "run.sh").read_text())
-    run_script.chmod(0o755)
+    shutil.copytree(hello_template, target_template)
 
     project_dir = tmp_path / "project"
     init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
@@ -663,11 +725,7 @@ def test_global_pack_configuration_is_used_for_template_lookup(tmp_path: Path) -
     pack_root = tmp_path / "pack"
     hello_template = ROOT / "examples" / "packs" / "basic" / "templates" / "simple_echo"
     target_template = pack_root / "templates" / "simple_echo"
-    target_template.mkdir(parents=True)
-    (target_template / "linkar_template.yaml").write_text((hello_template / "linkar_template.yaml").read_text())
-    run_script = target_template / "run.sh"
-    run_script.write_text((hello_template / "run.sh").read_text())
-    run_script.chmod(0o755)
+    shutil.copytree(hello_template, target_template)
 
     added = run_cli("config", "pack", "add", str(pack_root), "--id", "global_pack", cwd=tmp_path, env_extra=env)
     assert added.returncode == 0, added.stderr
@@ -676,7 +734,7 @@ def test_global_pack_configuration_is_used_for_template_lookup(tmp_path: Path) -
     assert completed.returncode == 0, completed.stderr
 
     outdir = Path(completed.stdout.strip())
-    assert (outdir / "greeting.txt").read_text().strip() == "Hello, GlobalPack"
+    assert (outdir / "results" / "greeting.txt").read_text().strip() == "Hello, GlobalPack"
 
 
 def test_project_pack_takes_precedence_over_global_pack(tmp_path: Path) -> None:

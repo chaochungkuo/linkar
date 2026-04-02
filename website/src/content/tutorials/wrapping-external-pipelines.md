@@ -38,35 +38,33 @@ outputs:
   fastqc_reports:
     glob: fastqc/*_fastqc.html
 run:
-  entry: run.sh
-  mode: direct
+  command: >-
+    fastqc --threads "${THREADS}"
+    --outdir "${LINKAR_RESULTS_DIR}/fastqc"
+    "${INPUT_FASTQ}"
 ```
 
-Now the wrapper has a clear job: adapt Linkar's resolved inputs to the underlying tool.
+Now the wrapper has a clear job: in the simplest case, there is no separate wrapper file at all.
 
-## Thin shell wrappers are fine when the tool is already shell-first
+## Prefer `run.command` for one-command wrappers
 
-For a normal command-line tool, `run.sh` can stay very small:
+For a normal command-line tool, a single `run.command` string is usually the cleanest option:
 
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-mkdir -p "${LINKAR_RESULTS_DIR}/fastqc"
-
-fastqc \
-  --threads "${THREADS}" \
-  --outdir "${LINKAR_RESULTS_DIR}/fastqc" \
-  "${INPUT_FASTQ}"
+```yaml
+run:
+  command: >-
+    fastqc --threads "${THREADS}"
+    --outdir "${LINKAR_RESULTS_DIR}/fastqc"
+    "${INPUT_FASTQ}"
 ```
 
 This is a good wrapper because:
 
 - the contract is explicit
 - the output location is deterministic
-- the wrapper is easier to read than the underlying tool help text
+- there is no extra wrapper file to maintain
 
-## Use `run.py` when the wrapper starts doing real logic
+## Use `run.sh` or `run.py` when the wrapper starts doing real logic
 
 If you are wrapping a Python-based pipeline or a multi-mode entrypoint, `run.py` is usually better
 than pushing more conditionals into shell.
@@ -78,7 +76,8 @@ than pushing more conditionals into shell.
 - call into a Python library or Python-native pipeline
 - inspect files or emit structured errors
 
-That is why a template like `demultiplex` is better as `run.py` than as a large shell adapter.
+That is why a template like `demultiplex` is better as either a declarative `run.command` or a real
+programmatic entrypoint, rather than a large shell adapter that only forwards arguments.
 
 ## Keep the external repo boundary clear
 
@@ -105,7 +104,7 @@ Template directory can then contain:
 ```text
 demultiplex/
   linkar_template.yaml
-  run.py
+  linkar_template.yaml
   test.py
   demux_pipeline/
   pixi.toml
@@ -142,6 +141,7 @@ linkar test demultiplex --pack /path/to/pack
 - keep the Linkar contract explicit
 - keep output locations deterministic
 - prefer explicit defaults over hidden omission logic
+- prefer `run.command` when one command is enough
 - use `run.py` once shell stops being clearer
 - let the external tool own the real computation
 

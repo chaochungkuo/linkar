@@ -6,7 +6,8 @@ params:
     type: str
     required: true
 outputs:
-  greeting_file: {}
+  greeting_file:
+    path: greeting.txt
 run:
-  entry: run.sh
-  mode: direct
+  command: >-
+    printf 'Hello, %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/greeting.txt"

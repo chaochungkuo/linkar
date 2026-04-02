@@ -123,6 +123,34 @@ class CliUI:
             )
         )
 
+    def print_render_completed(self, result: dict[str, Any]) -> None:
+        outdir = Path(result["outdir"])
+        history_outdir = Path(result.get("history_outdir", result["outdir"]))
+        launcher = history_outdir / "linkar-run.sh"
+        if not self.rich_enabled:
+            self.plain_print(str(outdir))
+            return
+        body = Text()
+        body.append("Template", style="label")
+        body.append(": ", style="muted")
+        body.append(str(result["template"]), style="accent")
+        body.append("\n")
+        body.append("Rendered Dir", style="label")
+        body.append(": ", style="muted")
+        body.append(str(outdir), style="value")
+        body.append("\n")
+        body.append("Launcher", style="label")
+        body.append(": ", style="muted")
+        body.append(str(launcher), style="value")
+        self.console.print(
+            Panel(
+                body,
+                title="[ok]Render Completed[/ok]",
+                border_style="ok",
+                box=box.ROUNDED,
+            )
+        )
+
     def print_test_completed(self, result: dict[str, Any]) -> None:
         outdir = Path(result["outdir"])
         if not self.rich_enabled:

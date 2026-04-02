@@ -9,4 +9,3 @@ outputs:
   greeting_file: {}
 run:
   entry: run.sh
-  mode: direct

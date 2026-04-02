@@ -176,15 +176,15 @@ That means:
 
 This keeps the CLI simple without changing the underlying core model.
 
-## Execution Modes
-The architecture currently supports or anticipates two execution modes:
+## User Actions
+The architecture exposes two top-level actions:
 
-- `direct`: execute the template entrypoint directly
-- `render`: optionally render an execution artifact before running
+- `run`: stage the runtime bundle and execute it
+- `render`: stage the runtime bundle and stop after writing a runnable launcher
 
-The architecture should treat execution mode as template behavior, not as a separate product layer.
+The architecture should treat this as a product-level action choice, not as a template-level behavior override.
 
-The common path should remain `direct`.
+The common path should remain `run`.
 
 ## Error Boundaries
 Errors should be handled at the right layer:

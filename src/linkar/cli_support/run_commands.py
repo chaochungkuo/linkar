@@ -13,11 +13,11 @@ from linkar.errors import LinkarError, ProjectValidationError
 from linkar.ui import CliUI
 from linkar.cli_support.common import (
     click_type_for_param,
+    execute_with_optional_prompts,
     handle_linkar_errors,
     help_for_param,
     parse_key_value,
     params_from_pairs,
-    run_with_optional_prompts,
     shell_complete_filesystem_ref,
     shell_complete_template_ref,
 )
@@ -26,8 +26,15 @@ CommandClass = getattr(click, "RichCommand", click.Command)
 GroupClass = getattr(click, "RichGroup", click.Group)
 
 
-def template_command_callback(template_id: str, template_path: str, pack_ref: str | None = None):
+def template_command_callback(
+    template_id: str,
+    template_path: str,
+    pack_ref: str | None = None,
+    *,
+    action: str = "run",
+):
     template_spec = load_template(template_path)
+    status_message = "Rendering template" if action == "render" else "Running template"
 
     @handle_linkar_errors
     def callback(
@@ -43,8 +50,8 @@ def template_command_callback(template_id: str, template_path: str, pack_ref: st
         params.update(params_from_pairs(param))
         run_template_ref = template_id if pack_ref is not None else template_path
         run_pack_refs = [pack_ref] if pack_ref is not None else None
-        with ui.status("Running template"):
-            result = run_with_optional_prompts(
+        with ui.status(status_message):
+            result = execute_with_optional_prompts(
                 run_template_ref,
                 params=params,
                 project=project,
@@ -52,8 +59,12 @@ def template_command_callback(template_id: str, template_path: str, pack_ref: st
                 pack_refs=run_pack_refs,
                 binding_ref=binding,
                 prompt_missing=prompt_missing,
+                action=action,
             )
-        ui.print_run_completed(result)
+        if action == "render":
+            ui.print_render_completed(result)
+        else:
+            ui.print_run_completed(result)
 
     params: list[click.Parameter] = []
     for key, spec in template_spec.params.items():
@@ -110,12 +121,14 @@ def template_command_callback(template_id: str, template_path: str, pack_ref: st
         name=template_id,
         callback=callback,
         params=params,
-        help=f"Run template '{template_id}'.",
-        short_help=f"Run template '{template_id}'.",
+        help=f"{'Render' if action == 'render' else 'Run'} template '{template_id}'.",
+        short_help=f"{'Render' if action == 'render' else 'Run'} template '{template_id}'.",
     )
 
 
-def generic_run_callback(bound_template: str | None = None):
+def generic_run_callback(bound_template: str | None = None, *, action: str = "run"):
+    status_message = "Rendering template" if action == "render" else "Running template"
+
     @handle_linkar_errors
     def callback(
         pack: tuple[str, ...],
@@ -130,8 +143,8 @@ def generic_run_callback(bound_template: str | None = None):
         template_ref = bound_template or template
         if template_ref is None:
             raise ProjectValidationError("Missing template reference.")
-        with ui.status("Running template"):
-            result = run_with_optional_prompts(
+        with ui.status(status_message):
+            result = execute_with_optional_prompts(
                 template_ref,
                 params=params_from_pairs(param),
                 project=project,
@@ -139,13 +152,23 @@ def generic_run_callback(bound_template: str | None = None):
                 pack_refs=list(pack),
                 binding_ref=binding,
                 prompt_missing=prompt_missing,
+                action=action,
             )
-        ui.print_run_completed(result)
+        if action == "render":
+            ui.print_render_completed(result)
+        else:
+            ui.print_run_completed(result)
 
     return callback
 
 
-def make_generic_run_command(name: str, *, bound_template: str | None = None, hidden: bool = False):
+def make_generic_run_command(
+    name: str,
+    *,
+    bound_template: str | None = None,
+    hidden: bool = False,
+    action: str = "run",
+):
     params: list[click.Parameter] = []
     if bound_template is None:
         params.append(
@@ -204,15 +227,25 @@ def make_generic_run_command(name: str, *, bound_template: str | None = None, hi
 
     return CommandClass(
         name=name,
-        callback=generic_run_callback(bound_template),
+        callback=generic_run_callback(bound_template, action=action),
         params=params,
-        help="Run any template by id or path using the generic execution interface.",
-        short_help="Run a template with the generic interface.",
+        help=(
+            "Render any template by id or path using the generic staging interface."
+            if action == "render"
+            else "Run any template by id or path using the generic execution interface."
+        ),
+        short_help=(
+            "Render a template with the generic interface."
+            if action == "render"
+            else "Run a template with the generic interface."
+        ),
         hidden=hidden,
     )
 
 
-class DynamicRunGroup(GroupClass):
+class DynamicTemplateGroup(GroupClass):
+    action = "run"
+
     def list_commands(self, ctx: click.Context) -> list[str]:
         command_names: set[str] = set()
         by_id: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -234,7 +267,7 @@ class DynamicRunGroup(GroupClass):
 
     def get_command(self, ctx: click.Context, cmd_name: str):
         if cmd_name == "raw":
-            return raw_run_command
+            return render_raw_command if self.action == "render" else raw_run_command
 
         try:
             project_obj = discover_project()
@@ -244,7 +277,12 @@ class DynamicRunGroup(GroupClass):
             visible = []
 
         if len(visible) == 1:
-            return template_command_callback(cmd_name, visible[0]["path"], visible[0]["pack_ref"])
+            return template_command_callback(
+                cmd_name,
+                visible[0]["path"],
+                visible[0]["pack_ref"],
+                action=self.action,
+            )
         if len(visible) > 1:
             if active_entry is not None:
                 active_matches = [template for template in visible if template["pack_ref"] == active_entry.asset.ref]
@@ -253,9 +291,18 @@ class DynamicRunGroup(GroupClass):
                         cmd_name,
                         active_matches[0]["path"],
                         active_matches[0]["pack_ref"],
+                        action=self.action,
                     )
 
-        return make_generic_run_command(cmd_name, bound_template=cmd_name)
+        return make_generic_run_command(cmd_name, bound_template=cmd_name, action=self.action)
+
+class DynamicRunGroup(DynamicTemplateGroup):
+    action = "run"
 
 
-raw_run_command = make_generic_run_command("raw", hidden=True)
+class DynamicRenderGroup(DynamicTemplateGroup):
+    action = "render"
+
+
+raw_run_command = make_generic_run_command("raw", hidden=True, action="run")
+render_raw_command = make_generic_run_command("raw", hidden=True, action="render")

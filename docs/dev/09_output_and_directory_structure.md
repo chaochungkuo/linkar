@@ -16,7 +16,7 @@ Each template instance should produce a directory like:
 
 ```text
 outdir/
-  run.sh
+  run.sh or linkar-run.sh
   results/
   .linkar/
     meta.json
@@ -29,7 +29,8 @@ The root directory of the template instance.
 
 This is the primary artifact for the run.
 
-For shell-based templates, `run.sh` is the runtime entrypoint recorded with the run artifact.
+For entrypoint-based templates, `run.sh` is the runtime entrypoint recorded with the run artifact.
+For `linkar render ...`, Linkar writes `linkar-run.sh` as the runnable launcher.
 
 In direct mode, Linkar stages the runtime bundle into this directory before execution. That staged bundle may include:
 

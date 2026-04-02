@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
+from linkar.errors import ExecutionError, TemplateValidationError
 from linkar.runtime.projects import init_project, load_project
 from linkar.runtime.runs import (
     collect_declared_glob_output,
@@ -11,11 +14,15 @@ from linkar.runtime.runs import (
     determine_outdir,
     determine_test_dir,
     next_instance_id,
+    render_mode_launcher_path,
+    render_template,
     resolve_declared_output_path,
+    ensure_required_tools_available,
     sync_project_alias,
     should_exclude_runtime_path,
     should_render_shell_wrapper,
     stage_runtime_bundle,
+    run_template,
 )
 from linkar.runtime.templates import load_template
 
@@ -69,6 +76,49 @@ def test_load_template_accepts_legacy_template_yaml_filename(tmp_path: Path) -> 
     template = load_template(template_dir)
 
     assert template.id == "legacy_template"
+
+
+def test_load_template_accepts_run_command_without_entry(tmp_path: Path) -> None:
+    template_dir = tmp_path / "command_template"
+    template_dir.mkdir(parents=True)
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: command_template",
+                "run:",
+                "  mode: direct",
+                "  command: echo hello",
+                "",
+            ]
+        )
+    )
+
+    template = load_template(template_dir)
+
+    assert template.run_entry is None
+    assert template.run_command == "echo hello"
+
+
+def test_load_template_rejects_both_run_entry_and_run_command(tmp_path: Path) -> None:
+    template_dir = tmp_path / "bad_command_template"
+    template_dir.mkdir(parents=True)
+    (template_dir / "run.sh").write_text("#!/usr/bin/env bash\nset -euo pipefail\n")
+    (template_dir / "run.sh").chmod(0o755)
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: bad_command_template",
+                "run:",
+                "  entry: run.sh",
+                "  command: echo hello",
+                "  mode: direct",
+                "",
+            ]
+        )
+    )
+
+    with pytest.raises(TemplateValidationError, match="both run.entry and run.command"):
+        load_template(template_dir)
 
 
 def test_next_instance_id_uses_project_history_count(tmp_path: Path) -> None:
@@ -159,6 +209,7 @@ def test_runtime_bundle_exclusion_helper_matches_current_policy() -> None:
     assert should_exclude_runtime_path(Path("test.py")) is True
     assert should_exclude_runtime_path(Path("testdata")) is True
     assert should_exclude_runtime_path(Path(".pixi")) is True
+    assert should_exclude_runtime_path(Path(".rattler-cache")) is True
     assert should_exclude_runtime_path(Path("run.sh")) is False
     assert should_exclude_runtime_path(Path("pixi.toml")) is False
 
@@ -268,3 +319,254 @@ def test_collect_outputs_falls_back_to_results_dir_for_legacy_templates(tmp_path
     (outdir / "results").mkdir(parents=True)
 
     assert collect_outputs(template, outdir) == {"results_dir": str((outdir / "results").resolve())}
+
+
+def test_render_template_stages_bundle_and_writes_launcher_without_executing(tmp_path: Path) -> None:
+    template_dir = make_template(
+        tmp_path / "templates",
+        "render_demo",
+        "#!/usr/bin/env bash\nset -euo pipefail\nprintf 'executed\\n' > \"${LINKAR_RESULTS_DIR}/executed.txt\"\n",
+    )
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: render_demo",
+                "params:",
+                "  name:",
+                "    type: str",
+                "    required: true",
+                "run:",
+                "  entry: run.sh",
+                "  mode: render",
+                "",
+            ]
+        )
+    )
+
+    result = render_template(template_dir, params={"name": "demo"}, outdir=tmp_path / "rendered")
+    rendered_dir = Path(result["history_outdir"])
+    launcher = render_mode_launcher_path(rendered_dir)
+
+    assert result["run_mode"] == "render"
+    assert rendered_dir.is_dir()
+    assert (rendered_dir / "run.sh").is_file()
+    assert launcher.is_file()
+    assert not (rendered_dir / "results" / "executed.txt").exists()
+    assert 'export NAME=demo' in launcher.read_text(encoding="utf-8")
+    assert 'exec "${script_dir}/run.sh"' in launcher.read_text(encoding="utf-8")
+
+
+def test_render_template_does_not_update_project_history_or_alias(tmp_path: Path) -> None:
+    template_dir = make_template(
+        tmp_path / "templates",
+        "render_project_demo",
+        "#!/usr/bin/env bash\nset -euo pipefail\n",
+    )
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: render_project_demo",
+                "params:",
+                "  name:",
+                "    type: str",
+                "    required: true",
+                "run:",
+                "  entry: run.sh",
+                "  mode: render",
+                "",
+            ]
+        )
+    )
+    project_path = init_project(tmp_path / "project")
+    project = load_project(project_path.parent)
+
+    result = render_template(template_dir, params={"name": "demo"}, project=project)
+
+    project_after = load_project(project.root)
+    assert project_after.data["templates"] == []
+    assert not (project.root / "render_project_demo").exists()
+    assert Path(result["history_outdir"]).is_dir()
+
+
+def test_direct_run_command_executes_without_template_wrapper_script(tmp_path: Path) -> None:
+    template_dir = tmp_path / "command_direct"
+    template_dir.mkdir(parents=True)
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: command_direct",
+                "params:",
+                "  name:",
+                "    type: str",
+                "    required: true",
+                "run:",
+                "  mode: direct",
+                "  command: >-",
+                "    printf '%s\\n' \"${NAME}\" > \"${LINKAR_RESULTS_DIR}/name.txt\"",
+                "",
+            ]
+        )
+    )
+
+    result = run_template(template_dir, params={"name": "demo"}, outdir=tmp_path / "out")
+    outdir = Path(result["history_outdir"])
+
+    assert (outdir / "results" / "name.txt").read_text() == "demo\n"
+    assert (outdir / "run.sh").is_file()
+    assert not (outdir / "linkar-run.sh").exists()
+
+
+def test_render_template_with_run_command_writes_single_launcher(tmp_path: Path) -> None:
+    template_dir = tmp_path / "command_render"
+    template_dir.mkdir(parents=True)
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: command_render",
+                "params:",
+                "  name:",
+                "    type: str",
+                "    required: true",
+                "run:",
+                "  mode: render",
+                "  command: >-",
+                "    printf '%s\\n' \"${NAME}\" > \"${LINKAR_RESULTS_DIR}/name.txt\"",
+                "",
+            ]
+        )
+    )
+
+    result = render_template(template_dir, params={"name": "demo"}, outdir=tmp_path / "rendered")
+    outdir = Path(result["history_outdir"])
+    launcher = render_mode_launcher_path(outdir)
+
+    assert launcher.is_file()
+    assert not (outdir / "run.sh").exists()
+    assert "bash -lc" in launcher.read_text(encoding="utf-8")
+    assert not (outdir / "results" / "name.txt").exists()
+
+
+def test_run_template_executes_even_when_template_declares_legacy_render_mode(tmp_path: Path) -> None:
+    template_dir = make_template(
+        tmp_path / "templates",
+        "legacy_render_mode",
+        "#!/usr/bin/env bash\nset -euo pipefail\nprintf 'executed\\n' > \"${LINKAR_RESULTS_DIR}/executed.txt\"\n",
+    )
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: legacy_render_mode",
+                "run:",
+                "  entry: run.sh",
+                "  mode: render",
+                "",
+            ]
+        )
+    )
+
+    result = run_template(template_dir, outdir=tmp_path / "executed")
+    outdir = Path(result["history_outdir"])
+
+    assert result["run_mode"] == "run"
+    assert (outdir / "results" / "executed.txt").read_text() == "executed\n"
+
+
+def test_load_template_parses_tool_requirements(tmp_path: Path) -> None:
+    template_dir = make_template(tmp_path / "templates", "tool_demo", "#!/usr/bin/env bash\n")
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: tool_demo",
+                "tools:",
+                "  required:",
+                "    - pixi",
+                "  required_any:",
+                "    - [bcl-convert, bcl_convert]",
+                "run:",
+                "  entry: run.sh",
+                "  mode: direct",
+                "",
+            ]
+        )
+    )
+
+    template = load_template(template_dir)
+
+    assert template.tools_required == ["pixi"]
+    assert template.tools_required_any == [["bcl-convert", "bcl_convert"]]
+
+
+def test_load_template_rejects_invalid_tool_requirements(tmp_path: Path) -> None:
+    template_dir = make_template(tmp_path / "templates", "broken_tools", "#!/usr/bin/env bash\n")
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: broken_tools",
+                "tools:",
+                "  required_any:",
+                "    - pixi",
+                "run:",
+                "  entry: run.sh",
+                "  mode: direct",
+                "",
+            ]
+        )
+    )
+
+    with pytest.raises(TemplateValidationError, match="tools.required_any entries must be non-empty lists"):
+        load_template(template_dir)
+
+
+def test_ensure_required_tools_available_reports_missing_commands(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    template_dir = make_template(tmp_path / "templates", "missing_tools", "#!/usr/bin/env bash\n")
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: missing_tools",
+                "tools:",
+                "  required:",
+                "    - missingcmd",
+                "  required_any:",
+                "    - [tool_a, tool_b]",
+                "run:",
+                "  entry: run.sh",
+                "  mode: direct",
+                "",
+            ]
+        )
+    )
+    template = load_template(template_dir)
+    monkeypatch.setenv("PATH", str(tmp_path / "empty-bin"))
+
+    with pytest.raises(ExecutionError, match="missing required commands: missingcmd; missing any of: tool_a, tool_b"):
+        ensure_required_tools_available(template)
+
+
+def test_run_template_checks_required_tools_before_execution(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    template_dir = make_template(
+        tmp_path / "templates",
+        "tool_checked",
+        "#!/usr/bin/env bash\nset -euo pipefail\nprintf 'ran\\n' > \"${LINKAR_RESULTS_DIR}/done.txt\"\n",
+    )
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: tool_checked",
+                "params:",
+                "  name:",
+                "    type: str",
+                "    required: true",
+                "tools:",
+                "  required:",
+                "    - missingcmd",
+                "run:",
+                "  entry: run.sh",
+                "  mode: direct",
+                "",
+            ]
+        )
+    )
+    monkeypatch.setenv("PATH", str(tmp_path / "empty-bin"))
+
+    with pytest.raises(ExecutionError, match="Template 'tool_checked' cannot run because required tools are unavailable"):
+        run_template(template_dir, params={"name": "demo"})

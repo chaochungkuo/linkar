@@ -125,16 +125,16 @@ A failed run should still preserve:
 
 Project indexing behavior on failure should remain conservative. In early versions, failed runs should generally not be appended as normal successful template instances unless failure semantics are defined explicitly.
 
-## Execution Modes
-### `direct`
-Run the template entrypoint directly.
+## User Actions
+### `run`
+`linkar run ...` stages the runtime bundle and executes the template entrypoint or rendered launcher.
 
-This is the primary execution mode and should cover the common path.
+This is the primary path and should match the normal meaning of the verb.
 
 ### `render`
-In future versions, Linkar may support `render` mode where the core first materializes an execution artifact and then runs it.
+`linkar render ...` materializes the execution artifact, writes metadata and a runnable launcher script, and stops without executing the template entrypoint.
 
-This should remain optional and must not complicate the primary direct-execution path.
+This remains optional and should not complicate the primary execution path.
 
 ## Design Constraints
 The execution model should preserve the following boundaries:

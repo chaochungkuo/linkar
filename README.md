@@ -9,6 +9,11 @@
 - YAML-based templates and projects
 - Metadata and runtime capture under `.linkar/`
 
+For template authors:
+
+- use `run.command` for thin single-command wrappers
+- use `run.sh` only when the template needs real script logic
+
 New template and pack contracts should use:
 
 - `linkar_template.yaml`
@@ -94,6 +99,7 @@ Current agent-oriented endpoints:
 - `GET /methods`
 - `POST /resolve`
 - `POST /run`
+- `POST /render`
 - `POST /test`
 
 Success responses use:
@@ -136,6 +142,7 @@ High-value MCP tools include:
 - `linkar_describe_template`
 - `linkar_resolve`
 - `linkar_run`
+- `linkar_render`
 - `linkar_test`
 - `linkar_inspect_run`
 - `linkar_get_run_outputs`
@@ -167,6 +174,7 @@ Bundled examples are organized by teaching purpose:
 - `examples/packs/basic`
   - minimal templates and local authoring patterns
   - includes `simple_echo`, `simple_file_input`, `simple_boolean_flag`, `download_test_data`, `fastq_stats`, `pixi_echo`, and `pixi_pytest`
+  - `simple_echo` demonstrates `run.command`; the others show script-based templates
 - `examples/packs/chaining`
   - a small project-mode pack showing output reuse through a default binding
 - `examples/packs/pack_management`

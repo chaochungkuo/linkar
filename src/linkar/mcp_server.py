@@ -11,6 +11,7 @@ from linkar.mcp_tools import (
     list_project_assets_tool,
     list_project_runs_tool,
     list_templates_tool,
+    render_template_tool,
     resolve_template_tool,
     run_template_tool,
     test_template_tool,
@@ -73,6 +74,24 @@ def build_server() -> Any:
         binding_ref: str | None = None,
     ) -> dict[str, Any]:
         return run_template_tool(
+            template=template,
+            params=params,
+            project=project,
+            outdir=outdir,
+            pack_refs=pack_refs,
+            binding_ref=binding_ref,
+        )
+
+    @mcp.tool(description="Render a template bundle and return the staged launcher and metadata paths.")
+    def linkar_render(
+        template: str,
+        params: dict[str, Any] | None = None,
+        project: str | None = None,
+        outdir: str | None = None,
+        pack_refs: list[str] | None = None,
+        binding_ref: str | None = None,
+    ) -> dict[str, Any]:
+        return render_template_tool(
             template=template,
             params=params,
             project=project,

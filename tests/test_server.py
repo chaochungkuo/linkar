@@ -79,7 +79,7 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
     assert status == "200 OK"
     result = payload["data"]
     outdir = Path(result["outdir"])
-    assert (outdir / "greeting.txt").read_text().strip() == "Hello, Server"
+    assert (outdir / "results" / "greeting.txt").read_text().strip() == "Hello, Server"
 
     status, _, runs_payload = call_app(
         app,
@@ -136,7 +136,8 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
     )
     assert status == "200 OK"
     assert template_payload["data"]["id"] == "simple_echo"
-    assert template_payload["data"]["run"]["entry"] == "run.sh"
+    assert template_payload["data"]["run"]["entry"] is None
+    assert "greeting.txt" in template_payload["data"]["run"]["command"]
 
     status, _, assets_payload = call_app(
         app,
@@ -278,4 +279,26 @@ def test_server_run_endpoint_supports_ephemeral_mode() -> None:
     assert status == "200 OK"
     outdir = Path(payload["data"]["outdir"])
     assert outdir.parent.name == "runs"
-    assert (outdir / "greeting.txt").read_text().strip() == "Hello, EphemeralServer"
+    assert (outdir / "results" / "greeting.txt").read_text().strip() == "Hello, EphemeralServer"
+
+
+def test_server_render_endpoint_stages_without_execution() -> None:
+    app = make_app()
+    status, _, payload = call_app(
+        app,
+        method="POST",
+        path="/render",
+        body=json.dumps(
+            {
+                "template": "simple_echo",
+                "pack_refs": [str(ROOT / "examples" / "packs" / "basic")],
+                "params": {"name": "RenderedServer"},
+            }
+        ).encode("utf-8"),
+    )
+
+    assert status == "200 OK"
+    outdir = Path(payload["data"]["outdir"])
+    assert outdir.parent.name == "runs"
+    assert (outdir / "linkar-run.sh").exists()
+    assert not (outdir / "results" / "greeting.txt").exists()
