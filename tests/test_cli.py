@@ -749,6 +749,29 @@ def test_collect_command_updates_outputs_after_manual_run(tmp_path: Path) -> Non
     assert meta["outputs"]["greeting_file"] == str((rendered_dir / "results" / "greeting.txt").resolve())
 
 
+def test_render_in_project_defaults_to_visible_project_template_dir(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    completed = run_cli(
+        "render",
+        "simple_echo",
+        "--pack",
+        str(ROOT / "examples" / "packs" / "basic"),
+        "--param",
+        "name=ProjectRender",
+        cwd=project_dir,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+    rendered_dir = project_dir / "simple_echo"
+    assert completed.stdout.strip() == str(rendered_dir)
+    assert (rendered_dir / "run.sh").is_file()
+    assert (rendered_dir / ".linkar" / "meta.json").is_file()
+    assert not (project_dir / ".linkar" / "runs" / "simple_echo_001").exists()
+
+
 def test_run_command_executes_even_for_legacy_render_mode_template(tmp_path: Path) -> None:
     template = make_template(
         tmp_path / "templates",

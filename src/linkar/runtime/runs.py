@@ -67,6 +67,20 @@ def determine_project_alias_dir(template: TemplateSpec, project: Project | None)
     return project.root / template.id
 
 
+def determine_render_outdir(
+    template: TemplateSpec,
+    project: Project | None,
+    outdir: str | Path | None,
+    instance_id: str,
+) -> Path:
+    if outdir is not None:
+        return Path(outdir).resolve()
+    alias_dir = determine_project_alias_dir(template, project)
+    if alias_dir is not None:
+        return alias_dir.resolve()
+    return determine_outdir(template, project, outdir, instance_id)
+
+
 def determine_test_dir(
     template: TemplateSpec,
     project: Project | None,
@@ -385,6 +399,7 @@ def prepare_template_execution(
     binding_ref: str | Path | None,
     *,
     include_template_spec: bool = True,
+    action: str = "run",
 ) -> tuple[
     Project | None,
     TemplateSpec,
@@ -428,8 +443,11 @@ def prepare_template_execution(
         binding_ref=selected_binding_ref,
     )
     instance_id = next_instance_id(template.id, project_obj)
-    output_dir = determine_outdir(template, project_obj, outdir, instance_id)
-    display_dir = determine_project_alias_dir(template, project_obj) if outdir is None else output_dir
+    if action == "render":
+        output_dir = determine_render_outdir(template, project_obj, outdir, instance_id)
+    else:
+        output_dir = determine_outdir(template, project_obj, outdir, instance_id)
+    display_dir = determine_project_alias_dir(template, project_obj) if action != "render" and outdir is None else output_dir
     if display_dir is None:
         display_dir = output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -1212,6 +1230,7 @@ def render_template(
         pack_refs,
         binding_ref,
         include_template_spec=False,
+        action="render",
     )
     resolved_params = localize_render_params(template, resolved_params, param_provenance, output_dir)
 

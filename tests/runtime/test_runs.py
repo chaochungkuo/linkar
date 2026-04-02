@@ -16,6 +16,7 @@ from linkar.runtime.runs import (
     default_output_relative_path,
     determine_project_alias_dir,
     determine_outdir,
+    determine_render_outdir,
     determine_test_dir,
     next_instance_id,
     render_mode_launcher_path,
@@ -147,6 +148,7 @@ def test_determine_outdir_and_testdir_follow_project_and_ephemeral_rules(tmp_pat
     outdir = determine_outdir(template, project, None, "demo_001")
     assert outdir == (project.root / ".linkar" / "runs" / "demo_001").resolve()
     assert determine_project_alias_dir(template, project) == (project.root / "demo").resolve()
+    assert determine_render_outdir(template, project, None, "demo_001") == (project.root / "demo").resolve()
 
     testdir = determine_test_dir(template, project, None)
     assert testdir.parent.parent == (project.root / ".linkar").resolve()
@@ -155,6 +157,7 @@ def test_determine_outdir_and_testdir_follow_project_and_ephemeral_rules(tmp_pat
     ephemeral_outdir = determine_outdir(template, None, None, "demo_999")
     assert ephemeral_outdir.parent.parent.name == ".linkar"
     assert ephemeral_outdir.parent.name == "runs"
+    assert determine_render_outdir(template, None, None, "demo_999") == ephemeral_outdir
 
 
 def test_sync_project_alias_points_stable_project_path_to_history_dir(tmp_path: Path) -> None:
