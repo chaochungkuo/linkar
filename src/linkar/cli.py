@@ -24,6 +24,7 @@ from linkar.cli_support.run_commands import (
 from linkar.core import (
     add_global_pack,
     add_project_pack,
+    adopt_run_into_project,
     clear_global_author,
     collect_run_outputs,
     discover_project,
@@ -70,6 +71,7 @@ if hasattr(click, "rich_click"):
         "  linkar project init --name study\n"
         "  linkar config pack add ~/github/izkf_genomics_pack\n"
         "  linkar pack add /path/to/project-pack\n"
+        "  linkar project init --name study --adopt /path/to/run\n"
         "  linkar run fastqc --input sample.fastq.gz\n"
         "  linkar render demultiplex --outdir ./demux_bundle\n"
         "  linkar run simple_echo --pack ./examples/packs/basic --param name=Linkar\n"
@@ -324,6 +326,14 @@ def mcp_serve_command() -> None:
     metavar="ORG",
     help="Project author organization. Defaults to the configured global author.",
 )
+@click.option(
+    "--adopt",
+    "adopt_runs",
+    multiple=True,
+    type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+    help="Existing Linkar run directory or .linkar/meta.json to import into the new project. Repeat to adopt more than one run.",
+    show_default=False,
+)
 @handle_linkar_errors
 def project_init(
     path: str | None,
@@ -332,6 +342,7 @@ def project_init(
     author_name: str | None,
     author_email: str | None,
     author_organization: str | None,
+    adopt_runs: tuple[str, ...],
     ui: CliUI,
 ) -> None:
     """Create project.yaml in the target directory. Use --name to create a new directory automatically."""
@@ -348,8 +359,36 @@ def project_init(
         project_id=project_id or implied_id,
         author=author or None,
     )
+    for run_ref in adopt_runs:
+        adopt_run_into_project(run_ref, project=project_path.parent)
     resolved_id = project_id or implied_id or Path(target_path).resolve().name
     ui.print_project_created(project_path, resolved_id)
+
+
+@project_group.command("adopt-run")
+@click.argument("run_ref", nargs=-1)
+@click.option(
+    "--project",
+    type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+    help="Project directory or project.yaml path. Defaults to the current directory.",
+    show_default=False,
+)
+@handle_linkar_errors
+def project_adopt_run_command(run_ref: tuple[str, ...], project: str | None, ui: CliUI) -> None:
+    """Import existing Linkar run directories into the active project index."""
+    if not run_ref:
+        raise ProjectValidationError("Provide at least one run reference to adopt.")
+    adopted: list[dict[str, str]] = []
+    with ui.status("Adopting runs"):
+        for item in run_ref:
+            entry = adopt_run_into_project(item, project=project)
+            adopted.append({"instance_id": entry["instance_id"], "path": entry["path"]})
+    ui.print_runs(
+        [
+            {"instance_id": item["instance_id"], "id": "adopted", "path": item["path"]}
+            for item in adopted
+        ]
+    )
 
 
 @project_group.command("runs")

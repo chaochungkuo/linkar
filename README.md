@@ -48,6 +48,12 @@ linkar run simple_echo --name Linkar
 linkar inspect run simple_echo_001
 ```
 
+If you already have an ad hoc Linkar run and want to start a project around it:
+
+```bash
+linkar project init --name study --adopt /path/to/existing_run
+```
+
 In project mode, Linkar exposes a stable directory such as `./simple_echo`, writes results under `results/`, and keeps immutable run history plus metadata under `.linkar/runs/<instance_id>/`.
 
 For ad hoc runs without a project:

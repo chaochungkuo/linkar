@@ -227,6 +227,61 @@ def test_project_init_author_options_override_global_defaults(tmp_path: Path) ->
     }
 
 
+def test_project_init_can_adopt_existing_run(tmp_path: Path) -> None:
+    ad_hoc = run_cli(
+        "run",
+        "simple_echo",
+        "--pack",
+        str(ROOT / "examples" / "packs" / "basic"),
+        "--param",
+        "name=Adopted",
+        cwd=tmp_path,
+    )
+    assert ad_hoc.returncode == 0, ad_hoc.stderr
+    run_dir = Path(ad_hoc.stdout.strip())
+
+    completed = run_cli("project", "init", "--name", "study", "--adopt", str(run_dir), cwd=tmp_path)
+    assert completed.returncode == 0, completed.stderr
+
+    data = yaml.safe_load((tmp_path / "study" / "project.yaml").read_text())
+    assert len(data["templates"]) == 1
+    entry = data["templates"][0]
+    assert entry["id"] == "simple_echo"
+    assert entry["instance_id"].startswith("simple_echo_")
+    assert entry["adopted"] is True
+    assert entry["params"]["name"] == "Adopted"
+    assert entry["outputs"]["greeting_file"].endswith("results/greeting.txt")
+    assert entry["path"] == str(run_dir)
+    assert entry["history_path"] == str(run_dir)
+
+
+def test_project_adopt_run_imports_existing_linkar_run(tmp_path: Path) -> None:
+    ad_hoc = run_cli(
+        "run",
+        "simple_echo",
+        "--pack",
+        str(ROOT / "examples" / "packs" / "basic"),
+        "--param",
+        "name=Later",
+        cwd=tmp_path,
+    )
+    assert ad_hoc.returncode == 0, ad_hoc.stderr
+    run_dir = Path(ad_hoc.stdout.strip())
+
+    init = run_cli("project", "init", "--name", "study", cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    adopted = run_cli("project", "adopt-run", str(run_dir), cwd=tmp_path / "study")
+    assert adopted.returncode == 0, adopted.stderr
+
+    data = yaml.safe_load((tmp_path / "study" / "project.yaml").read_text())
+    assert len(data["templates"]) == 1
+    entry = data["templates"][0]
+    assert entry["adopted"] is True
+    assert entry["params"]["name"] == "Later"
+    assert entry["meta"].endswith(".linkar/meta.json")
+
+
 def test_pack_commands_manage_project_configuration(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
     init = run_cli("project", "init", str(project_dir), cwd=tmp_path)

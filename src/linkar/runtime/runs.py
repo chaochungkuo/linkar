@@ -28,6 +28,7 @@ from linkar.runtime.shared import (
     format_env_value,
     normalize_binding_ref,
     preferred_pack_ref_for_assets,
+    save_yaml,
     unique_assets,
     utc_now,
     write_json,
@@ -596,6 +597,93 @@ def update_project(
         }
     project.data.setdefault("templates", []).append(entry)
     save_yaml(project.root / "project.yaml", project.data)
+
+
+def project_path_reference(path: Path, project_root: Path) -> str:
+    resolved = path.resolve()
+    try:
+        resolved.relative_to(project_root)
+    except ValueError:
+        return str(resolved)
+    return os.path.relpath(resolved, project_root)
+
+
+def build_adopted_project_entry(
+    project: Project,
+    metadata: dict[str, Any],
+    *,
+    outdir: Path,
+    meta_path: Path,
+) -> dict[str, Any]:
+    instance_id = metadata.get("instance_id")
+    template_id = metadata.get("template")
+    if not isinstance(instance_id, str) or not instance_id:
+        raise ProjectValidationError(f"Run metadata missing required field 'instance_id': {meta_path}")
+    if not isinstance(template_id, str) or not template_id:
+        raise ProjectValidationError(f"Run metadata missing required field 'template': {meta_path}")
+    params = metadata.get("params")
+    outputs = metadata.get("outputs")
+    if params is None or not isinstance(params, dict):
+        raise ProjectValidationError(f"Run metadata field 'params' must be a mapping: {meta_path}")
+    if outputs is None or not isinstance(outputs, dict):
+        raise ProjectValidationError(f"Run metadata field 'outputs' must be a mapping: {meta_path}")
+
+    entry = {
+        "id": template_id,
+        "template_version": metadata.get("template_version"),
+        "instance_id": instance_id,
+        "path": project_path_reference(outdir, project.root),
+        "history_path": project_path_reference(outdir, project.root),
+        "params": params,
+        "outputs": outputs,
+        "meta": project_path_reference(meta_path, project.root),
+        "adopted": True,
+    }
+    pack = metadata.get("pack")
+    if isinstance(pack, dict) and pack.get("ref"):
+        entry["pack"] = {
+            "id": derive_pack_id(pack["ref"]),
+            "ref": pack["ref"],
+            "revision": pack.get("revision"),
+        }
+    binding = metadata.get("binding")
+    if isinstance(binding, dict) and binding.get("ref"):
+        entry["binding"] = {"ref": binding["ref"]}
+    return entry
+
+
+def adopt_run_into_project(
+    run_ref: str | Path,
+    *,
+    project: str | Path | Project | None = None,
+) -> dict[str, Any]:
+    if isinstance(project, (str, Path)):
+        project_obj = load_project(project)
+    elif project is None:
+        project_obj = discover_project()
+    else:
+        project_obj = project
+    if project_obj is None:
+        raise ProjectValidationError(
+            "Adopting a run requires an active project. Run it inside a directory containing project.yaml or pass --project PATH."
+        )
+
+    refreshed = collect_run_outputs(run_ref)
+    meta_path = Path(refreshed["meta"]).resolve()
+    outdir = Path(refreshed["outdir"]).resolve()
+    metadata = json.loads(meta_path.read_text(encoding="utf-8"))
+    entry = build_adopted_project_entry(project_obj, metadata, outdir=outdir, meta_path=meta_path)
+
+    templates = project_obj.data.setdefault("templates", [])
+    for existing in templates:
+        if existing.get("instance_id") == entry["instance_id"]:
+            raise ProjectValidationError(f"Run instance already exists in project: {entry['instance_id']}")
+        if existing.get("meta") == entry["meta"]:
+            raise ProjectValidationError(f"Run metadata already exists in project: {entry['meta']}")
+
+    templates.append(entry)
+    save_yaml(project_obj.root / "project.yaml", project_obj.data)
+    return entry
 
 
 def sync_project_alias(output_dir: Path, alias_dir: Path) -> None:

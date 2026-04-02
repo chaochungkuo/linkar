@@ -37,6 +37,7 @@ from linkar.runtime.projects import (
     set_active_pack,
 )
 from linkar.runtime.runs import (
+    adopt_run_into_project,
     collect_run_outputs,
     collect_outputs,
     determine_outdir,
@@ -76,6 +77,7 @@ __all__ = [
     "TemplateSpec",
     "add_project_pack",
     "add_global_pack",
+    "adopt_run_into_project",
     "binding_asset_root",
     "clear_global_author",
     "collect_run_outputs",

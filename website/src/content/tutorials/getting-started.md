@@ -64,6 +64,13 @@ linkar templates
 Use `linkar project runs` to review what happened locally, and `linkar inspect run` to read the
 metadata and outputs for one recorded run.
 
+If you started with an ad hoc run before creating a project, you can adopt it when initializing the
+project:
+
+```bash
+linkar project init --name study --adopt /path/to/existing_run
+```
+
 This is the Linkar user path.
 
 Template authoring is separate. Template repos can use `test.sh`, `test.py`, Pixi, pytest, or
