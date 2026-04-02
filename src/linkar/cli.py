@@ -319,6 +319,53 @@ def _print_completion_script(shell: str) -> None:
     click.echo(cls(app, {}, "linkar", "_LINKAR_COMPLETE").source())
 
 
+def _default_completion_install_target(shell: str, rc_file: str | None = None) -> tuple[Path, str]:
+    home = Path.home()
+    if shell == "bash":
+        if rc_file is not None:
+            target = Path(rc_file).expanduser().resolve()
+            line = 'eval "$(linkar completion bash)"'
+            return target, line
+        completion_dir = home / ".local" / "share" / "bash-completion" / "completions"
+        return completion_dir / "linkar", "$(linkar completion bash)"
+    if shell == "zsh":
+        if rc_file is not None:
+            target = Path(rc_file).expanduser().resolve()
+            line = 'eval "$(linkar completion zsh)"'
+            return target, line
+        completion_dir = home / ".zsh" / "completions"
+        return completion_dir / "_linkar", "$(linkar completion zsh)"
+    raise click.ClickException(f"Unsupported shell for completion install: {shell}")
+
+
+def _install_completion(shell: str, *, rc_file: str | None = None, assume_yes: bool = False) -> None:
+    target, content = _default_completion_install_target(shell, rc_file=rc_file)
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    existing = target.read_text(encoding="utf-8") if target.exists() else ""
+    if content in existing:
+        click.echo(str(target))
+        return
+
+    if rc_file is not None:
+        new_text = existing
+        if new_text and not new_text.endswith("\n"):
+            new_text += "\n"
+        new_text += f'{content}\n'
+        prompt = f"Append Linkar {shell} completion setup to {target}?"
+    else:
+        new_text = content
+        if not new_text.endswith("\n"):
+            new_text += "\n"
+        prompt = f"Write Linkar {shell} completion script to {target}?"
+
+    if not assume_yes and not click.confirm(prompt, default=True):
+        raise click.exceptions.Exit(1)
+
+    target.write_text(new_text, encoding="utf-8")
+    click.echo(str(target))
+
+
 @completion_group.command("bash")
 def completion_bash_command() -> None:
     """Print the bash completion script."""
@@ -329,6 +376,37 @@ def completion_bash_command() -> None:
 def completion_zsh_command() -> None:
     """Print the zsh completion script."""
     _print_completion_script("zsh")
+
+
+@completion_group.group("install")
+def completion_install_group() -> None:
+    """Install shell completion for supported shells."""
+
+
+@completion_install_group.command("bash")
+@click.option("--yes", is_flag=True, help="Install without interactive confirmation.")
+@click.option(
+    "--rc-file",
+    type=click.Path(path_type=str, dir_okay=False),
+    help="Append eval-based setup to this shell rc file instead of writing a user completion file.",
+    show_default=False,
+)
+def completion_install_bash_command(yes: bool, rc_file: str | None) -> None:
+    """Install bash completion in a user-level location."""
+    _install_completion("bash", rc_file=rc_file, assume_yes=yes)
+
+
+@completion_install_group.command("zsh")
+@click.option("--yes", is_flag=True, help="Install without interactive confirmation.")
+@click.option(
+    "--rc-file",
+    type=click.Path(path_type=str, dir_okay=False),
+    help="Append eval-based setup to this shell rc file instead of writing a user completion file.",
+    show_default=False,
+)
+def completion_install_zsh_command(yes: bool, rc_file: str | None) -> None:
+    """Install zsh completion in a user-level location."""
+    _install_completion("zsh", rc_file=rc_file, assume_yes=yes)
 
 
 @project_group.command("init")

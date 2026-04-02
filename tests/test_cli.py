@@ -163,6 +163,57 @@ def test_completion_zsh_prints_completion_script(tmp_path: Path) -> None:
     assert "compdef" in completed.stdout
 
 
+def test_completion_install_bash_writes_user_completion_file(tmp_path: Path) -> None:
+    env = {"HOME": str(tmp_path / "home")}
+    completed = run_cli("completion", "install", "bash", "--yes", cwd=tmp_path, env_extra=env)
+    assert completed.returncode == 0, completed.stderr
+    target = Path(completed.stdout.strip())
+    assert target == (tmp_path / "home" / ".local" / "share" / "bash-completion" / "completions" / "linkar")
+    assert target.read_text() == "$(linkar completion bash)\n"
+
+
+def test_completion_install_zsh_writes_user_completion_file(tmp_path: Path) -> None:
+    env = {"HOME": str(tmp_path / "home")}
+    completed = run_cli("completion", "install", "zsh", "--yes", cwd=tmp_path, env_extra=env)
+    assert completed.returncode == 0, completed.stderr
+    target = Path(completed.stdout.strip())
+    assert target == (tmp_path / "home" / ".zsh" / "completions" / "_linkar")
+    assert target.read_text() == "$(linkar completion zsh)\n"
+
+
+def test_completion_install_bash_rc_file_appends_eval_line(tmp_path: Path) -> None:
+    rc_file = tmp_path / ".bashrc"
+    rc_file.write_text("# existing\n", encoding="utf-8")
+    completed = run_cli(
+        "completion",
+        "install",
+        "bash",
+        "--yes",
+        "--rc-file",
+        str(rc_file),
+        cwd=tmp_path,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == str(rc_file)
+    assert rc_file.read_text(encoding="utf-8") == '# existing\neval "$(linkar completion bash)"\n'
+
+
+def test_completion_install_bash_rc_file_is_idempotent(tmp_path: Path) -> None:
+    rc_file = tmp_path / ".bashrc"
+    rc_file.write_text('eval "$(linkar completion bash)"\n', encoding="utf-8")
+    completed = run_cli(
+        "completion",
+        "install",
+        "bash",
+        "--yes",
+        "--rc-file",
+        str(rc_file),
+        cwd=tmp_path,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert rc_file.read_text(encoding="utf-8") == 'eval "$(linkar completion bash)"\n'
+
+
 def test_project_init_with_name_creates_directory(tmp_path: Path) -> None:
     completed = run_cli("project", "init", "--name", "PROJECT1", cwd=tmp_path)
     assert completed.returncode == 0, completed.stderr
