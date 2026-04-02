@@ -7,6 +7,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -500,6 +501,67 @@ def build_run_command(
     return [str((output_dir / template.run_entry).resolve())]
 
 
+def execute_subprocess(
+    command: list[str],
+    *,
+    cwd: Path,
+    env: dict[str, str],
+    verbose: bool = False,
+) -> tuple[subprocess.CompletedProcess[str], Any, Any]:
+    started_at = utc_now()
+    if not verbose:
+        completed = subprocess.run(
+            command,
+            cwd=cwd,
+            env=env,
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+        finished_at = utc_now()
+        return completed, started_at, finished_at
+
+    process = subprocess.Popen(
+        command,
+        cwd=cwd,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,
+    )
+    stdout_chunks: list[str] = []
+    stderr_chunks: list[str] = []
+
+    def pump(stream: Any, sink: Any, chunks: list[str]) -> None:
+        if stream is None:
+            return
+        try:
+            for line in stream:
+                chunks.append(line)
+                sink.write(line)
+                sink.flush()
+        finally:
+            stream.close()
+
+    stdout_thread = threading.Thread(target=pump, args=(process.stdout, sys.stdout, stdout_chunks))
+    stderr_thread = threading.Thread(target=pump, args=(process.stderr, sys.stderr, stderr_chunks))
+    stdout_thread.start()
+    stderr_thread.start()
+    returncode = process.wait()
+    stdout_thread.join()
+    stderr_thread.join()
+
+    finished_at = utc_now()
+    completed = subprocess.CompletedProcess(
+        args=command,
+        returncode=returncode,
+        stdout="".join(stdout_chunks),
+        stderr="".join(stderr_chunks),
+    )
+    return completed, started_at, finished_at
+
+
 def update_project(
     project: Project,
     template: TemplateSpec,
@@ -753,6 +815,7 @@ def test_template(
     project: str | Path | Project | None = None,
     outdir: str | Path | None = None,
     pack_refs: str | Path | list[str | Path] | None = None,
+    verbose: bool = False,
 ) -> dict[str, Any]:
     if isinstance(project, (str, Path)):
         project_obj = load_project(project)
@@ -804,16 +867,12 @@ def test_template(
     if project_obj is not None:
         env["LINKAR_PROJECT_DIR"] = str(project_obj.root)
 
-    started_at = utc_now()
-    completed = subprocess.run(
+    completed, started_at, finished_at = execute_subprocess(
         command,
         cwd=template.root,
         env=env,
-        check=False,
-        text=True,
-        capture_output=True,
+        verbose=verbose,
     )
-    finished_at = utc_now()
 
     runtime_path = linkar_dir / "runtime.json"
     write_json(
@@ -850,6 +909,7 @@ def run_template(
     outdir: str | Path | None = None,
     pack_refs: str | Path | list[str | Path] | None = None,
     binding_ref: str | Path | None = None,
+    verbose: bool = False,
 ) -> dict[str, Any]:
     (
         project_obj,
@@ -872,16 +932,12 @@ def run_template(
     )
 
     command = build_run_command(template, output_dir, resolved_params, instance_id, project_obj)
-    started_at = utc_now()
-    completed = subprocess.run(
+    completed, started_at, finished_at = execute_subprocess(
         command,
         cwd=output_dir,
         env=env,
-        check=False,
-        text=True,
-        capture_output=True,
+        verbose=verbose,
     )
-    finished_at = utc_now()
 
     runtime_path = linkar_dir / "runtime.json"
     write_json(

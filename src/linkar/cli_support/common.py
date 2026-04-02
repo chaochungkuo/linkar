@@ -104,6 +104,7 @@ def execute_with_optional_prompts(
     binding_ref: str | None,
     prompt_missing: bool,
     action: str = "run",
+    verbose: bool = False,
 ):
     template, _ = load_template_for_cli(template_ref, project=project, pack_refs=pack_refs)
     pending_params = dict(params)
@@ -112,13 +113,18 @@ def execute_with_optional_prompts(
 
     while True:
         try:
+            execute_kwargs = {
+                "params": pending_params,
+                "project": project,
+                "outdir": outdir,
+                "pack_refs": pack_refs,
+                "binding_ref": binding_ref,
+            }
+            if action == "run":
+                execute_kwargs["verbose"] = verbose
             return execute(
                 template_ref,
-                params=pending_params,
-                project=project,
-                outdir=outdir,
-                pack_refs=pack_refs,
-                binding_ref=binding_ref,
+                **execute_kwargs,
             )
         except ParameterResolutionError as exc:
             prefix = "Missing required param: "
@@ -140,6 +146,7 @@ def run_with_optional_prompts(
     pack_refs: list[str] | None,
     binding_ref: str | None,
     prompt_missing: bool,
+    verbose: bool = False,
 ):
     return execute_with_optional_prompts(
         template_ref,
@@ -150,6 +157,7 @@ def run_with_optional_prompts(
         binding_ref=binding_ref,
         prompt_missing=prompt_missing,
         action="run",
+        verbose=verbose,
     )
 
 

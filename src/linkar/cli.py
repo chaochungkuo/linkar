@@ -379,22 +379,38 @@ def collect_command(run_ref: str, project: str | None, ui: CliUI) -> None:
     help="Write test artifacts to a specific directory instead of the default test workspace.",
     show_default=False,
 )
+@click.option(
+    "--verbose",
+    is_flag=True,
+    help="Stream the template test stdout and stderr while it runs.",
+    show_default=False,
+)
 @handle_linkar_errors
 def test_command(
     template: str,
     pack: tuple[str, ...],
     project: str | None,
     outdir: str | None,
+    verbose: bool,
     ui: CliUI,
 ) -> None:
     """Run a template-local test.sh or test.py if the template provides one."""
-    with ui.status("Testing template"):
+    if verbose:
         result = test_template(
             template,
             project=project,
             outdir=outdir,
             pack_refs=list(pack),
+            verbose=True,
         )
+    else:
+        with ui.status("Testing template"):
+            result = test_template(
+                template,
+                project=project,
+                outdir=outdir,
+                pack_refs=list(pack),
+            )
     ui.print_test_completed(result)
 
 

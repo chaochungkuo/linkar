@@ -1650,6 +1650,36 @@ def test_inspect_run_command_returns_metadata_json(tmp_path: Path) -> None:
     assert metadata["params"]["name"] == "Inspect"
 
 
+def test_run_verbose_streams_template_stdout_and_stderr(tmp_path: Path) -> None:
+    template_root = tmp_path / "templates"
+    make_template(
+        template_root,
+        "verbose_demo",
+        "  message:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'stdout:%s\\n' "${MESSAGE}"
+printf 'stderr:%s\\n' "${MESSAGE}" >&2
+printf '%s\\n' "${MESSAGE}" > "${LINKAR_RESULTS_DIR}/message.txt"
+""",
+    )
+
+    completed = run_cli(
+        "run",
+        str(template_root / "verbose_demo"),
+        "--param",
+        "message=hello",
+        "--verbose",
+        cwd=tmp_path,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert "stdout:hello" in completed.stdout
+    assert "stderr:hello" in completed.stderr
+
+    outdir = Path(completed.stdout.strip().splitlines()[-1])
+    assert (outdir / "results" / "message.txt").read_text().strip() == "hello"
+
+
 def test_print_metadata_renders_rich_run_inspection_view(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("NO_COLOR", raising=False)
     ui = CliUI()

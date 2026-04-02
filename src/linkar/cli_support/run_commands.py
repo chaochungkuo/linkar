@@ -42,7 +42,9 @@ def template_command_callback(
         binding: str | None,
         outdir: str | None,
         prompt_missing: bool,
+        *,
         param: tuple[tuple[str, str], ...],
+        verbose: bool = False,
         ui: CliUI,
         **template_values: Any,
     ) -> None:
@@ -50,7 +52,7 @@ def template_command_callback(
         params.update(params_from_pairs(param))
         run_template_ref = template_id if pack_ref is not None else template_path
         run_pack_refs = [pack_ref] if pack_ref is not None else None
-        with ui.status(status_message):
+        if verbose and action == "run":
             result = execute_with_optional_prompts(
                 run_template_ref,
                 params=params,
@@ -60,7 +62,20 @@ def template_command_callback(
                 binding_ref=binding,
                 prompt_missing=prompt_missing,
                 action=action,
+                verbose=True,
             )
+        else:
+            with ui.status(status_message):
+                result = execute_with_optional_prompts(
+                    run_template_ref,
+                    params=params,
+                    project=project,
+                    outdir=outdir,
+                    pack_refs=run_pack_refs,
+                    binding_ref=binding,
+                    prompt_missing=prompt_missing,
+                    action=action,
+                )
         if action == "render":
             ui.print_render_completed(result)
         else:
@@ -106,15 +121,26 @@ def template_command_callback(
                 help="Prompt interactively for unresolved required parameters when running in a TTY.",
                 show_default=True,
             ),
-            click.Option(
-                ["--param"],
-                multiple=True,
-                callback=lambda _ctx, _param, value: tuple(parse_key_value(item) for item in value),
-                metavar="KEY=VALUE",
-                help="Additional parameter override in KEY=VALUE form.",
-                show_default=False,
-            ),
         ]
+    )
+    if action == "run":
+        params.append(
+            click.Option(
+                ["--verbose"],
+                is_flag=True,
+                help="Stream the template command stdout and stderr while it runs.",
+                show_default=False,
+            )
+        )
+    params.append(
+        click.Option(
+            ["--param"],
+            multiple=True,
+            callback=lambda _ctx, _param, value: tuple(parse_key_value(item) for item in value),
+            metavar="KEY=VALUE",
+            help="Additional parameter override in KEY=VALUE form.",
+            show_default=False,
+        )
     )
 
     return CommandClass(
@@ -136,14 +162,16 @@ def generic_run_callback(bound_template: str | None = None, *, action: str = "ru
         project: str | None,
         outdir: str | None,
         prompt_missing: bool,
+        *,
         param: tuple[tuple[str, str], ...],
+        verbose: bool = False,
         ui: CliUI,
         template: str | None = None,
     ) -> None:
         template_ref = bound_template or template
         if template_ref is None:
             raise ProjectValidationError("Missing template reference.")
-        with ui.status(status_message):
+        if verbose and action == "run":
             result = execute_with_optional_prompts(
                 template_ref,
                 params=params_from_pairs(param),
@@ -153,7 +181,20 @@ def generic_run_callback(bound_template: str | None = None, *, action: str = "ru
                 binding_ref=binding,
                 prompt_missing=prompt_missing,
                 action=action,
+                verbose=True,
             )
+        else:
+            with ui.status(status_message):
+                result = execute_with_optional_prompts(
+                    template_ref,
+                    params=params_from_pairs(param),
+                    project=project,
+                    outdir=outdir,
+                    pack_refs=list(pack),
+                    binding_ref=binding,
+                    prompt_missing=prompt_missing,
+                    action=action,
+                )
         if action == "render":
             ui.print_render_completed(result)
         else:
@@ -214,15 +255,26 @@ def make_generic_run_command(
                 help="Prompt interactively for unresolved required parameters when running in a TTY.",
                 show_default=True,
             ),
-            click.Option(
-                ["--param"],
-                multiple=True,
-                callback=lambda _ctx, _param, value: tuple(parse_key_value(item) for item in value),
-                metavar="KEY=VALUE",
-                help="Template parameter in KEY=VALUE form.",
-                show_default=False,
-            ),
         ]
+    )
+    if action == "run":
+        params.append(
+            click.Option(
+                ["--verbose"],
+                is_flag=True,
+                help="Stream the template command stdout and stderr while it runs.",
+                show_default=False,
+            )
+        )
+    params.append(
+        click.Option(
+            ["--param"],
+            multiple=True,
+            callback=lambda _ctx, _param, value: tuple(parse_key_value(item) for item in value),
+            metavar="KEY=VALUE",
+            help="Template parameter in KEY=VALUE form.",
+            show_default=False,
+        )
     )
 
     return CommandClass(
