@@ -97,6 +97,7 @@ class CliUI:
         history_outdir = Path(result.get("history_outdir", result["outdir"]))
         if not self.rich_enabled:
             self.plain_print(str(outdir))
+            self.print_warnings(result.get("warnings") or [])
             return
         body = Text()
         body.append("Run", style="label")
@@ -123,6 +124,7 @@ class CliUI:
                 box=box.ROUNDED,
             )
         )
+        self.print_warnings(result.get("warnings") or [])
 
     def print_render_completed(self, result: dict[str, Any]) -> None:
         outdir = Path(result["outdir"])
@@ -130,6 +132,7 @@ class CliUI:
         launcher = history_outdir / "run.sh"
         if not self.rich_enabled:
             self.plain_print(str(outdir))
+            self.print_warnings(result.get("warnings") or [])
             return
         body = Text()
         body.append("Template", style="label")
@@ -148,6 +151,51 @@ class CliUI:
                 body,
                 title="[ok]Render Completed[/ok]",
                 border_style="ok",
+                box=box.ROUNDED,
+            )
+        )
+        self.print_warnings(result.get("warnings") or [])
+
+    def print_warnings(self, warnings: list[dict[str, Any]]) -> None:
+        if not warnings:
+            return
+        if not self.rich_enabled:
+            for warning in warnings:
+                scope = warning.get("template") or "template"
+                param = warning.get("param")
+                if param:
+                    scope = f"{scope}.{param}"
+                line = f"Warning: {scope}: {warning.get('message', '')}"
+                fallback = warning.get("fallback")
+                if fallback is not None:
+                    line += f" Fallback: {fallback}."
+                action = warning.get("action")
+                if action:
+                    line += f" Action: {action}"
+                self.plain_error(line)
+            return
+
+        table = Table(box=box.SIMPLE_HEAVY, header_style="warn")
+        table.add_column("Scope", style="warn", no_wrap=True)
+        table.add_column("Message", style="value")
+        table.add_column("Fallback", style="value")
+        table.add_column("Action", style="value")
+        for warning in warnings:
+            scope = warning.get("template") or "template"
+            param = warning.get("param")
+            if param:
+                scope = f"{scope}.{param}"
+            table.add_row(
+                scope,
+                str(warning.get("message", "")),
+                str(warning.get("fallback", "")),
+                str(warning.get("action", "")),
+            )
+        self.error_console.print(
+            Panel(
+                table,
+                title="[warn]Warnings[/warn]",
+                border_style="warn",
                 box=box.ROUNDED,
             )
         )

@@ -66,6 +66,7 @@ def resolve_bound_value(
     binding_data: dict[str, Any],
     project: Project | None,
     resolved_params: dict[str, Any],
+    warnings: list[dict[str, Any]],
 ) -> tuple[bool, Any, dict[str, Any] | None]:
     templates = binding_data.get("templates") or {}
     template_binding = templates.get(template.id) or {}
@@ -86,7 +87,13 @@ def resolve_bound_value(
         raise AssetResolutionError(
             f"linkar_pack.yaml param rule must be a mapping for '{template.id}.{key}'"
         )
-    ctx = BindingContext(template=template, project=project, resolved_params=dict(resolved_params))
+    ctx = BindingContext(
+        template=template,
+        project=project,
+        resolved_params=dict(resolved_params),
+        current_param=key,
+        warnings=warnings,
+    )
 
     if "template" in rule or "output" in rule:
         template_name = rule.get("template")
@@ -196,13 +203,13 @@ def resolve_bound_value(
     )
 
 
-def resolve_params_detailed(
+def resolve_params_detailed_with_warnings(
     template: TemplateSpec,
     cli_params: dict[str, Any] | None = None,
     project: Project | None = None,
     binding_ref: str | Path | None = None,
-) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
-    resolved, provenance, missing_required = preview_params_detailed(
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]], list[dict[str, Any]]]:
+    resolved, provenance, missing_required, warnings = preview_params_detailed(
         template,
         cli_params=cli_params,
         project=project,
@@ -213,6 +220,21 @@ def resolve_params_detailed(
         raise ParameterResolutionError(
             f"Missing required param: {key}. Pass --{key.replace('_', '-')} VALUE, --param {key}=VALUE, add a binding, or define a default in linkar_template.yaml."
         )
+    return resolved, provenance, warnings
+
+
+def resolve_params_detailed(
+    template: TemplateSpec,
+    cli_params: dict[str, Any] | None = None,
+    project: Project | None = None,
+    binding_ref: str | Path | None = None,
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    resolved, provenance, _warnings = resolve_params_detailed_with_warnings(
+        template,
+        cli_params=cli_params,
+        project=project,
+        binding_ref=binding_ref,
+    )
     return resolved, provenance
 
 
@@ -221,7 +243,7 @@ def preview_params_detailed(
     cli_params: dict[str, Any] | None = None,
     project: Project | None = None,
     binding_ref: str | Path | None = None,
-) -> tuple[dict[str, Any], dict[str, dict[str, Any]], list[str]]:
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]], list[str], list[dict[str, Any]]]:
     from linkar.runtime.projects import latest_project_output
 
     cli_params = cli_params or {}
@@ -229,6 +251,7 @@ def preview_params_detailed(
     resolved: dict[str, Any] = {}
     provenance: dict[str, dict[str, Any]] = {}
     missing_required: list[str] = []
+    warnings: list[dict[str, Any]] = []
 
     for key, raw_spec in template.params.items():
         spec = raw_spec or {}
@@ -244,6 +267,7 @@ def preview_params_detailed(
                 binding_data=binding_data,
                 project=project,
                 resolved_params=resolved,
+                warnings=warnings,
             )
             project_value = latest_project_output(project, key)
             if has_bound_value:
@@ -264,7 +288,7 @@ def preview_params_detailed(
         resolved[key] = parse_param_value(raw_value, param_type)
         provenance[key] = raw_provenance
 
-    return resolved, provenance, missing_required
+    return resolved, provenance, missing_required, warnings
 
 
 def resolve_params(

@@ -1323,6 +1323,62 @@ def test_binding_function_failures_surface_as_linkar_errors(tmp_path: Path) -> N
     assert "Traceback" not in completed.stderr
 
 
+def test_render_shows_structured_binding_warnings(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    template = make_template(
+        pack_root / "templates",
+        "warns_on_render",
+        "  genome:\n    type: str\n    required: true",
+        "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\\n' \"${GENOME}\" > \"${LINKAR_RESULTS_DIR}/genome.txt\"\n",
+    )
+    template_yaml = template / "linkar_template.yaml"
+    template_yaml.write_text(
+        template_yaml.read_text().replace("  entry: run.sh\n  mode: direct", "  command: >-\n    printf '%s\\n' \"${GENOME}\" > \"${LINKAR_RESULTS_DIR}/genome.txt\"\n  mode: render")
+    )
+    make_binding(
+        pack_root,
+        "warns_on_render",
+        "      genome:\n        function: derive_genome",
+        function_name="derive_genome",
+        function_body=(
+            "def resolve(ctx):\n"
+            "    ctx.warn(\n"
+            "        \"Could not derive genome from metadata.\",\n"
+            "        action=\"Edit run.sh before execution.\",\n"
+            "        fallback=\"__EDIT_ME_GENOME__\",\n"
+            "    )\n"
+            "    return '__EDIT_ME_GENOME__'\n"
+        ),
+    )
+
+    completed = run_cli(
+        "render",
+        "warns_on_render",
+        "--pack",
+        str(pack_root),
+        "--binding",
+        "default",
+        "--outdir",
+        str(tmp_path / "rendered"),
+        cwd=tmp_path,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert "Could not derive genome from metadata." in completed.stderr
+    assert "__EDIT_ME_GENOME__" in completed.stderr
+    assert "Edit run.sh before execution." in completed.stderr
+    meta = json.loads((tmp_path / "rendered" / ".linkar" / "meta.json").read_text())
+    assert meta["warnings"] == [
+        {
+            "template": "warns_on_render",
+            "param": "genome",
+            "message": "Could not derive genome from metadata.",
+            "action": "Edit run.sh before execution.",
+            "fallback": "__EDIT_ME_GENOME__",
+        }
+    ]
+
+
 def test_failed_run_writes_runtime_diagnostics(tmp_path: Path) -> None:
     template = make_template(
         tmp_path / "templates",

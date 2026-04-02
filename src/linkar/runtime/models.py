@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -43,8 +43,28 @@ class BindingContext:
     template: TemplateSpec
     project: Project | None
     resolved_params: dict[str, Any]
+    current_param: str | None = None
+    warnings: list[dict[str, Any]] = field(default_factory=list)
 
     def latest_output(self, key: str, template_id: str | None = None) -> Any | None:
         from linkar.runtime.projects import latest_project_output
 
         return latest_project_output(self.project, key, template_id=template_id)
+
+    def warn(
+        self,
+        message: str,
+        *,
+        action: str | None = None,
+        fallback: Any | None = None,
+    ) -> None:
+        warning: dict[str, Any] = {
+            "template": self.template.id,
+            "param": self.current_param,
+            "message": message,
+        }
+        if action:
+            warning["action"] = action
+        if fallback is not None:
+            warning["fallback"] = fallback
+        self.warnings.append(warning)

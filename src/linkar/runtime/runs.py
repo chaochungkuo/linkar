@@ -14,7 +14,7 @@ from typing import Any
 from linkar import __version__
 from linkar.assets import resolve_asset_refs
 from linkar.errors import ExecutionError, LinkarError, ProjectValidationError, TemplateValidationError
-from linkar.runtime.bindings import resolve_params_detailed
+from linkar.runtime.bindings import resolve_params_detailed_with_warnings
 from linkar.runtime.models import Project, TemplateSpec
 from linkar.runtime.projects import (
     discover_project,
@@ -390,6 +390,7 @@ def prepare_template_execution(
     TemplateSpec,
     dict[str, Any],
     dict[str, Any],
+    list[dict[str, Any]],
     str | Path | None,
     str,
     Path,
@@ -420,7 +421,7 @@ def prepare_template_execution(
             if entry.asset.root == template.pack_root:
                 selected_binding_ref = normalize_binding_ref(entry.binding)
                 break
-    resolved_params, param_provenance = resolve_params_detailed(
+    resolved_params, param_provenance, warnings = resolve_params_detailed_with_warnings(
         template,
         cli_params=params,
         project=project_obj,
@@ -454,6 +455,7 @@ def prepare_template_execution(
         template,
         resolved_params,
         param_provenance,
+        warnings,
         selected_binding_ref,
         instance_id,
         output_dir,
@@ -1004,6 +1006,7 @@ def run_template(
         template,
         resolved_params,
         param_provenance,
+        warnings,
         selected_binding_ref,
         instance_id,
         output_dir,
@@ -1040,6 +1043,7 @@ def run_template(
             "duration_seconds": (finished_at - started_at).total_seconds(),
             "stdout": completed.stdout,
             "stderr": completed.stderr,
+            "warnings": warnings,
         },
     )
 
@@ -1072,6 +1076,7 @@ def run_template(
                 if selected_binding_ref is not None
                 else None
             ),
+            "warnings": warnings,
             "command": command,
             "timestamp": finished_at.isoformat(),
             "run_mode": "run",
@@ -1101,6 +1106,7 @@ def run_template(
         "runtime": str(runtime_path),
         "run_mode": "run",
         "template_run_mode": template.run_mode,
+        "warnings": warnings,
     }
 
 
@@ -1117,6 +1123,7 @@ def render_template(
         template,
         resolved_params,
         param_provenance,
+        warnings,
         selected_binding_ref,
         instance_id,
         output_dir,
@@ -1168,6 +1175,7 @@ def render_template(
             "duration_seconds": (finished_at - started_at).total_seconds(),
             "stdout": completed.stdout,
             "stderr": completed.stderr,
+            "warnings": warnings,
         },
     )
 
@@ -1193,6 +1201,7 @@ def render_template(
                 if selected_binding_ref is not None
                 else None
             ),
+            "warnings": warnings,
             "command": command,
             "timestamp": finished_at.isoformat(),
             "run_mode": "render",
@@ -1209,4 +1218,5 @@ def render_template(
         "runtime": str(runtime_path),
         "run_mode": "render",
         "template_run_mode": template.run_mode,
+        "warnings": warnings,
     }

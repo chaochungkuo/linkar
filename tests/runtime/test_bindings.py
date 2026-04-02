@@ -7,7 +7,11 @@ import pytest
 import yaml
 
 from linkar.errors import AssetResolutionError, ParameterResolutionError
-from linkar.runtime.bindings import load_binding_config, resolve_params_detailed
+from linkar.runtime.bindings import (
+    load_binding_config,
+    resolve_params_detailed,
+    resolve_params_detailed_with_warnings,
+)
 from linkar.runtime.projects import init_project, load_project
 from linkar.runtime.shared import format_env_value, save_yaml
 from linkar.runtime.templates import load_template
@@ -204,3 +208,46 @@ def test_binding_output_rule_can_resolve_list_path_values(tmp_path: Path) -> Non
     assert format_env_value(resolved["report_files"]) == (
         f"{resolved['report_files'][0]}:{resolved['report_files'][1]}"
     )
+
+
+def test_binding_function_can_emit_structured_warnings(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    make_template(
+        pack_root,
+        "consume",
+        "  genome:\n    type: str\n    required: true",
+        "#!/usr/bin/env bash\nset -euo pipefail\n",
+    )
+    functions_dir = pack_root / "functions"
+    functions_dir.mkdir(parents=True, exist_ok=True)
+    (functions_dir / "derive_genome.py").write_text(
+        "def resolve(ctx):\n"
+        "    ctx.warn(\n"
+        "        \"Could not derive genome from metadata.\",\n"
+        "        action=\"Edit run.sh before execution.\",\n"
+        "        fallback=\"__EDIT_ME_GENOME__\",\n"
+        "    )\n"
+        "    return '__EDIT_ME_GENOME__'\n"
+    )
+    make_binding(
+        pack_root,
+        {"templates": {"consume": {"params": {"genome": {"function": "derive_genome"}}}}},
+    )
+
+    template = load_template(pack_root / "templates" / "consume")
+    resolved, provenance, warnings = resolve_params_detailed_with_warnings(
+        template,
+        binding_ref="default",
+    )
+
+    assert resolved["genome"] == "__EDIT_ME_GENOME__"
+    assert provenance["genome"]["binding_source"] == "function"
+    assert warnings == [
+        {
+            "template": "consume",
+            "param": "genome",
+            "message": "Could not derive genome from metadata.",
+            "action": "Edit run.sh before execution.",
+            "fallback": "__EDIT_ME_GENOME__",
+        }
+    ]
