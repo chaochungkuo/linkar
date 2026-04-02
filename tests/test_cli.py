@@ -1291,6 +1291,38 @@ def test_missing_required_param_suggests_cli_binding_or_default(tmp_path: Path) 
     assert "define a default in linkar_template.yaml" in completed.stderr
 
 
+def test_binding_function_failures_surface_as_linkar_errors(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    make_template(
+        pack_root / "templates",
+        "needs_binding",
+        "  samplesheet:\n    type: path\n    required: true",
+        "#!/usr/bin/env bash\nset -euo pipefail\n",
+    )
+    make_binding(
+        pack_root,
+        "needs_binding",
+        "      samplesheet:\n        function: fail_samplesheet",
+        function_name="fail_samplesheet",
+        function_body="""def resolve(ctx):\n    raise RuntimeError('samplesheet could not be generated because no demultiplex demux_fastq_files output was found in the current project')\n""",
+    )
+
+    completed = run_cli(
+        "run",
+        "needs_binding",
+        "--pack",
+        str(pack_root),
+        "--binding",
+        "default",
+        cwd=tmp_path,
+    )
+
+    assert completed.returncode == 1
+    assert "Binding function failed for 'needs_binding.samplesheet'" in completed.stderr
+    assert "no demultiplex demux_fastq_files output was found in the current project" in completed.stderr
+    assert "Traceback" not in completed.stderr
+
+
 def test_failed_run_writes_runtime_diagnostics(tmp_path: Path) -> None:
     template = make_template(
         tmp_path / "templates",

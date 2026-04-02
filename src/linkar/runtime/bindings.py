@@ -117,7 +117,14 @@ def resolve_bound_value(
             search_roots.append(binding_root)
         if template.pack_root is not None and template.pack_root not in search_roots:
             search_roots.append(template.pack_root)
-        value = resolve_binding_function(function_name, search_roots)(ctx)
+        try:
+            value = resolve_binding_function(function_name, search_roots)(ctx)
+        except (AssetResolutionError, ParameterResolutionError):
+            raise
+        except Exception as exc:
+            raise ParameterResolutionError(
+                f"Binding function failed for '{template.id}.{key}': {exc}"
+            ) from exc
         if value is None:
             raise ParameterResolutionError(
                 f"Binding function returned no value for '{template.id}.{key}'"
@@ -157,7 +164,14 @@ def resolve_bound_value(
             search_roots.append(binding_root)
         if template.pack_root is not None and template.pack_root not in search_roots:
             search_roots.append(template.pack_root)
-        value = resolve_binding_function(function_name, search_roots)(ctx)
+        try:
+            value = resolve_binding_function(function_name, search_roots)(ctx)
+        except (AssetResolutionError, ParameterResolutionError):
+            raise
+        except Exception as exc:
+            raise ParameterResolutionError(
+                f"Binding function failed for '{template.id}.{key}': {exc}"
+            ) from exc
         if value is None:
             raise ParameterResolutionError(
                 f"Binding function returned no value for '{template.id}.{key}'"
