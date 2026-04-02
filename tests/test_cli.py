@@ -12,6 +12,7 @@ import pytest
 import yaml
 from rich.console import Console
 
+from linkar import __version__
 from linkar.core import load_project, load_template, resolve_project_assets, run_template
 from linkar.errors import (
     AssetResolutionError,
@@ -157,6 +158,73 @@ def test_project_init_with_name_creates_directory(tmp_path: Path) -> None:
     assert data["active_pack"] is None
     assert data["packs"] == []
     assert data["templates"] == []
+
+
+def test_project_init_uses_global_author_defaults(tmp_path: Path) -> None:
+    env = {"LINKAR_HOME": str(tmp_path / "home")}
+    configured = run_cli(
+        "config",
+        "author",
+        "set",
+        "--name",
+        "Casey Kuo",
+        "--email",
+        "casey@example.org",
+        "--organization",
+        "IZKF",
+        cwd=tmp_path,
+        env_extra=env,
+    )
+    assert configured.returncode == 0, configured.stderr
+
+    completed = run_cli("project", "init", "--name", "study", cwd=tmp_path, env_extra=env)
+    assert completed.returncode == 0, completed.stderr
+
+    data = yaml.safe_load((tmp_path / "study" / "project.yaml").read_text())
+    assert data["author"] == {
+        "name": "Casey Kuo",
+        "email": "casey@example.org",
+        "organization": "IZKF",
+    }
+
+
+def test_project_init_author_options_override_global_defaults(tmp_path: Path) -> None:
+    env = {"LINKAR_HOME": str(tmp_path / "home")}
+    configured = run_cli(
+        "config",
+        "author",
+        "set",
+        "--name",
+        "Casey Kuo",
+        "--email",
+        "casey@example.org",
+        "--organization",
+        "IZKF",
+        cwd=tmp_path,
+        env_extra=env,
+    )
+    assert configured.returncode == 0, configured.stderr
+
+    completed = run_cli(
+        "project",
+        "init",
+        "--name",
+        "study",
+        "--author-name",
+        "Alex Example",
+        "--author-email",
+        "alex@example.org",
+        cwd=tmp_path,
+        env_extra=env,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+    data = yaml.safe_load((tmp_path / "study" / "project.yaml").read_text())
+    assert data["author"] == {
+        "name": "Alex Example",
+        "email": "alex@example.org",
+        "organization": "IZKF",
+    }
 
 
 def test_pack_commands_manage_project_configuration(tmp_path: Path) -> None:
@@ -1706,7 +1774,7 @@ def test_print_metadata_renders_rich_run_inspection_view(monkeypatch: pytest.Mon
             "results_dir": "/tmp/demux/results",
             "report_files": ["/tmp/demux/results/a.txt", "/tmp/demux/results/b.txt"],
         },
-        "software": [{"name": "linkar", "version": "0.2.0"}],
+        "software": [{"name": "linkar", "version": __version__}],
         "pack": {"ref": "/packs/izkf", "revision": "abc123"},
         "binding": {"ref": "default"},
         "command": ["/tmp/demux/run.sh"],

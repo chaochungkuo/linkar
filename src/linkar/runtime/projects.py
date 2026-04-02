@@ -34,10 +34,23 @@ def load_project(path: str | Path) -> Project:
     active_pack = data.get("active_pack")
     if active_pack is not None and not isinstance(active_pack, str):
         raise ProjectValidationError("project.yaml field 'active_pack' must be a string")
+    author = data.get("author")
+    if author is not None:
+        if not isinstance(author, dict):
+            raise ProjectValidationError("project.yaml field 'author' must be a mapping")
+        for key in ("name", "email", "organization"):
+            value = author.get(key)
+            if value is not None and not isinstance(value, str):
+                raise ProjectValidationError(f"project.yaml field 'author.{key}' must be a string")
     return Project(root=file_path.parent, data=data)
 
 
-def init_project(path: str | Path, project_id: str | None = None) -> Path:
+def init_project(
+    path: str | Path,
+    project_id: str | None = None,
+    *,
+    author: dict[str, str] | None = None,
+) -> Path:
     root = Path(path).resolve()
     root.mkdir(parents=True, exist_ok=True)
     file_path = root / "project.yaml"
@@ -49,6 +62,8 @@ def init_project(path: str | Path, project_id: str | None = None) -> Path:
         "packs": [],
         "templates": [],
     }
+    if author:
+        data["author"] = author
     save_yaml(file_path, data)
     return file_path
 

@@ -27,6 +27,7 @@ to template authoring or Linkar repo development, not to normal Linkar usage.
 Start with the shortest useful flow:
 
 ```bash
+linkar config author set --name "Your Name" --email "you@example.org" --organization "IZKF"
 linkar project init --name study
 cd study
 linkar pack add ~/github/izkf_genomics_pack --id izkf
@@ -38,6 +39,7 @@ This gives you:
 
 - a normal project directory
 - `project.yaml`
+- reused author metadata from your global Linkar config
 - a stable project-root directory such as `./fastqc`
 - immutable run history under `.linkar/runs/`
 - `.linkar/runs/<instance_id>/.linkar/meta.json` for provenance

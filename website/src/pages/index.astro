@@ -73,7 +73,8 @@ const explanationHref = (slug: string) => `${import.meta.env.BASE_URL}explanatio
               Discover the current project, expose template params as flags, and keep the command
               path short enough to use every day.
             </p>
-            <pre><code>linkar project init --name study
+            <pre><code>linkar config author set --name "Your Name"
+linkar project init --name study
 cd study
 linkar run fastqc --input sample.fastq.gz
 linkar project runs
@@ -126,7 +127,8 @@ uv tool install git+https://github.com/jovesus/linkar.git</code></pre>
 
           <div class="content-card">
             <h3>1. Start a project</h3>
-            <pre><code>linkar project init --name demo
+            <pre><code>linkar config author set --name "Your Name"
+linkar project init --name demo
 cd demo</code></pre>
           </div>
 

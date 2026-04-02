@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from linkar.runtime.config import (
     add_global_pack,
+    clear_global_author,
     get_active_global_pack_entry,
+    get_global_author,
     global_config_path,
     global_pack_entries,
     list_global_packs,
     load_global_config,
     remove_global_pack,
+    set_global_author,
     set_active_global_pack,
 )
 from linkar.runtime.bindings import (
@@ -74,6 +77,7 @@ __all__ = [
     "add_project_pack",
     "add_global_pack",
     "binding_asset_root",
+    "clear_global_author",
     "collect_run_outputs",
     "collect_outputs",
     "describe_template",
@@ -87,6 +91,7 @@ __all__ = [
     "generate_methods",
     "get_active_global_pack_entry",
     "get_active_pack_entry",
+    "get_global_author",
     "global_config_path",
     "global_pack_entries",
     "init_project",
@@ -121,6 +126,7 @@ __all__ = [
     "run_template",
     "save_yaml",
     "set_active_pack",
+    "set_global_author",
     "set_active_global_pack",
     "test_template",
     "unique_assets",

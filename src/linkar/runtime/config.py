@@ -40,11 +40,59 @@ def load_global_config() -> GlobalConfig:
     active_pack = data.get("active_pack")
     if active_pack is not None and not isinstance(active_pack, str):
         raise ProjectValidationError("config.yaml field 'active_pack' must be a string")
+    author = data.get("author")
+    if author is not None:
+        if not isinstance(author, dict):
+            raise ProjectValidationError("config.yaml field 'author' must be a mapping")
+        for key in ("name", "email", "organization"):
+            value = author.get(key)
+            if value is not None and not isinstance(value, str):
+                raise ProjectValidationError(f"config.yaml field 'author.{key}' must be a string")
     return GlobalConfig(path=path, data=data)
 
 
 def save_global_config(config: GlobalConfig) -> None:
     save_yaml(config.path, config.data)
+
+
+def get_global_author(config: GlobalConfig | None = None) -> dict[str, str] | None:
+    config_obj = config or load_global_config()
+    author = config_obj.data.get("author")
+    if not isinstance(author, dict):
+        return None
+    result = {
+        key: value
+        for key in ("name", "email", "organization")
+        if isinstance((value := author.get(key)), str) and value
+    }
+    return result or None
+
+
+def set_global_author(
+    *,
+    name: str | None = None,
+    email: str | None = None,
+    organization: str | None = None,
+) -> dict[str, str]:
+    if not any(value is not None for value in (name, email, organization)):
+        raise ProjectValidationError("Provide at least one author field to set")
+    config = load_global_config()
+    author = dict(get_global_author(config) or {})
+    if name is not None:
+        author["name"] = name
+    if email is not None:
+        author["email"] = email
+    if organization is not None:
+        author["organization"] = organization
+    config.data["author"] = author
+    save_global_config(config)
+    return author
+
+
+def clear_global_author() -> None:
+    config = load_global_config()
+    config.data.pop("author", None)
+    save_global_config(config)
 
 
 def global_pack_entries(config: GlobalConfig | None = None) -> list[PackEntry]:

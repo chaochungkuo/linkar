@@ -24,11 +24,13 @@ from linkar.cli_support.run_commands import (
 from linkar.core import (
     add_global_pack,
     add_project_pack,
+    clear_global_author,
     collect_run_outputs,
     discover_project,
     generate_methods,
     get_active_global_pack_entry,
     get_active_pack_entry,
+    get_global_author,
     global_config_path,
     init_project,
     inspect_run,
@@ -39,6 +41,7 @@ from linkar.core import (
     load_project,
     remove_global_pack,
     remove_project_pack,
+    set_global_author,
     set_active_global_pack,
     set_active_pack,
     test_template,
@@ -151,6 +154,49 @@ def config_pack_show_command(ui: CliUI) -> None:
             f"No active global pack configured. Add one with 'linkar config pack add REF'. Config file: {global_config_path()}"
         )
     ui.print_text(f"{active_entry.id}\t{active_entry.asset.ref}")
+
+
+@config_group.group("author")
+def config_author_group() -> None:
+    """Manage default author metadata reused when creating new projects."""
+
+
+@config_author_group.command("set")
+@click.option("--name", "author_name", metavar="NAME", help="Default author name.")
+@click.option("--email", "author_email", metavar="EMAIL", help="Default author email.")
+@click.option("--organization", metavar="ORG", help="Default author organization.")
+@handle_linkar_errors
+def config_author_set_command(
+    author_name: str | None,
+    author_email: str | None,
+    organization: str | None,
+    ui: CliUI,
+) -> None:
+    """Set default author metadata in the global Linkar config."""
+    ui.print_metadata(
+        {
+            "author": set_global_author(
+                name=author_name,
+                email=author_email,
+                organization=organization,
+            )
+        }
+    )
+
+
+@config_author_group.command("show")
+@handle_linkar_errors
+def config_author_show_command(ui: CliUI) -> None:
+    """Show default author metadata from the global Linkar config."""
+    ui.print_metadata({"author": get_global_author()})
+
+
+@config_author_group.command("clear")
+@handle_linkar_errors
+def config_author_clear_command(ui: CliUI) -> None:
+    """Remove default author metadata from the global Linkar config."""
+    clear_global_author()
+    ui.print_text("author defaults cleared")
 
 
 @pack_group.command("add")
@@ -271,11 +317,37 @@ def mcp_serve_command() -> None:
     metavar="PROJECT_ID",
     help="Project identifier to write into project.yaml. Defaults to the directory name.",
 )
+@click.option("--author-name", metavar="NAME", help="Project author name. Defaults to the configured global author.")
+@click.option("--author-email", metavar="EMAIL", help="Project author email. Defaults to the configured global author.")
+@click.option(
+    "--author-organization",
+    metavar="ORG",
+    help="Project author organization. Defaults to the configured global author.",
+)
 @handle_linkar_errors
-def project_init(path: str | None, name: str | None, project_id: str | None, ui: CliUI) -> None:
+def project_init(
+    path: str | None,
+    name: str | None,
+    project_id: str | None,
+    author_name: str | None,
+    author_email: str | None,
+    author_organization: str | None,
+    ui: CliUI,
+) -> None:
     """Create project.yaml in the target directory. Use --name to create a new directory automatically."""
     target_path, implied_id = resolve_project_init_target(path, name)
-    project_path = init_project(target_path, project_id=project_id or implied_id)
+    author = dict(get_global_author() or {})
+    if author_name is not None:
+        author["name"] = author_name
+    if author_email is not None:
+        author["email"] = author_email
+    if author_organization is not None:
+        author["organization"] = author_organization
+    project_path = init_project(
+        target_path,
+        project_id=project_id or implied_id,
+        author=author or None,
+    )
     resolved_id = project_id or implied_id or Path(target_path).resolve().name
     ui.print_project_created(project_path, resolved_id)
 

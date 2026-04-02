@@ -40,6 +40,7 @@ uv tool install git+https://github.com/jovesus/linkar.git
 Then start with the shortest useful flow:
 
 ```bash
+linkar config author set --name "Your Name" --email "you@example.org" --organization "IZKF"
 linkar project init --name demo
 cd demo
 linkar pack add ./examples/packs/basic --id basic
@@ -73,6 +74,7 @@ Example global setup:
 
 ```bash
 linkar config pack add ~/github/izkf_genomics_pack --id izkf_genomics_pack
+linkar config author set --name "Your Name" --email "you@example.org"
 linkar config pack list
 linkar run fastqc --input sample.fastq.gz
 ```

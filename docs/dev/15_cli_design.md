@@ -57,10 +57,12 @@ Purpose:
 
 - create a minimal `project.yaml`
 - mark a directory as a Linkar project
+- copy default author metadata from user config when available
 
 Example:
 
 ```bash
+linkar config author set --name "Your Name" --email "you@example.org"
 linkar project init .
 ```
 

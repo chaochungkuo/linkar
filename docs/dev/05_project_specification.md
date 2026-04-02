@@ -55,6 +55,10 @@ Current minimal example:
 
 ```yaml
 id: project_001
+author:
+  name: Your Name
+  email: you@example.org
+  organization: IZKF
 packs: []
 templates:
   - id: fastqc
@@ -86,6 +90,18 @@ Required.
 This is the ordered list of template instances recorded in the project.
 
 Ordering matters because later resolution logic may use the most recent matching output when selecting defaults.
+
+### `author`
+Optional.
+
+This captures project-level author metadata copied from global Linkar config or provided explicitly at
+project creation time.
+
+Recommended fields:
+
+- `name`
+- `email`
+- `organization`
 
 ### `packs`
 Optional in the earliest versions, but likely to become a standard project field.
