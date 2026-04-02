@@ -319,6 +319,8 @@ def localized_render_path(
 ) -> Path:
     candidate_name = source_path.name
     candidate = output_dir / candidate_name
+    if index is None:
+        return candidate
     if candidate.exists():
         prefix = f"{param_name}_{index}" if index is not None else param_name
         candidate = output_dir / f"{prefix}_{candidate_name}"

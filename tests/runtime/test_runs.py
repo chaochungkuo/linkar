@@ -535,6 +535,58 @@ def test_render_template_localizes_bound_file_params_into_render_dir(tmp_path: P
     assert str(cached_file) not in text
 
 
+def test_render_template_overwrites_staged_file_when_bound_file_uses_same_name(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    template_dir = pack_root / "templates" / "samplesheet_collision"
+    template_dir.mkdir(parents=True)
+    cached_dir = tmp_path / "cache"
+    cached_dir.mkdir()
+    cached_file = cached_dir / "samplesheet.csv"
+    cached_file.write_text("from_api\n")
+    (template_dir / "samplesheet.csv").write_text("from_template\n")
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: samplesheet_collision",
+                "params:",
+                "  samplesheet:",
+                "    type: path",
+                "    required: true",
+                "run:",
+                "  command: >-",
+                '    printf "%s\\n" "${samplesheet}" > "./results/path.txt"',
+                "",
+            ]
+        )
+    )
+    functions_dir = pack_root / "functions"
+    functions_dir.mkdir()
+    (functions_dir / "provide_samplesheet.py").write_text(
+        "def resolve(ctx):\n"
+        f"    return {cached_file.as_posix()!r}\n"
+    )
+    save_yaml(
+        pack_root / "linkar_pack.yaml",
+        {
+            "templates": {
+                "samplesheet_collision": {
+                    "params": {
+                        "samplesheet": {
+                            "function": "provide_samplesheet"
+                        }
+                    }
+                }
+            }
+        },
+    )
+
+    result = render_template(template_dir, binding_ref="default", outdir=tmp_path / "rendered")
+    outdir = Path(result["history_outdir"])
+
+    assert (outdir / "samplesheet.csv").read_text() == "from_api\n"
+    assert not (outdir / "samplesheet_samplesheet.csv").exists()
+
+
 def test_load_template_parses_tool_requirements(tmp_path: Path) -> None:
     template_dir = make_template(tmp_path / "templates", "tool_demo", "#!/usr/bin/env bash\n")
     (template_dir / "linkar_template.yaml").write_text(
