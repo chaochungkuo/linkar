@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import sys
 from contextlib import nullcontext
 from pathlib import Path
@@ -266,9 +267,137 @@ class CliUI:
             table.add_row("yes" if pack.get("active") else "", pack["id"], pack["ref"], pack.get("binding") or "")
         self.console.print(table)
 
+    def _looks_like_run_metadata(self, metadata: dict[str, Any]) -> bool:
+        required = {"template", "instance_id", "params", "outputs"}
+        return required.issubset(metadata)
+
+    def _metadata_value_text(self, value: Any) -> str:
+        if isinstance(value, list):
+            return "\n".join(self._metadata_value_text(item) for item in value)
+        if isinstance(value, dict):
+            return json.dumps(value, sort_keys=True)
+        if value is None:
+            return "-"
+        return str(value)
+
+    def _provenance_text(self, provenance: dict[str, Any] | None) -> str:
+        if not provenance:
+            return "-"
+        source = provenance.get("source")
+        if source == "explicit":
+            return "cli"
+        if source == "default":
+            return "default"
+        if source == "project":
+            key = provenance.get("key")
+            return f"project:{key}" if key else "project"
+        if source == "binding":
+            binding_source = provenance.get("binding_source")
+            if binding_source == "function":
+                name = provenance.get("name")
+                return f"binding:function:{name}" if name else "binding:function"
+            if binding_source == "output":
+                template = provenance.get("template")
+                output = provenance.get("output")
+                if template and output:
+                    return f"binding:output:{template}.{output}"
+                if output:
+                    return f"binding:output:{output}"
+            if binding_source == "value":
+                return "binding:value"
+            return "binding"
+        return str(source or "-")
+
+    def _command_text(self, command: Any) -> str:
+        if isinstance(command, list) and all(isinstance(item, str) for item in command):
+            return shlex.join(command)
+        return self._metadata_value_text(command)
+
+    def _print_run_metadata(self, metadata: dict[str, Any]) -> None:
+        summary = Table(box=box.SIMPLE_HEAVY, header_style="accent")
+        summary.add_column("Field", style="label", no_wrap=True)
+        summary.add_column("Value", style="value")
+        summary_rows = [
+            ("Template", metadata.get("template")),
+            ("Instance", metadata.get("instance_id")),
+            ("Run Mode", metadata.get("run_mode")),
+            ("Template Mode", metadata.get("template_run_mode")),
+            ("Version", metadata.get("template_version")),
+            ("Timestamp", metadata.get("timestamp")),
+        ]
+        pack = metadata.get("pack")
+        if isinstance(pack, dict):
+            summary_rows.append(("Pack", pack.get("ref")))
+            if pack.get("revision"):
+                summary_rows.append(("Pack Revision", pack.get("revision")))
+        binding = metadata.get("binding")
+        if isinstance(binding, dict) and binding.get("ref"):
+            summary_rows.append(("Binding", binding.get("ref")))
+        software = metadata.get("software")
+        if isinstance(software, list) and software:
+            first = software[0]
+            if isinstance(first, dict) and first.get("name"):
+                value = first["name"]
+                if first.get("version"):
+                    value = f"{value} {first['version']}"
+                summary_rows.append(("Software", value))
+        for label, value in summary_rows:
+            if value in (None, "", []):
+                continue
+            summary.add_row(label, self._metadata_value_text(value))
+        self.console.print(
+            Panel(
+                summary,
+                title="[accent]Run Inspection[/accent]",
+                border_style="accent",
+                box=box.ROUNDED,
+            )
+        )
+
+        params = metadata.get("params") or {}
+        provenance = metadata.get("param_provenance") or {}
+        if isinstance(params, dict) and params:
+            table = Table(box=box.SIMPLE_HEAVY, header_style="accent")
+            table.add_column("Param", style="label", no_wrap=True)
+            table.add_column("Value", style="value")
+            table.add_column("Source", style="muted")
+            for key, value in params.items():
+                table.add_row(
+                    key,
+                    self._metadata_value_text(value),
+                    self._provenance_text(provenance.get(key)),
+                )
+            self.console.print(table)
+
+        outputs = metadata.get("outputs") or {}
+        if isinstance(outputs, dict):
+            table = Table(box=box.SIMPLE_HEAVY, header_style="accent")
+            table.add_column("Output", style="label", no_wrap=True)
+            table.add_column("Value", style="value")
+            if outputs:
+                for key, value in outputs.items():
+                    table.add_row(key, self._metadata_value_text(value))
+            else:
+                table.add_row("outputs", "No outputs collected yet")
+            self.console.print(table)
+
+        command = metadata.get("command")
+        if command:
+            self.console.print(
+                Panel(
+                    self._command_text(command),
+                    title="[accent]Command[/accent]",
+                    border_style="accent",
+                    box=box.ROUNDED,
+                )
+            )
+
     def print_metadata(self, metadata: dict[str, Any]) -> None:
         if not self.rich_enabled:
             self.plain_print(json.dumps(metadata, indent=2, sort_keys=True))
+            return
+        if self._looks_like_run_metadata(metadata):
+            self._print_run_metadata(metadata)
             return
         self.console.print(JSON.from_data(metadata))
 

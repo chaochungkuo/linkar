@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from rich.console import Console
 
 from linkar.core import load_project, load_template, resolve_project_assets, run_template
 from linkar.errors import (
@@ -17,6 +18,7 @@ from linkar.errors import (
     ProjectValidationError,
     TemplateValidationError,
 )
+from linkar.ui import CliUI, THEME
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -1646,6 +1648,51 @@ def test_inspect_run_command_returns_metadata_json(tmp_path: Path) -> None:
     metadata = json.loads(inspected.stdout)
     assert metadata["template"] == "simple_echo"
     assert metadata["params"]["name"] == "Inspect"
+
+
+def test_print_metadata_renders_rich_run_inspection_view(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    ui = CliUI()
+    ui.console = Console(record=True, force_terminal=True, width=120, theme=THEME)
+    metadata = {
+        "template": "demultiplex",
+        "template_version": "1.2.3",
+        "instance_id": "demultiplex_001",
+        "params": {
+            "bcl_dir": "/data/run",
+            "samplesheet": "./samplesheet.csv",
+            "threads": 4,
+        },
+        "param_provenance": {
+            "bcl_dir": {"source": "explicit"},
+            "samplesheet": {
+                "source": "binding",
+                "binding_source": "function",
+                "name": "get_api_samplesheet",
+            },
+            "threads": {"source": "default"},
+        },
+        "outputs": {
+            "results_dir": "/tmp/demux/results",
+            "report_files": ["/tmp/demux/results/a.txt", "/tmp/demux/results/b.txt"],
+        },
+        "software": [{"name": "linkar", "version": "0.2.0"}],
+        "pack": {"ref": "/packs/izkf", "revision": "abc123"},
+        "binding": {"ref": "default"},
+        "command": ["/tmp/demux/run.sh"],
+        "timestamp": "2026-04-02T12:00:00+00:00",
+        "run_mode": "run",
+        "template_run_mode": "direct",
+    }
+
+    ui.print_metadata(metadata)
+
+    rendered = ui.console.export_text()
+    assert "Run Inspection" in rendered
+    assert "demultiplex_001" in rendered
+    assert "binding:function:get_api_samplesheet" in rendered
+    assert "No outputs collected yet" not in rendered
+    assert "/tmp/demux/run.sh" in rendered
 
 
 def test_methods_command_aggregates_runs_in_project_order(tmp_path: Path) -> None:
