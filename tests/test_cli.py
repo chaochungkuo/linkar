@@ -349,6 +349,73 @@ def test_project_adopt_run_imports_existing_linkar_run(tmp_path: Path) -> None:
     assert entry["meta"].endswith(".linkar/meta.json")
 
 
+def test_project_remove_run_detaches_without_deleting_files(tmp_path: Path) -> None:
+    init = run_cli("project", "init", "--name", "study", cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    produced = run_cli(
+        "run",
+        "simple_echo",
+        "--pack",
+        str(ROOT / "examples" / "packs" / "basic"),
+        "--param",
+        "name=Detach",
+        cwd=tmp_path / "study",
+    )
+    assert produced.returncode == 0, produced.stderr
+
+    project_file = tmp_path / "study" / "project.yaml"
+    data = yaml.safe_load(project_file.read_text())
+    assert len(data["templates"]) == 1
+    instance_id = data["templates"][0]["instance_id"]
+    history_path = (tmp_path / "study" / data["templates"][0]["history_path"]).resolve()
+    assert history_path.exists()
+
+    removed = run_cli("project", "remove-run", instance_id, cwd=tmp_path / "study")
+    assert removed.returncode == 0, removed.stderr
+    assert "detached" in removed.stdout
+
+    data = yaml.safe_load(project_file.read_text())
+    assert data["templates"] == []
+    assert history_path.exists()
+
+
+def test_project_remove_run_can_delete_run_files(tmp_path: Path) -> None:
+    init = run_cli("project", "init", "--name", "study", cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    produced = run_cli(
+        "run",
+        "simple_echo",
+        "--pack",
+        str(ROOT / "examples" / "packs" / "basic"),
+        "--param",
+        "name=Delete",
+        cwd=tmp_path / "study",
+    )
+    assert produced.returncode == 0, produced.stderr
+
+    project_file = tmp_path / "study" / "project.yaml"
+    data = yaml.safe_load(project_file.read_text())
+    instance_id = data["templates"][0]["instance_id"]
+    history_path = (tmp_path / "study" / data["templates"][0]["history_path"]).resolve()
+    assert history_path.exists()
+
+    removed = run_cli(
+        "project",
+        "remove-run",
+        instance_id,
+        "--delete-files",
+        cwd=tmp_path / "study",
+    )
+    assert removed.returncode == 0, removed.stderr
+    assert "deleted" in removed.stdout
+
+    data = yaml.safe_load(project_file.read_text())
+    assert data["templates"] == []
+    assert not history_path.exists()
+
+
 def test_pack_commands_manage_project_configuration(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
     init = run_cli("project", "init", str(project_dir), cwd=tmp_path)

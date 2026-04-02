@@ -43,6 +43,7 @@ from linkar.core import (
     load_project,
     remove_global_pack,
     remove_project_pack,
+    remove_project_run,
     set_global_author,
     set_active_global_pack,
     set_active_pack,
@@ -492,6 +493,33 @@ def project_adopt_run_command(run_ref: tuple[str, ...], project: str | None, ui:
             for item in adopted
         ]
     )
+
+
+@project_group.command("remove-run")
+@click.argument("run_ref")
+@click.option(
+    "--delete-files/--keep-files",
+    default=False,
+    show_default=True,
+    help="Also delete the recorded run directory from disk.",
+)
+@click.option(
+    "--project",
+    type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+    help="Project directory or project.yaml path. Defaults to the current directory.",
+    show_default=False,
+)
+@handle_linkar_errors
+def project_remove_run_command(
+    run_ref: str,
+    delete_files: bool,
+    project: str | None,
+    ui: CliUI,
+) -> None:
+    """Remove a run record from the active project, optionally deleting its files."""
+    result = remove_project_run(run_ref, project=project, delete_files=delete_files)
+    suffix = " deleted" if delete_files else " detached"
+    ui.print_text(f"{result['instance_id']}\t{result['id']}\t{result['path']}{suffix}")
 
 
 @project_group.command("runs")

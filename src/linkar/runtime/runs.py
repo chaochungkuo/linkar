@@ -711,6 +711,80 @@ def list_project_runs(project: str | Path | Project | None = None) -> list[dict[
     return list(project_obj.data.get("templates", []))
 
 
+def remove_project_run(
+    run_ref: str | Path,
+    *,
+    project: str | Path | Project | None = None,
+    delete_files: bool = False,
+) -> dict[str, Any]:
+    if isinstance(project, (str, Path)):
+        project_obj = load_project(project)
+    elif project is None:
+        project_obj = discover_project()
+    else:
+        project_obj = project
+    if project_obj is None:
+        raise ProjectValidationError(
+            "Removing a run requires an active project. Run it inside a directory containing project.yaml or pass --project PATH."
+        )
+
+    ref_path = Path(run_ref).expanduser()
+    resolved_ref = ref_path.resolve() if ref_path.exists() else None
+    templates = project_obj.data.setdefault("templates", [])
+    kept: list[dict[str, Any]] = []
+    removed: dict[str, Any] | None = None
+
+    for entry in templates:
+        entry_instance_id = entry.get("instance_id")
+        entry_meta = entry.get("meta")
+        entry_meta_path = (project_obj.root / entry_meta).resolve() if isinstance(entry_meta, str) else None
+        entry_history = entry.get("history_path") or entry.get("path")
+        entry_history_path = (
+            (project_obj.root / entry_history).resolve()
+            if isinstance(entry_history, str) and not Path(entry_history).is_absolute()
+            else Path(entry_history).resolve() if isinstance(entry_history, str) else None
+        )
+
+        matches = entry_instance_id == str(run_ref)
+        if resolved_ref is not None:
+            if entry_meta_path is not None and resolved_ref == entry_meta_path:
+                matches = True
+            elif entry_history_path is not None and resolved_ref in {entry_history_path, entry_history_path / ".linkar" / "meta.json"}:
+                matches = True
+
+        if matches and removed is None:
+            removed = dict(entry)
+            removed["_history_path_resolved"] = str(entry_history_path) if entry_history_path is not None else None
+            removed["_meta_path_resolved"] = str(entry_meta_path) if entry_meta_path is not None else None
+            continue
+        kept.append(entry)
+
+    if removed is None:
+        raise ProjectValidationError(f"Run not found in project: {run_ref}")
+
+    project_obj.data["templates"] = kept
+    save_yaml(project_obj.root / "project.yaml", project_obj.data)
+
+    if delete_files:
+        history_path_str = removed.get("_history_path_resolved")
+        if not isinstance(history_path_str, str) or not history_path_str:
+            raise ProjectValidationError(f"Run '{removed.get('instance_id')}' does not record a removable history path")
+        history_path = Path(history_path_str)
+        if history_path.exists():
+            if history_path.is_symlink() or history_path.is_file():
+                history_path.unlink()
+            else:
+                shutil.rmtree(history_path)
+
+    return {
+        "id": removed.get("id"),
+        "instance_id": removed.get("instance_id"),
+        "path": removed.get("path"),
+        "history_path": removed.get("history_path"),
+        "deleted_files": delete_files,
+    }
+
+
 def resolve_project_assets(project: str | Path | Project | None = None) -> list[dict[str, Any]]:
     if isinstance(project, (str, Path)):
         project_obj = load_project(project)
