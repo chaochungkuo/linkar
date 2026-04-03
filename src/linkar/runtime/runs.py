@@ -225,6 +225,27 @@ def should_render_shell_wrapper(template: TemplateSpec) -> bool:
     return template.run_entry is not None and Path(template.run_entry).name == "script.sh"
 
 
+def resolve_param_placeholders(
+    command: str,
+    resolved_params: dict[str, Any],
+    *,
+    for_render: bool,
+) -> str:
+    def replace(match: re.Match[str]) -> str:
+        key = match.group(1)
+        suffix = match.group(2) or ""
+        name = key if for_render else env_key(key)
+        return f"${{{name}{suffix}}}"
+
+    pattern = re.compile(r"\$\{param:([A-Za-z0-9_]+)([^}]*)\}")
+    rendered = command
+    while True:
+        updated = pattern.sub(replace, rendered)
+        if updated == rendered:
+            return updated
+        rendered = updated
+
+
 def render_launcher(
     launcher_path: Path,
     template: TemplateSpec,
@@ -248,7 +269,8 @@ def render_launcher(
     for key, value in sorted(resolved_params.items()):
         lines.append(f"export {env_key(key)}={shlex.quote(format_env_value(value))}")
     if template.run_command is not None:
-        lines.append(f"exec bash -lc {shlex.quote(template.run_command)}")
+        command = resolve_param_placeholders(template.run_command, resolved_params, for_render=False)
+        lines.append(f"exec bash -lc {shlex.quote(command)}")
     else:
         entry_name = target_entry or template.run_entry
         if entry_name is None:
@@ -272,7 +294,7 @@ def resolve_render_command(
         "LINKAR_PROJECT_DIR": shlex.quote(str(project_obj.root)) if project_obj is not None else '""',
     }
 
-    rendered = command
+    rendered = resolve_param_placeholders(command, resolved_params, for_render=True)
     for key, value in substitutions.items():
         rendered = rendered.replace(f"${{{key}}}", value)
         rendered = re.sub(rf"\${key}(?![A-Za-z0-9_])", value, rendered)
@@ -293,7 +315,7 @@ def resolve_render_command(
 def render_command_param_keys(command: str, resolved_params: dict[str, Any]) -> list[str]:
     keys: list[str] = []
     for key in resolved_params:
-        if re.search(rf"\$\{{{re.escape(key)}(?=[:}}])", command) or re.search(
+        if re.search(rf"\$\{{param:{re.escape(key)}(?:[^}}]*)\}}", command) or re.search(rf"\$\{{{re.escape(key)}(?=[:}}])", command) or re.search(
             rf"\${re.escape(key)}(?![A-Za-z0-9_])",
             command,
         ):

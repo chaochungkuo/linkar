@@ -463,6 +463,93 @@ def test_render_template_with_run_command_writes_single_launcher(tmp_path: Path)
     assert not (outdir / "results" / "name.txt").exists()
 
 
+def test_render_template_supports_explicit_param_placeholders(tmp_path: Path) -> None:
+    template_dir = tmp_path / "command_render_param_placeholder"
+    template_dir.mkdir(parents=True)
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: command_render_param_placeholder",
+                "params:",
+                "  name:",
+                "    type: str",
+                "    required: true",
+                "run:",
+                "  mode: render",
+                "  command: >-",
+                "    printf '%s\\n' \"${param:name}\" > \"${LINKAR_RESULTS_DIR}/name.txt\"",
+                "",
+            ]
+        )
+    )
+
+    result = render_template(template_dir, params={"name": "demo"}, outdir=tmp_path / "rendered")
+    launcher = render_mode_launcher_path(Path(result["history_outdir"]))
+    text = launcher.read_text(encoding="utf-8")
+
+    assert "${param:name}" not in text
+    assert "name=demo" in text
+    assert 'printf \'%s\\n\' "${name}"' in text
+    assert "${param:name:+x}" not in text
+
+
+def test_run_template_supports_explicit_param_placeholders(tmp_path: Path) -> None:
+    template_dir = tmp_path / "command_direct_param_placeholder"
+    template_dir.mkdir(parents=True)
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: command_direct_param_placeholder",
+                "params:",
+                "  name:",
+                "    type: str",
+                "    required: true",
+                "run:",
+                "  mode: direct",
+                "  command: >-",
+                "    printf '%s\\n' \"${param:name}\" > \"${LINKAR_RESULTS_DIR}/name.txt\"",
+                "",
+            ]
+        )
+    )
+
+    result = run_template(template_dir, params={"name": "demo"}, outdir=tmp_path / "out")
+    outdir = Path(result["history_outdir"])
+
+    assert (outdir / "results" / "name.txt").read_text() == "demo\n"
+    launcher_text = (outdir / "run.sh").read_text(encoding="utf-8")
+    assert "${param:name}" not in launcher_text
+    assert 'export NAME=demo' in launcher_text
+    assert '"${NAME}"' in launcher_text
+
+
+def test_render_template_supports_param_placeholder_expansions(tmp_path: Path) -> None:
+    template_dir = tmp_path / "command_render_param_expansion"
+    template_dir.mkdir(parents=True)
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: command_render_param_expansion",
+                "params:",
+                "  name:",
+                "    type: str",
+                '    default: ""',
+                "run:",
+                "  mode: render",
+                "  command: >-",
+                '    printf \'%s\\n\' ${param:name:+--name "${param:name}"} > "${LINKAR_RESULTS_DIR}/cmd.txt"',
+                "",
+            ]
+        )
+    )
+
+    result = render_template(template_dir, params={"name": "demo"}, outdir=tmp_path / "rendered")
+    text = render_mode_launcher_path(Path(result["history_outdir"])).read_text(encoding="utf-8")
+
+    assert "${param:name:+--name" not in text
+    assert '${name:+--name "${name}"}' in text
+
+
 def test_run_template_executes_even_when_template_declares_legacy_render_mode(tmp_path: Path) -> None:
     template_dir = make_template(
         tmp_path / "templates",
