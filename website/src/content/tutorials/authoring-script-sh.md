@@ -37,14 +37,14 @@ outputs:
     path: greeting_file
 run:
   command: >-
-    printf 'hello %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/greeting_file"
+    printf 'hello %s\n' "${param:name}" > "${LINKAR_RESULTS_DIR}/greeting_file"
 ```
 
 That is cleaner than creating a `run.sh` whose only job is to forward one command.
 
 ## How parameters arrive in `run.command` and `run.sh`
 
-Linkar exposes resolved parameters as environment variables.
+The preferred authoring style in `run.command` is the explicit placeholder form.
 
 If the template declares:
 
@@ -58,10 +58,17 @@ params:
     default: 4
 ```
 
-then the runtime can read:
+then a command should normally read:
 
-- `${INPUT_FASTQ}`
-- `${THREADS}`
+- `${param:input_fastq}`
+- `${param:threads}`
+
+Linkar still supports the older implicit shell-variable convention:
+
+- `input_fastq` -> `${INPUT_FASTQ}`
+- `threads` -> `${THREADS}`
+
+but new templates should prefer `${param:...}` because it is clearer to template authors.
 
 Use explicit defaults in the schema whenever possible. That keeps runtime logic small and readable.
 
@@ -116,8 +123,8 @@ run:
   command: >-
     pixi run python -m demux_pipeline.cli
     --outdir "${LINKAR_RESULTS_DIR}"
-    --bcl_dir "${BCL_DIR}"
-    --samplesheet "${SAMPLESHEET}"
+    --bcl_dir "${param:bcl_dir}"
+    --samplesheet "${param:samplesheet}"
 ```
 
 The rendered directory then contains one launcher, not a template-local wrapper plus a second outer

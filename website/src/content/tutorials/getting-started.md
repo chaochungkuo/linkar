@@ -43,6 +43,7 @@ This gives you:
 - a stable project-root directory such as `./fastqc`
 - immutable run history under `.linkar/runs/`
 - `.linkar/runs/<instance_id>/.linkar/meta.json` for provenance
+- the option to render a standalone artifact with `linkar render ...`
 
 ## What happens after `linkar run`
 
@@ -69,6 +70,15 @@ project:
 
 ```bash
 linkar project init --name study --adopt /path/to/existing_run
+```
+
+If you want a standalone runnable artifact instead of an executed run:
+
+```bash
+linkar render simple_echo --pack ./examples/packs/basic --param name=Linkar
+cd simple_echo
+bash run.sh
+linkar collect .
 ```
 
 This is the Linkar user path.

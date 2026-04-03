@@ -39,9 +39,9 @@ outputs:
     glob: fastqc/*_fastqc.html
 run:
   command: >-
-    fastqc --threads "${THREADS}"
+    fastqc --threads "${param:threads}"
     --outdir "${LINKAR_RESULTS_DIR}/fastqc"
-    "${INPUT_FASTQ}"
+    "${param:input_fastq}"
 ```
 
 Now the wrapper has a clear job: in the simplest case, there is no separate wrapper file at all.
@@ -53,9 +53,9 @@ For a normal command-line tool, a single `run.command` string is usually the cle
 ```yaml
 run:
   command: >-
-    fastqc --threads "${THREADS}"
+    fastqc --threads "${param:threads}"
     --outdir "${LINKAR_RESULTS_DIR}/fastqc"
-    "${INPUT_FASTQ}"
+    "${param:input_fastq}"
 ```
 
 This is a good wrapper because:
@@ -86,7 +86,7 @@ You have two reasonable packaging models:
 ### 1. Thin wrapper around an external checkout
 
 Use this when the external repo already has its own release cycle and you do not want to bundle it
-into the template.
+into the template. If you do this, prefer cloning a pinned commit rather than floating `main`.
 
 Template job:
 
@@ -101,17 +101,7 @@ the template distribution.
 
 Template directory can then contain:
 
-```text
-demultiplex/
-  linkar_template.yaml
-  linkar_template.yaml
-  test.py
-  demux_pipeline/
-  pixi.toml
-  pixi.lock
-```
-
-This is often the better choice for a real reusable template repo.
+This is still reasonable when the bundled code really is part of the distributed template contract.
 
 ## Testing strategy
 
