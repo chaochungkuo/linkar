@@ -7,6 +7,8 @@ from pathlib import Path
 import pytest
 
 from linkar.errors import ExecutionError, TemplateValidationError
+from linkar.runtime.config import save_global_config
+from linkar.runtime.config import load_global_config
 from linkar.runtime.projects import init_project, load_project
 from linkar.runtime.shared import save_yaml
 from linkar.runtime.runs import (
@@ -397,6 +399,71 @@ def test_render_template_does_not_update_project_history_or_alias(tmp_path: Path
     assert project_after.data["templates"] == []
     assert (project.root / "render_project_demo").is_dir()
     assert Path(result["history_outdir"]) == (project.root / "render_project_demo").resolve()
+
+
+def test_render_template_uses_default_binding_for_active_global_pack(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    linkar_home = tmp_path / "linkar-home"
+    monkeypatch.setenv("LINKAR_HOME", str(linkar_home))
+
+    pack_root = tmp_path / "pack"
+    template_dir = pack_root / "templates" / "global_default_binding_demo"
+    template_dir.mkdir(parents=True)
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: global_default_binding_demo",
+                "params:",
+                "  source_dir:",
+                "    type: path",
+                "    required: true",
+                "run:",
+                "  mode: render",
+                "  command: >-",
+                "    printf '%s\\n' \"${source_dir}\" > \"${LINKAR_RESULTS_DIR}/source.txt\"",
+                "",
+            ]
+        )
+    )
+    functions_dir = pack_root / "functions"
+    functions_dir.mkdir()
+    (functions_dir / "derive_render_outdir.py").write_text(
+        "from pathlib import Path\n"
+        "\n"
+        "def resolve(ctx):\n"
+        "    source = Path(ctx.resolved_params['source_dir'])\n"
+        f"    return str(Path({str((tmp_path / 'global-render-root')).__repr__()}) / source.name)\n"
+    )
+    save_yaml(
+        pack_root / "linkar_pack.yaml",
+        {
+            "templates": {
+                "global_default_binding_demo": {
+                    "outdir": {
+                        "function": "derive_render_outdir",
+                    }
+                }
+            }
+        },
+    )
+
+    config = load_global_config()
+    config.data["packs"] = [{"id": "demo_pack", "ref": str(pack_root)}]
+    config.data["active_pack"] = "demo_pack"
+    save_global_config(config)
+
+    source_dir = tmp_path / "inputs" / "run_global"
+    source_dir.mkdir(parents=True)
+
+    result = render_template(
+        "global_default_binding_demo",
+        params={"source_dir": str(source_dir)},
+    )
+
+    outdir = Path(result["history_outdir"])
+    assert outdir == (tmp_path / "global-render-root" / "run_global").resolve()
+    meta = json.loads((outdir / ".linkar" / "meta.json").read_text(encoding="utf-8"))
+    assert meta["binding"]["ref"] == "default"
+    assert meta["outdir_provenance"]["binding_source"] == "function"
 
 
 def test_render_template_uses_bound_outdir_function(tmp_path: Path) -> None:

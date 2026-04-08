@@ -26,6 +26,7 @@ from linkar.runtime.projects import (
     load_project,
     project_pack_entries,
 )
+from linkar.runtime.config import get_active_global_pack_entry
 from linkar.runtime.shared import (
     derive_pack_id,
     env_key,
@@ -50,6 +51,21 @@ def next_instance_id(template_id: str, project: Project | None = None) -> str:
         if item.get("id") == template_id:
             matches += 1
     return f"{template_id}_{matches + 1:03d}"
+
+
+def infer_default_binding_ref(
+    template: TemplateSpec,
+    selected_binding_ref: str | Path | None,
+    project_obj: Project | None,
+) -> str | Path | None:
+    if selected_binding_ref is not None or template.pack_root is None:
+        return selected_binding_ref
+    active_global_entry = get_active_global_pack_entry()
+    if active_global_entry is None:
+        return selected_binding_ref
+    if active_global_entry.asset.root != template.pack_root:
+        return selected_binding_ref
+    return "default"
 
 
 def determine_outdir(
@@ -491,6 +507,7 @@ def prepare_template_execution(
             if entry.asset.root == template.pack_root:
                 selected_binding_ref = normalize_binding_ref(entry.binding)
                 break
+    selected_binding_ref = infer_default_binding_ref(template, selected_binding_ref, project_obj)
     resolved_params, param_provenance, warnings = resolve_params_detailed_with_warnings(
         template,
         cli_params=params,
