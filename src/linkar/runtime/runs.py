@@ -641,6 +641,7 @@ def execute_subprocess(
 
     if should_use_pty_for_verbose_output():
         master_fd, slave_fd = pty.openpty()
+        os.set_blocking(master_fd, False)
         stdout_chunks: list[str] = []
         try:
             process = subprocess.Popen(
@@ -657,33 +658,28 @@ def execute_subprocess(
             os.close(slave_fd)
 
         while True:
+            process_exited = process.poll() is not None
             ready, _, _ = select.select([master_fd], [], [], 0.1)
+            had_output = False
             if ready:
-                try:
-                    chunk = os.read(master_fd, 4096)
-                except OSError:
-                    chunk = b""
-                if chunk:
+                while True:
+                    try:
+                        chunk = os.read(master_fd, 4096)
+                    except BlockingIOError:
+                        break
+                    except OSError:
+                        chunk = b""
+                    if not chunk:
+                        break
+                    had_output = True
                     text = chunk.decode(errors="replace")
                     stdout_chunks.append(text)
                     sys.stdout.write(text)
                     sys.stdout.flush()
-            if process.poll() is not None and not ready:
+            if process_exited and not had_output:
                 break
 
-        try:
-            while True:
-                chunk = os.read(master_fd, 4096)
-                if not chunk:
-                    break
-                text = chunk.decode(errors="replace")
-                stdout_chunks.append(text)
-                sys.stdout.write(text)
-                sys.stdout.flush()
-        except OSError:
-            pass
-        finally:
-            os.close(master_fd)
+        os.close(master_fd)
 
         finished_at = utc_now()
         completed = subprocess.CompletedProcess(
