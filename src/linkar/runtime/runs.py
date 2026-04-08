@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import os
+import pty
 import re
+import select
 import shlex
 import shutil
 import subprocess
@@ -634,6 +636,61 @@ def execute_subprocess(
         finished_at = utc_now()
         return completed, started_at, finished_at
 
+    if should_use_pty_for_verbose_output():
+        master_fd, slave_fd = pty.openpty()
+        stdout_chunks: list[str] = []
+        try:
+            process = subprocess.Popen(
+                command,
+                cwd=cwd,
+                env=env,
+                stdin=slave_fd,
+                stdout=slave_fd,
+                stderr=slave_fd,
+                text=False,
+                close_fds=True,
+            )
+        finally:
+            os.close(slave_fd)
+
+        while True:
+            ready, _, _ = select.select([master_fd], [], [], 0.1)
+            if ready:
+                try:
+                    chunk = os.read(master_fd, 4096)
+                except OSError:
+                    chunk = b""
+                if chunk:
+                    text = chunk.decode(errors="replace")
+                    stdout_chunks.append(text)
+                    sys.stdout.write(text)
+                    sys.stdout.flush()
+            if process.poll() is not None and not ready:
+                break
+
+        try:
+            while True:
+                chunk = os.read(master_fd, 4096)
+                if not chunk:
+                    break
+                text = chunk.decode(errors="replace")
+                stdout_chunks.append(text)
+                sys.stdout.write(text)
+                sys.stdout.flush()
+        except OSError:
+            pass
+        finally:
+            os.close(master_fd)
+
+        finished_at = utc_now()
+        completed = subprocess.CompletedProcess(
+            args=command,
+            returncode=process.wait(),
+            stdout="".join(stdout_chunks),
+            stderr="",
+        )
+        return completed, started_at, finished_at
+
     process = subprocess.Popen(
         command,
         cwd=cwd,
@@ -673,6 +730,15 @@ def execute_subprocess(
         stderr="".join(stderr_chunks),
     )
     return completed, started_at, finished_at
+
+
+def should_use_pty_for_verbose_output() -> bool:
+    return (
+        os.name == "posix"
+        and sys.stdin.isatty()
+        and sys.stdout.isatty()
+        and sys.stderr.isatty()
+    )
 
 
 def update_project(

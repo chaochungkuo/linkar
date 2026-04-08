@@ -28,6 +28,7 @@ from linkar.runtime.runs import (
     sync_project_alias,
     should_exclude_runtime_path,
     should_render_shell_wrapper,
+    should_use_pty_for_verbose_output,
     stage_runtime_bundle,
     run_template,
 )
@@ -220,6 +221,24 @@ def test_runtime_bundle_exclusion_helper_matches_current_policy() -> None:
     assert should_exclude_runtime_path(Path(".pixi")) is True
     assert should_exclude_runtime_path(Path(".rattler-cache")) is True
     assert should_exclude_runtime_path(Path("run.sh")) is False
+
+
+def test_should_use_pty_for_verbose_output_requires_real_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeStream:
+        def __init__(self, is_tty: bool) -> None:
+            self._is_tty = is_tty
+
+        def isatty(self) -> bool:
+            return self._is_tty
+
+    monkeypatch.setattr("linkar.runtime.runs.sys.stdin", FakeStream(True))
+    monkeypatch.setattr("linkar.runtime.runs.sys.stdout", FakeStream(True))
+    monkeypatch.setattr("linkar.runtime.runs.sys.stderr", FakeStream(True))
+    monkeypatch.setattr("linkar.runtime.runs.os.name", "posix")
+    assert should_use_pty_for_verbose_output() is True
+
+    monkeypatch.setattr("linkar.runtime.runs.sys.stderr", FakeStream(False))
+    assert should_use_pty_for_verbose_output() is False
     assert should_exclude_runtime_path(Path("pixi.toml")) is False
 
 
