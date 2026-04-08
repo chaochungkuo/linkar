@@ -20,6 +20,7 @@ class TemplateSpec:
     run_entry: str | None
     run_command: str | None
     run_mode: str
+    run_verbose_by_default: bool = False
     pack_root: Path | None = None
     pack_ref: str | None = None
     pack_revision: str | None = None

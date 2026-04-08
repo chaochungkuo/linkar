@@ -107,6 +107,7 @@ def execute_with_optional_prompts(
     verbose: bool = False,
 ):
     template, _ = load_template_for_cli(template_ref, project=project, pack_refs=pack_refs)
+    effective_verbose = verbose or template.run_verbose_by_default
     pending_params = dict(params)
     prompted: set[str] = set()
     execute = render_template if action == "render" else run_template
@@ -121,7 +122,7 @@ def execute_with_optional_prompts(
                 "binding_ref": binding_ref,
             }
             if action == "run":
-                execute_kwargs["verbose"] = verbose
+                execute_kwargs["verbose"] = effective_verbose
             return execute(
                 template_ref,
                 **execute_kwargs,
@@ -159,6 +160,16 @@ def run_with_optional_prompts(
         action="run",
         verbose=verbose,
     )
+
+
+def should_stream_output_by_default(
+    template_ref: str,
+    *,
+    project: str | None,
+    pack_refs: list[str] | None,
+) -> bool:
+    template, _ = load_template_for_cli(template_ref, project=project, pack_refs=pack_refs)
+    return template.run_verbose_by_default
 
 
 def shell_complete_template_ref(

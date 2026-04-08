@@ -32,6 +32,7 @@ from linkar.runtime.config import get_active_global_pack_entry
 from linkar.runtime.shared import (
     derive_pack_id,
     env_key,
+    find_pack_spec_path,
     format_env_value,
     normalize_binding_ref,
     preferred_pack_ref_for_assets,
@@ -66,6 +67,8 @@ def infer_default_binding_ref(
     if active_global_entry is None:
         return selected_binding_ref
     if active_global_entry.asset.root != template.pack_root:
+        return selected_binding_ref
+    if find_pack_spec_path(active_global_entry.asset.root) is None:
         return selected_binding_ref
     return "default"
 

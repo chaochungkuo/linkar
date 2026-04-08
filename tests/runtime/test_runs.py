@@ -107,6 +107,29 @@ def test_load_template_accepts_run_command_without_entry(tmp_path: Path) -> None
     assert template.run_command == "echo hello"
 
 
+def test_load_template_parses_run_verbose_by_default(tmp_path: Path) -> None:
+    template_dir = tmp_path / "verbose_template"
+    template_dir.mkdir(parents=True)
+    (template_dir / "run.sh").write_text("#!/usr/bin/env bash\nset -euo pipefail\n")
+    (template_dir / "run.sh").chmod(0o755)
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: verbose_template",
+                "run:",
+                "  entry: run.sh",
+                "  mode: direct",
+                "  verbose_by_default: true",
+                "",
+            ]
+        )
+    )
+
+    template = load_template(template_dir)
+
+    assert template.run_verbose_by_default is True
+
+
 def test_load_template_rejects_both_run_entry_and_run_command(tmp_path: Path) -> None:
     template_dir = tmp_path / "bad_command_template"
     template_dir.mkdir(parents=True)

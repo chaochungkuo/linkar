@@ -28,6 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def run_cli(*args: str, cwd: Path, env_extra: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env["PYTHONPATH"] = str(ROOT / "src")
+    env.setdefault("LINKAR_HOME", str(cwd / ".linkar-home-test"))
     if env_extra:
         env.update(env_extra)
     return subprocess.run(
@@ -292,6 +293,37 @@ def test_project_init_author_options_override_global_defaults(tmp_path: Path) ->
         "email": "alex@example.org",
         "organization": "IZKF",
     }
+
+
+def test_run_streams_output_when_template_requests_verbose_by_default(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    template_dir = pack_root / "templates" / "chatty"
+    template_dir.mkdir(parents=True)
+    (template_dir / "run.sh").write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "printf 'hello from template\\n'\n",
+        encoding="utf-8",
+    )
+    (template_dir / "run.sh").chmod(0o755)
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: chatty",
+                "run:",
+                "  entry: run.sh",
+                "  mode: direct",
+                "  verbose_by_default: true",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    completed = run_cli("run", "chatty", "--pack", str(pack_root), cwd=tmp_path)
+
+    assert completed.returncode == 0, completed.stderr
+    assert "hello from template" in completed.stdout
 
 
 def test_project_init_can_adopt_existing_run(tmp_path: Path) -> None:
@@ -570,6 +602,19 @@ def test_project_init_rejects_path_and_name_together(tmp_path: Path) -> None:
 
 
 def test_help_output_is_clean_and_descriptive(tmp_path: Path) -> None:
+    env = {"LINKAR_HOME": str(tmp_path / "home")}
+    configured = run_cli(
+        "config",
+        "pack",
+        "add",
+        str(ROOT / "examples" / "packs" / "basic"),
+        "--id",
+        "basic",
+        cwd=tmp_path,
+        env_extra=env,
+    )
+    assert configured.returncode == 0, configured.stderr
+
     root_help = run_cli("--help", cwd=tmp_path)
     assert root_help.returncode == 0, root_help.stderr
     assert "human-friendly CLI" in root_help.stdout
@@ -581,14 +626,14 @@ def test_help_output_is_clean_and_descriptive(tmp_path: Path) -> None:
     assert "linkar mcp serve" in root_help.stdout
     assert "╭─ Options" in root_help.stdout
 
-    run_help = run_cli("run", "--help", cwd=tmp_path)
+    run_help = run_cli("run", "--help", cwd=tmp_path, env_extra=env)
     assert run_help.returncode == 0, run_help.stderr
     assert "Run templates with template-aware options or the generic TEMPLATE" in run_help.stdout
     assert "raw" not in run_help.stdout
     assert "╭─ Options" in run_help.stdout
     assert "╭─ Commands" in run_help.stdout
 
-    render_help = run_cli("render", "--help", cwd=tmp_path)
+    render_help = run_cli("render", "--help", cwd=tmp_path, env_extra=env)
     assert render_help.returncode == 0, render_help.stderr
     assert "Render template bundles with template-aware options" in render_help.stdout
     assert "raw" not in render_help.stdout
@@ -623,12 +668,25 @@ def test_bare_cli_shows_helpful_guidance(tmp_path: Path) -> None:
 
 
 def test_parser_errors_show_contextual_help(tmp_path: Path) -> None:
-    completed = run_cli("run", cwd=tmp_path)
+    env = {"LINKAR_HOME": str(tmp_path / "home")}
+    configured = run_cli(
+        "config",
+        "pack",
+        "add",
+        str(ROOT / "examples" / "packs" / "basic"),
+        "--id",
+        "basic",
+        cwd=tmp_path,
+        env_extra=env,
+    )
+    assert configured.returncode == 0, configured.stderr
+
+    completed = run_cli("run", cwd=tmp_path, env_extra=env)
     assert completed.returncode == 0
     assert "Usage: linkar run" in completed.stdout
     assert "Commands" in completed.stdout
 
-    rendered = run_cli("render", cwd=tmp_path)
+    rendered = run_cli("render", cwd=tmp_path, env_extra=env)
     assert rendered.returncode == 0
     assert "Usage: linkar render" in rendered.stdout
     assert "Commands" in rendered.stdout

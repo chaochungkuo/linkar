@@ -20,6 +20,7 @@ from linkar.cli_support.common import (
     params_from_pairs,
     shell_complete_filesystem_ref,
     shell_complete_template_ref,
+    should_stream_output_by_default,
 )
 
 CommandClass = getattr(click, "RichCommand", click.Command)
@@ -52,7 +53,8 @@ def template_command_callback(
         params.update(params_from_pairs(param))
         run_template_ref = template_id if pack_ref is not None else template_path
         run_pack_refs = [pack_ref] if pack_ref is not None else None
-        if verbose and action == "run":
+        effective_verbose = verbose or (action == "run" and template_spec.run_verbose_by_default)
+        if effective_verbose and action == "run":
             result = execute_with_optional_prompts(
                 run_template_ref,
                 params=params,
@@ -171,7 +173,15 @@ def generic_run_callback(bound_template: str | None = None, *, action: str = "ru
         template_ref = bound_template or template
         if template_ref is None:
             raise ProjectValidationError("Missing template reference.")
-        if verbose and action == "run":
+        effective_verbose = verbose or (
+            action == "run"
+            and should_stream_output_by_default(
+                template_ref,
+                project=project,
+                pack_refs=list(pack),
+            )
+        )
+        if effective_verbose and action == "run":
             result = execute_with_optional_prompts(
                 template_ref,
                 params=params_from_pairs(param),

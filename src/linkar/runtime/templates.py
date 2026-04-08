@@ -107,6 +107,9 @@ def load_template(
         raise TemplateValidationError(f"Template run.entry or run.command is required in {spec_path}")
     if entry and command:
         raise TemplateValidationError(f"Template cannot declare both run.entry and run.command in {spec_path}")
+    run_verbose_by_default = run.get("verbose_by_default", False)
+    if not isinstance(run_verbose_by_default, bool):
+        raise TemplateValidationError(f"Template run.verbose_by_default must be a boolean in {spec_path}")
     if entry:
         entry_path = root / entry
         if not entry_path.exists():
@@ -196,6 +199,7 @@ def load_template(
         run_entry=entry,
         run_command=command.strip() if isinstance(command, str) else None,
         run_mode=run.get("mode", "direct"),
+        run_verbose_by_default=run_verbose_by_default,
         pack_root=root.parent.parent if root.parent.name == "templates" else None,
         pack_ref=pack_asset.ref if pack_asset is not None else None,
         pack_revision=pack_asset.revision if pack_asset is not None else None,

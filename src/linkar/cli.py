@@ -538,11 +538,14 @@ def project_runs(project: str | None, ui: CliUI) -> None:
     "run",
     cls=DynamicRunGroup,
     invoke_without_command=True,
-    no_args_is_help=True,
+    no_args_is_help=False,
 )
 @click.pass_context
 def run_group(ctx: click.Context) -> None:
     """Run templates with template-aware options or the generic TEMPLATE interface."""
+    if ctx.invoked_subcommand is None:
+        click.echo(ctx.get_help())
+        ctx.exit(0)
 
 
 run_group.add_command(raw_run_command)
@@ -552,11 +555,14 @@ run_group.add_command(raw_run_command)
     "render",
     cls=DynamicRenderGroup,
     invoke_without_command=True,
-    no_args_is_help=True,
+    no_args_is_help=False,
 )
 @click.pass_context
 def render_group(ctx: click.Context) -> None:
     """Render template bundles with template-aware options or the generic TEMPLATE interface."""
+    if ctx.invoked_subcommand is None:
+        click.echo(ctx.get_help())
+        ctx.exit(0)
 
 
 render_group.add_command(render_raw_command)
