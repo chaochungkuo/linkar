@@ -399,6 +399,120 @@ def test_render_template_does_not_update_project_history_or_alias(tmp_path: Path
     assert Path(result["history_outdir"]) == (project.root / "render_project_demo").resolve()
 
 
+def test_render_template_uses_bound_outdir_function(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    template_dir = pack_root / "templates" / "render_bound_outdir"
+    template_dir.mkdir(parents=True)
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: render_bound_outdir",
+                "params:",
+                "  source_dir:",
+                "    type: path",
+                "    required: true",
+                "run:",
+                "  mode: render",
+                "  command: >-",
+                "    printf '%s\\n' \"${source_dir}\" > \"${LINKAR_RESULTS_DIR}/source.txt\"",
+                "",
+            ]
+        )
+    )
+    functions_dir = pack_root / "functions"
+    functions_dir.mkdir()
+    (functions_dir / "derive_render_outdir.py").write_text(
+        "from pathlib import Path\n"
+        "\n"
+        "def resolve(ctx):\n"
+        "    source = Path(ctx.resolved_params['source_dir'])\n"
+        f"    return str(Path({str((tmp_path / 'rendered-root')).__repr__()}) / source.name)\n"
+    )
+    save_yaml(
+        pack_root / "linkar_pack.yaml",
+        {
+            "templates": {
+                "render_bound_outdir": {
+                    "outdir": {
+                        "function": "derive_render_outdir",
+                    }
+                }
+            }
+        },
+    )
+
+    source_dir = tmp_path / "inputs" / "run_a"
+    source_dir.mkdir(parents=True)
+
+    result = render_template(
+        template_dir,
+        params={"source_dir": str(source_dir)},
+        binding_ref="default",
+    )
+
+    outdir = Path(result["history_outdir"])
+    assert outdir == (tmp_path / "rendered-root" / "run_a").resolve()
+    meta = json.loads((outdir / ".linkar" / "meta.json").read_text(encoding="utf-8"))
+    assert meta["outdir_provenance"]["binding_source"] == "function"
+    assert meta["outdir_provenance"]["name"] == "derive_render_outdir"
+
+
+def test_render_template_explicit_outdir_overrides_bound_outdir(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    template_dir = pack_root / "templates" / "render_outdir_precedence"
+    template_dir.mkdir(parents=True)
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: render_outdir_precedence",
+                "params:",
+                "  source_dir:",
+                "    type: path",
+                "    required: true",
+                "run:",
+                "  mode: render",
+                "  command: >-",
+                "    printf '%s\\n' \"${source_dir}\" > \"${LINKAR_RESULTS_DIR}/source.txt\"",
+                "",
+            ]
+        )
+    )
+    functions_dir = pack_root / "functions"
+    functions_dir.mkdir()
+    (functions_dir / "derive_render_outdir.py").write_text(
+        "def resolve(ctx):\n"
+        f"    return {str((tmp_path / 'should-not-be-used')).__repr__()}\n"
+    )
+    save_yaml(
+        pack_root / "linkar_pack.yaml",
+        {
+            "templates": {
+                "render_outdir_precedence": {
+                    "outdir": {
+                        "function": "derive_render_outdir",
+                    }
+                }
+            }
+        },
+    )
+
+    explicit_outdir = tmp_path / "explicit-render"
+    source_dir = tmp_path / "inputs" / "run_b"
+    source_dir.mkdir(parents=True)
+
+    result = render_template(
+        template_dir,
+        params={"source_dir": str(source_dir)},
+        binding_ref="default",
+        outdir=explicit_outdir,
+    )
+
+    outdir = Path(result["history_outdir"])
+    assert outdir == explicit_outdir.resolve()
+    meta = json.loads((outdir / ".linkar" / "meta.json").read_text(encoding="utf-8"))
+    assert meta["outdir_provenance"]["source"] == "cli"
+
+
 def test_direct_run_command_executes_without_template_wrapper_script(tmp_path: Path) -> None:
     template_dir = tmp_path / "command_direct"
     template_dir.mkdir(parents=True)

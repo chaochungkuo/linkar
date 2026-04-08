@@ -59,6 +59,147 @@ def resolve_binding_function(name: str, search_roots: list[Path]) -> Any:
     raise AssetResolutionError(f"Binding function not found: {name}")
 
 
+def _template_binding(template: TemplateSpec, binding_data: dict[str, Any]) -> dict[str, Any]:
+    templates = binding_data.get("templates") or {}
+    template_binding = templates.get(template.id) or {}
+    if not isinstance(template_binding, dict):
+        raise AssetResolutionError(
+            f"linkar_pack.yaml template entry must be a mapping for '{template.id}'"
+        )
+    return template_binding
+
+
+def _binding_function_search_roots(template: TemplateSpec, binding_root: Path | None) -> list[Path]:
+    search_roots: list[Path] = []
+    if binding_root is not None:
+        search_roots.append(binding_root)
+    if template.pack_root is not None and template.pack_root not in search_roots:
+        search_roots.append(template.pack_root)
+    return search_roots
+
+
+def _resolve_binding_rule(
+    *,
+    template: TemplateSpec,
+    target_name: str,
+    rule: dict[str, Any],
+    binding_root: Path | None,
+    project: Project | None,
+    resolved_params: dict[str, Any],
+    warnings: list[dict[str, Any]],
+) -> tuple[Any, dict[str, Any]]:
+    ctx = BindingContext(
+        template=template,
+        project=project,
+        resolved_params=dict(resolved_params),
+        current_param=target_name,
+        warnings=warnings,
+    )
+
+    if "template" in rule or "output" in rule:
+        template_name = rule.get("template")
+        output_key = rule.get("output", target_name)
+        if not template_name or not isinstance(template_name, str):
+            raise AssetResolutionError(
+                f"Binding template id is required for '{template.id}.{target_name}'"
+            )
+        value = ctx.latest_output(str(output_key), template_id=template_name)
+        if value is None:
+            raise ParameterResolutionError(
+                f"Binding could not resolve output '{template_name}.{output_key}' for '{template.id}.{target_name}'"
+            )
+        return value, {
+            "source": "binding",
+            "binding_source": "output",
+            "template": template_name,
+            "output": str(output_key),
+        }
+    if "function" in rule:
+        function_name = rule.get("function")
+        if not function_name or not isinstance(function_name, str):
+            raise AssetResolutionError(
+                f"Binding function name is required for '{template.id}.{target_name}'"
+            )
+        try:
+            value = resolve_binding_function(
+                function_name,
+                _binding_function_search_roots(template, binding_root),
+            )(ctx)
+        except (AssetResolutionError, ParameterResolutionError):
+            raise
+        except Exception as exc:
+            raise ParameterResolutionError(
+                f"Binding function failed for '{template.id}.{target_name}': {exc}"
+            ) from exc
+        if value is None:
+            raise ParameterResolutionError(
+                f"Binding function returned no value for '{template.id}.{target_name}'"
+            )
+        return value, {
+            "source": "binding",
+            "binding_source": "function",
+            "name": function_name,
+        }
+    if "value" in rule:
+        return rule["value"], {
+            "source": "binding",
+            "binding_source": "value",
+        }
+
+    source = rule.get("from")
+    if source == "output":
+        output_key = rule.get("key", target_name)
+        value = ctx.latest_output(str(output_key))
+        if value is None:
+            raise ParameterResolutionError(
+                f"Binding could not resolve output '{output_key}' for '{template.id}.{target_name}'"
+            )
+        return value, {
+            "source": "binding",
+            "binding_source": "output",
+            "output": str(output_key),
+        }
+    if source == "function":
+        function_name = rule.get("name")
+        if not function_name or not isinstance(function_name, str):
+            raise AssetResolutionError(
+                f"Binding function name is required for '{template.id}.{target_name}'"
+            )
+        try:
+            value = resolve_binding_function(
+                function_name,
+                _binding_function_search_roots(template, binding_root),
+            )(ctx)
+        except (AssetResolutionError, ParameterResolutionError):
+            raise
+        except Exception as exc:
+            raise ParameterResolutionError(
+                f"Binding function failed for '{template.id}.{target_name}': {exc}"
+            ) from exc
+        if value is None:
+            raise ParameterResolutionError(
+                f"Binding function returned no value for '{template.id}.{target_name}'"
+            )
+        return value, {
+            "source": "binding",
+            "binding_source": "function",
+            "name": function_name,
+        }
+    if source == "value":
+        if "value" not in rule:
+            raise AssetResolutionError(
+                f"Binding literal value is required for '{template.id}.{target_name}'"
+            )
+        return rule["value"], {
+            "source": "binding",
+            "binding_source": "value",
+        }
+
+    raise AssetResolutionError(
+        f"Unsupported binding rule for '{template.id}.{target_name}'"
+    )
+
+
 def resolve_bound_value(
     template: TemplateSpec,
     key: str,
@@ -68,12 +209,7 @@ def resolve_bound_value(
     resolved_params: dict[str, Any],
     warnings: list[dict[str, Any]],
 ) -> tuple[bool, Any, dict[str, Any] | None]:
-    templates = binding_data.get("templates") or {}
-    template_binding = templates.get(template.id) or {}
-    if not isinstance(template_binding, dict):
-        raise AssetResolutionError(
-            f"linkar_pack.yaml template entry must be a mapping for '{template.id}'"
-        )
+    template_binding = _template_binding(template, binding_data)
     params = template_binding.get("params") or {}
     if not isinstance(params, dict):
         raise AssetResolutionError(
@@ -87,120 +223,46 @@ def resolve_bound_value(
         raise AssetResolutionError(
             f"linkar_pack.yaml param rule must be a mapping for '{template.id}.{key}'"
         )
-    ctx = BindingContext(
+    value, provenance = _resolve_binding_rule(
         template=template,
+        target_name=key,
+        rule=rule,
+        binding_root=binding_root,
         project=project,
-        resolved_params=dict(resolved_params),
-        current_param=key,
+        resolved_params=resolved_params,
         warnings=warnings,
     )
+    return True, value, provenance
 
-    if "template" in rule or "output" in rule:
-        template_name = rule.get("template")
-        output_key = rule.get("output", key)
-        if not template_name or not isinstance(template_name, str):
-            raise AssetResolutionError(
-                f"Binding template id is required for '{template.id}.{key}'"
-            )
-        value = ctx.latest_output(str(output_key), template_id=template_name)
-        if value is None:
-            raise ParameterResolutionError(
-                f"Binding could not resolve output '{template_name}.{output_key}' for '{template.id}.{key}'"
-            )
-        return True, value, {
-            "source": "binding",
-            "binding_source": "output",
-            "template": template_name,
-            "output": str(output_key),
-        }
-    if "function" in rule:
-        function_name = rule.get("function")
-        if not function_name or not isinstance(function_name, str):
-            raise AssetResolutionError(
-                f"Binding function name is required for '{template.id}.{key}'"
-            )
-        search_roots = []
-        if binding_root is not None:
-            search_roots.append(binding_root)
-        if template.pack_root is not None and template.pack_root not in search_roots:
-            search_roots.append(template.pack_root)
-        try:
-            value = resolve_binding_function(function_name, search_roots)(ctx)
-        except (AssetResolutionError, ParameterResolutionError):
-            raise
-        except Exception as exc:
-            raise ParameterResolutionError(
-                f"Binding function failed for '{template.id}.{key}': {exc}"
-            ) from exc
-        if value is None:
-            raise ParameterResolutionError(
-                f"Binding function returned no value for '{template.id}.{key}'"
-            )
-        return True, value, {
-            "source": "binding",
-            "binding_source": "function",
-            "name": function_name,
-        }
-    if "value" in rule:
-        return True, rule["value"], {
-            "source": "binding",
-            "binding_source": "value",
-        }
 
-    source = rule.get("from")
-    if source == "output":
-        output_key = rule.get("key", key)
-        value = ctx.latest_output(str(output_key))
-        if value is None:
-            raise ParameterResolutionError(
-                f"Binding could not resolve output '{output_key}' for '{template.id}.{key}'"
-            )
-        return True, value, {
-            "source": "binding",
-            "binding_source": "output",
-            "output": str(output_key),
-        }
-    if source == "function":
-        function_name = rule.get("name")
-        if not function_name or not isinstance(function_name, str):
-            raise AssetResolutionError(
-                f"Binding function name is required for '{template.id}.{key}'"
-            )
-        search_roots = []
-        if binding_root is not None:
-            search_roots.append(binding_root)
-        if template.pack_root is not None and template.pack_root not in search_roots:
-            search_roots.append(template.pack_root)
-        try:
-            value = resolve_binding_function(function_name, search_roots)(ctx)
-        except (AssetResolutionError, ParameterResolutionError):
-            raise
-        except Exception as exc:
-            raise ParameterResolutionError(
-                f"Binding function failed for '{template.id}.{key}': {exc}"
-            ) from exc
-        if value is None:
-            raise ParameterResolutionError(
-                f"Binding function returned no value for '{template.id}.{key}'"
-            )
-        return True, value, {
-            "source": "binding",
-            "binding_source": "function",
-            "name": function_name,
-        }
-    if source == "value":
-        if "value" not in rule:
-            raise AssetResolutionError(
-                f"Binding literal value is required for '{template.id}.{key}'"
-            )
-        return True, rule["value"], {
-            "source": "binding",
-            "binding_source": "value",
-        }
+def resolve_bound_outdir(
+    template: TemplateSpec,
+    binding_root: Path | None,
+    binding_data: dict[str, Any],
+    project: Project | None,
+    resolved_params: dict[str, Any],
+    warnings: list[dict[str, Any]],
+) -> tuple[bool, str | None, dict[str, Any] | None]:
+    template_binding = _template_binding(template, binding_data)
+    if "outdir" not in template_binding:
+        return False, None, None
 
-    raise AssetResolutionError(
-        f"Unsupported binding rule for '{template.id}.{key}'"
+    rule = template_binding.get("outdir") or {}
+    if not isinstance(rule, dict):
+        raise AssetResolutionError(
+            f"linkar_pack.yaml outdir rule must be a mapping for '{template.id}.outdir'"
+        )
+
+    value, provenance = _resolve_binding_rule(
+        template=template,
+        target_name="outdir",
+        rule=rule,
+        binding_root=binding_root,
+        project=project,
+        resolved_params=resolved_params,
+        warnings=warnings,
     )
+    return True, parse_param_value(value, "path"), provenance
 
 
 def resolve_params_detailed_with_warnings(

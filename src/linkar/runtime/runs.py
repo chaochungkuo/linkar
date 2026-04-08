@@ -14,7 +14,11 @@ from typing import Any
 from linkar import __version__
 from linkar.assets import resolve_asset_refs
 from linkar.errors import ExecutionError, LinkarError, ProjectValidationError, TemplateValidationError
-from linkar.runtime.bindings import resolve_params_detailed_with_warnings
+from linkar.runtime.bindings import (
+    load_binding_config,
+    resolve_bound_outdir,
+    resolve_params_detailed_with_warnings,
+)
 from linkar.runtime.models import Project, TemplateSpec
 from linkar.runtime.projects import (
     discover_project,
@@ -461,6 +465,7 @@ def prepare_template_execution(
     Path,
     Path,
     Path,
+    dict[str, Any] | None,
     dict[str, str],
 ]:
     if isinstance(project, (str, Path)):
@@ -492,12 +497,31 @@ def prepare_template_execution(
         project=project_obj,
         binding_ref=selected_binding_ref,
     )
+    outdir_provenance: dict[str, Any] | None = {"source": "cli"} if outdir is not None else None
+    selected_outdir = outdir
+    if outdir is None:
+        binding_root, binding_data = load_binding_config(selected_binding_ref, template.pack_root)
+        has_bound_outdir, bound_outdir, bound_outdir_provenance = resolve_bound_outdir(
+            template,
+            binding_root,
+            binding_data,
+            project_obj,
+            resolved_params,
+            warnings,
+        )
+        if has_bound_outdir:
+            selected_outdir = bound_outdir
+            outdir_provenance = bound_outdir_provenance
     instance_id = next_instance_id(template.id, project_obj)
     if action == "render":
-        output_dir = determine_render_outdir(template, project_obj, outdir, instance_id)
+        output_dir = determine_render_outdir(template, project_obj, selected_outdir, instance_id)
     else:
-        output_dir = determine_outdir(template, project_obj, outdir, instance_id)
-    display_dir = determine_project_alias_dir(template, project_obj) if action != "render" and outdir is None else output_dir
+        output_dir = determine_outdir(template, project_obj, selected_outdir, instance_id)
+    display_dir = (
+        determine_project_alias_dir(template, project_obj)
+        if action != "render" and selected_outdir is None
+        else output_dir
+    )
     if display_dir is None:
         display_dir = output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -529,6 +553,7 @@ def prepare_template_execution(
         output_dir,
         display_dir,
         linkar_dir,
+        outdir_provenance,
         env,
     )
 
@@ -1170,6 +1195,7 @@ def run_template(
         output_dir,
         display_dir,
         linkar_dir,
+        outdir_provenance,
         env,
     ) = prepare_template_execution(
         template_ref,
@@ -1234,6 +1260,7 @@ def run_template(
                 if selected_binding_ref is not None
                 else None
             ),
+            "outdir_provenance": outdir_provenance,
             "warnings": warnings,
             "command": command,
             "timestamp": finished_at.isoformat(),
@@ -1287,6 +1314,7 @@ def render_template(
         output_dir,
         display_dir,
         linkar_dir,
+        outdir_provenance,
         _env,
     ) = prepare_template_execution(
         template_ref,
@@ -1360,6 +1388,7 @@ def render_template(
                 if selected_binding_ref is not None
                 else None
             ),
+            "outdir_provenance": outdir_provenance,
             "warnings": warnings,
             "command": command,
             "timestamp": finished_at.isoformat(),
