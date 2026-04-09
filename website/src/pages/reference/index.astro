@@ -7,7 +7,7 @@ const explanations = (await getCollection("explanations")).sort((a, b) => a.data
 const explanationHref = (slug: string) => `${import.meta.env.BASE_URL}explanations/${slug}/`;
 ---
 
-<BaseLayout title="Reference | Linkar" description="Read the current Linkar explanations and runtime reference pages that define the product model and contract.">
+<BaseLayout title="Reference | Linkar" description="Read the runtime contracts behind Linkar: pack conventions, template semantics, parameter resolution, metadata, and public interfaces.">
   <div class="page-shell">
     <SiteNav />
     <main class="section-page">
@@ -15,8 +15,9 @@ const explanationHref = (slug: string) => `${import.meta.env.BASE_URL}explanatio
         <p class="eyebrow">Reference</p>
         <h1 class="page-title">Specs and rationale in one place.</h1>
         <p class="lede page-lede">
-          Linkar stays readable all the way down. The public pages explain the model, and the
-          development docs define the contract in more detail.
+          Use this section when you already understand the model and need the concrete contract:
+          template runtime rules, output collection, parameter resolution, metadata, and interface
+          behavior.
         </p>
       </section>
 
@@ -25,16 +26,15 @@ const explanationHref = (slug: string) => `${import.meta.env.BASE_URL}explanatio
           <article class="content-card">
             <h3>Read this in order</h3>
             <p>
-              Start with the explanations if you want the product boundary first. The current
-              runtime contract now lives here in the website, not in a separate development-docs
-              tree.
+              Start with the concepts if you want the product boundary first. Then use the
+              explanation pages here as the durable reference for how Linkar behaves.
             </p>
           </article>
           <article class="content-card">
             <h3>What this section is for</h3>
             <p>
-              These pages are the current truth for runtime behavior, pack conventions, render/run
-              semantics, metadata, and interface boundaries.
+              These pages are the current truth for runtime behavior, pack conventions,
+              render-versus-run semantics, metadata, bindings, and interface boundaries.
             </p>
           </article>
         </div>

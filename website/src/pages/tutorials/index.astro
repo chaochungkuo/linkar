@@ -15,8 +15,8 @@ const tutorialHref = (slug: string) => `${import.meta.env.BASE_URL}tutorials/${s
         <p class="eyebrow">Tutorials</p>
         <h1 class="page-title">Learn Linkar one path at a time.</h1>
         <p class="lede page-lede">
-          Start with the shortest local project flow, then move into authoring, testing, packs,
-          and agent-oriented usage.
+          Start with the shortest project path, then continue based on your role: pack user,
+          template author, or automation author.
         </p>
       </section>
 
@@ -26,15 +26,15 @@ const tutorialHref = (slug: string) => `${import.meta.env.BASE_URL}tutorials/${s
             <h3>Start here</h3>
             <p>
               Read <a href={tutorialHref("getting-started")}>Getting started with a local project</a>
-              first. It shows the normal human path: initialize a project, attach a pack, run one
-              template, and inspect the result.
+              first. It shows the normal path for a human user: initialize a project, attach a
+              pack, run one template, and inspect the recorded result.
             </p>
           </article>
           <article class="content-card">
             <h3>Then pick a lane</h3>
             <p>
-              Template authors should continue with authoring and testing. Users adopting shared
-              packs should continue with packs, scope, and the bundled example packs.
+              Pack users should continue with packs and scope. Template authors should continue with
+              authoring and testing. Automation authors should continue with the API and MCP path.
             </p>
           </article>
         </div>

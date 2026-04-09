@@ -5,6 +5,11 @@ order: 1
 status: ready
 ---
 
+This tutorial is the normal human starting path.
+
+You already have a reusable pack. You want to attach it to a local project, run one template, and
+inspect the result without learning the whole internals first.
+
 Install Linkar as a CLI tool first.
 
 Recommended:

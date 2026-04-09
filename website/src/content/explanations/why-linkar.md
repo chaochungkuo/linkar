@@ -1,93 +1,104 @@
 ---
-title: Why Linkar stays small
-description: Scripts are flexible but opaque. Workflow engines are powerful but heavy. Linkar stays in the middle on purpose, with interfaces for both humans and agents.
+title: Why Linkar exists
+description: Linkar is for the tension between customization and reuse: turning useful analysis resources into reusable building blocks without making them rigid.
 order: 1
 ---
 
-Linkar should not drift into a general DAG platform.
+Linkar starts from a very common data-science problem.
 
-It works best as a small runtime for reusable computational templates:
+Useful work already exists in many forms:
 
-- strong provenance
-- readable project state
-- a short CLI for humans
-- a structured core and local API for agents
+- a CLI tool you wrap for one dataset
+- a Python package you call from a small script
+- a notebook that contains the core logic for a recurring task
+- a shell script someone on the team already trusts
 
-That constraint is a product decision, not a missing feature.
+You want to customize these resources for the current analysis. You also want to reuse them next
+time without rebuilding the same glue again.
 
-## The gap it tries to fill
+That is the tension Linkar is designed for: keep useful work flexible enough for real projects,
+but structured enough to reuse and connect safely.
 
-Many computational workflows start in one of two places:
+## The problem Linkar tries to solve
 
-### Ad hoc scripts
+Without a shared structure, customization and reuse fight each other:
 
-These are flexible and fast to write, but they usually become hard to reuse:
+- parameters stay implicit
+- outputs stay informal
+- custom path rewiring gets repeated by hand
+- downstream chaining becomes brittle
+- the same transformation logic gets copied from one run to the next
 
-- parameters are implicit
-- outputs are informal
-- provenance is weak
-- downstream chaining is brittle
+That is especially painful when one analysis step feeds another. People end up manually changing
+params, paths, and defaults again and again. It is slow and easy to get wrong.
 
-### Full workflow systems
+## What Linkar provides
 
-These are powerful, but they often ask for a lot up front:
+Linkar is the core runtime.
 
-- a workflow language
-- a scheduler model
-- a graph model
-- a bigger cognitive load than one reusable step actually needs
+It gives you:
 
-Linkar sits in the middle.
+- a human CLI for daily use
+- a local API and MCP interface for machines
+- explicit input and output contracts
+- readable run artifacts on disk
+- a reusable place to define chaining and customization logic
 
-It helps you package one computational step cleanly without forcing you into a full workflow
-platform.
+The key unit is not a whole workflow. It is the reusable analysis resource.
 
-## What Linkar is good at
+## The core idea
 
-Linkar is strong when you want to:
+A Linkar pack captures two things:
 
-- turn one analysis step into a reusable template
-- keep run artifacts inspectable on disk
-- expose parameters and outputs explicitly
-- chain a few steps through recorded outputs
-- support both human CLI use and agent-oriented automation
+### Templates
 
-## What Linkar should not become
+Templates are standalone functional units.
 
-Linkar should not quietly expand into:
+They define:
 
-- a DAG authoring language
-- a scheduler
-- a cluster orchestrator
-- a registry-first platform
-- a hidden state database
+- input params
+- output params
+- the files, scripts, helpers, and environment config needed to run
+- local test scripts so the template can be tested on its own
 
-Those tools exist already. Linkar is more valuable when it keeps its scope narrow and readable.
+Each template should remain understandable and testable without depending on another template.
 
-## Why the human and agent interfaces both matter
+### Bindings
 
-The product is not only about provenance. The interface model is part of the value.
+Bindings define how templates connect.
 
-For humans:
+They let you encode:
 
-- the common CLI path should stay short
-- the current project should be discovered automatically
-- the run artifact should be understandable from the filesystem
+- how outputs from template A become inputs to template B
+- custom resolution logic
+- repeated transformations or conventions the user should not redo manually
 
-For agents:
+Once this logic is written once, it becomes reusable instead of living in ad hoc notes or shell
+history.
 
-- parameters should be structured
-- outputs should be structured
-- metadata should be easy to inspect
-- the same semantics should exist in the core API and local server
+## Why this matters
 
-That dual-interface design is one of Linkar's strongest differentiators.
+This model gives Linkar a very specific role:
 
-## The real product thesis
+- reusable enough to share
+- flexible enough to customize locally
+- explicit enough to chain safely
+- structured enough for both humans and machines
 
-Linkar is a small runtime for reusable computational templates, with a short human CLI and a
-machine-readable execution model.
+Linkar is not trying to replace every workflow system. It is trying to make reusable analysis work
+practical before you need a workflow platform.
 
-It does not try to hide the filesystem.
-It does not try to own the whole workflow.
-It tries to make one step reusable, inspectable, and easy to connect to the next one.
+## Why it stays intentionally scoped
+
+Linkar works best when it stays focused on:
+
+- reusable templates
+- reusable bindings
+- readable local projects
+- a short CLI for people
+- a structured API for machines
+
+It should not drift into a general DAG language, scheduler, or hidden database.
+
+That narrow scope is part of the product identity. Linkar is the layer that links reusable
+resources together while keeping them understandable.

@@ -8,29 +8,30 @@ import SiteNav from "./SiteNav.astro";
   <div class="hero-grid">
     <div class="hero-copy">
       <div class="hero-badges">
-        <span class="hero-badge">Filesystem-first runtime</span>
-        <span class="hero-badge">CLI + local API</span>
-        <span class="hero-badge">Agent-ready metadata</span>
+        <span class="hero-badge">Reusable resources</span>
+        <span class="hero-badge">Customizable packs</span>
+        <span class="hero-badge">CLI + API + MCP</span>
       </div>
-      <p class="eyebrow">Reusable computational work, without a workflow language</p>
-      <h1 class="hero-title">A high-trust runtime for templates, humans, and agents.</h1>
+      <p class="eyebrow">Link reusable analysis resources without losing flexibility</p>
+      <h1 class="hero-title">Turn scripts, tools, and notebooks into reusable work.</h1>
       <p class="lede">
-        Linkar sits between ad hoc scripts and heavyweight workflow systems. It gives teams a
-        short human CLI, a machine-readable local API, portable run artifacts, and enough structure
-        for AI agents to use reliably without shell scraping.
+        Data scientists constantly adapt CLI tools, scripts, packages, and notebooks to the current
+        dataset or project. Linkar helps you keep that work reusable at the same time: package each
+        step as a template, connect steps through bindings, and run everything through a short CLI
+        or a machine-readable local API.
       </p>
       <div class="hero-actions">
         <a class="button button-primary" href={`${import.meta.env.BASE_URL}tutorials/getting-started/`}>Start Here</a>
-        <a class="button button-secondary" href={`${import.meta.env.BASE_URL}tutorials/using-linkar-from-agents/`}>For Agents</a>
+        <a class="button button-secondary" href={`${import.meta.env.BASE_URL}explanations/why-linkar/`}>Why Linkar</a>
       </div>
       <div class="hero-metrics">
         <div class="metric-card">
-          <strong>1 runtime</strong>
-          <span>CLI, core, and API share the same execution semantics.</span>
+          <strong>Templates stay standalone</strong>
+          <span>Each template declares its inputs and outputs and should be testable on its own.</span>
         </div>
         <div class="metric-card">
-          <strong>0 hidden state</strong>
-          <span>Runs stay on disk as normal directories with inspectable metadata.</span>
+          <strong>Bindings remove repeated wiring</strong>
+          <span>Reusable connection logic maps outputs to inputs so you do not keep re-entering the same choices.</span>
         </div>
       </div>
     </div>
@@ -44,15 +45,15 @@ import SiteNav from "./SiteNav.astro";
 cd study
 
 $ linkar pack add ~/github/izkf_genomics_pack --id izkf
-$ linkar run fastqc --input sample.fastq.gz
-$ linkar run multiqc
-$ linkar inspect run multiqc_001
+$ linkar run cellranger_atac --fastqs ./fastqs
+$ linkar run atac_qc
+$ linkar inspect run atac_qc_001
 
 study/
-  multiqc/
+  atac_qc/
   .linkar/
     runs/
-      multiqc_001/
+      atac_qc_001/
         results/
         .linkar/
           meta.json

@@ -10,8 +10,8 @@ const explanationHref = (slug: string) => `${import.meta.env.BASE_URL}explanatio
 ---
 
 <BaseLayout
-  title="Linkar | Template Runtime For Humans And Agents"
-  description="Linkar is a lightweight runtime for reusable computational templates, with a human-friendly CLI, a local API, and transparent run artifacts designed for reliable AI-agent use."
+  title="Linkar | Reusable Analysis Resources For Humans And Machines"
+  description="Linkar helps teams turn scripts, CLI tools, notebooks, and analysis steps into reusable templates and bindings, with a short CLI for humans and a local API for machines."
 >
   <div class="page-shell">
     <SiteHeader />
@@ -19,35 +19,36 @@ const explanationHref = (slug: string) => `${import.meta.env.BASE_URL}explanatio
     <main>
       <section class="section">
         <div class="section-heading">
-          <p class="eyebrow">Why Linkar</p>
-          <h2>A runtime for the work between scripts and workflow engines.</h2>
+          <p class="eyebrow">The Problem</p>
+          <h2>Real analysis work needs both customization and reuse.</h2>
           <p class="section-copy">
-            Linkar keeps one computational step reusable, inspectable, and easy to run. It does
-            not ask you to adopt a workflow language just to make a script portable.
+            Data scientists often start from something useful already: a script, a package, a CLI
+            tool, or a notebook. Then reality arrives. Inputs differ, defaults change, one step
+            must feed another, and the same local adjustments get repeated by hand. That is where
+            reuse becomes fragile and chaining becomes error-prone.
           </p>
         </div>
 
         <div class="card-grid three-up">
           <article class="feature-card">
-            <h3>Templates stay standalone</h3>
+            <h3>Useful resources drift into one-off work</h3>
             <p>
-              Each template is a normal directory with a small YAML contract and a real entry
-              script. Nothing important is hidden in framework internals.
+              Scripts and notebooks are easy to adapt once, but hard to reuse cleanly when params,
+              outputs, and environment assumptions stay implicit.
             </p>
           </article>
           <article class="feature-card">
-            <h3>Humans get a short CLI</h3>
+            <h3>Generalization can kill practicality</h3>
             <p>
-              The common path stays short: discover the current project, expose template params as
-              flags, and write readable run artifacts instead of hidden state.
+              Many systems become too abstract too early. You need a reusable step, not a whole new
+              workflow language just to keep a tool portable.
             </p>
           </article>
           <article class="feature-card">
-            <h3>Agents get explicit structure</h3>
+            <h3>Manual chaining creates avoidable mistakes</h3>
             <p>
-              Every run lives in a normal directory with <code>results/</code>,
-              <code>.linkar/meta.json</code>, and runtime details that tools and agents can inspect
-              later without shell scraping.
+              When one analysis feeds another, retyping paths and choices again and again is slow,
+              inconsistent, and easy to get wrong.
             </p>
           </article>
         </div>
@@ -55,10 +56,49 @@ const explanationHref = (slug: string) => `${import.meta.env.BASE_URL}explanatio
 
       <section class="section section-dark">
         <div class="section-heading">
-          <p class="eyebrow">Interfaces</p>
-          <h2>One runtime, two clear interfaces.</h2>
+          <p class="eyebrow">The Model</p>
+          <h2>Linkar packages reusable work and the logic that connects it.</h2>
           <p class="section-copy">
-            Humans get a short CLI. Agents get a structured core and local API. Both write the same
+            Linkar is the core runtime. Packs are where users capture reusable capabilities. A pack
+            combines standalone templates with bindings that define how steps connect and where
+            custom logic should live.
+          </p>
+        </div>
+
+        <div class="card-grid three-up">
+          <article class="feature-card">
+            <h3>Templates are standalone units</h3>
+            <p>
+              A template defines explicit input params and output params. It can include scripts,
+              helper files, environment config, and tests, but it should still be runnable and
+              testable on its own.
+            </p>
+          </article>
+          <article class="feature-card">
+            <h3>Bindings capture reusable customization</h3>
+            <p>
+              Bindings define how outputs from one template become inputs to another. They also
+              hold custom functions so repeated mapping or transformation only needs to be defined
+              once.
+            </p>
+          </article>
+          <article class="feature-card">
+            <h3>Packs are personal or shared assets</h3>
+            <p>
+              A pack is the reusable surface area of your work: templates plus pack-level bindings.
+              Projects stay local and readable while packs stay portable between users and teams.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section section-alt">
+        <div class="section-heading">
+          <p class="eyebrow">Interfaces</p>
+          <h2>One runtime for human use and machine automation.</h2>
+          <p class="section-copy">
+            Linkar is the same core software either way. Humans use a short CLI. Machines use the
+            same semantics through the local API or MCP tools. Both paths write the same readable
             run artifact on disk.
           </p>
         </div>
@@ -67,37 +107,34 @@ const explanationHref = (slug: string) => `${import.meta.env.BASE_URL}explanatio
           <article class="interface-card">
             <div class="interface-head">
               <span class="interface-tag">Human</span>
-              <h3>Short CLI for real work</h3>
+              <h3>Short CLI for daily analysis work</h3>
             </div>
             <p>
-              Discover the current project, expose template params as flags, and keep the command
-              path short enough to use every day.
+              Discover the current project, expose template params as flags, and keep the path
+              short enough that people will actually use it.
             </p>
             <pre><code>linkar config author set --name "Your Name"
 linkar project init --name study
 cd study
+linkar pack add ~/github/izkf_genomics_pack --id izkf
 linkar run fastqc --input sample.fastq.gz
-linkar project runs
 linkar inspect run fastqc_001</code></pre>
           </article>
 
           <article class="interface-card">
             <div class="interface-head">
               <span class="interface-tag">Machine</span>
-              <h3>Structured API and MCP for agents</h3>
+              <h3>Local API and MCP for structured automation</h3>
             </div>
             <p>
-              Inspect templates, run work, and consume outputs through JSON or MCP tools while
-              still writing the same on-disk artifacts.
+              Agents and tools can inspect templates, resolve params, run work, and consume
+              outputs without scraping shell text or inventing their own state model.
             </p>
             <pre><code>linkar serve --port 8000
 
 GET  /templates
-GET  /templates/&lcub;template_id&rcub;
 POST /resolve
 POST /run
-POST /render
-POST /collect
 GET  /runs/&lcub;run_ref&rcub;/outputs
 GET  /runs/&lcub;run_ref&rcub;/runtime
 
@@ -106,68 +143,48 @@ linkar mcp serve</code></pre>
         </div>
       </section>
 
-      <section class="section section-alt">
+      <section class="section">
         <div class="section-heading">
-          <p class="eyebrow">Quickstart</p>
-          <h2>Install once, then keep the path short.</h2>
+          <p class="eyebrow">Learn In Order</p>
+          <h2>Start with the model, then follow the path that matches your job.</h2>
           <p class="section-copy">
-            Install Linkar as a CLI tool, then start a project, attach a pack, run one template,
-            and inspect the recorded result.
+            The site is organized around three questions: what Linkar is, how to use it, and what
+            the contracts are. Start with concepts if you are new, then move into tutorials or the
+            reference depending on whether you are running packs, authoring them, or automating them.
           </p>
         </div>
 
         <div class="split-grid">
-          <div class="content-card">
-            <h3>0. Install Linkar</h3>
-            <pre><code>pipx install git+https://github.com/jovesus/linkar.git
-
-# or
-uv tool install git+https://github.com/jovesus/linkar.git</code></pre>
-          </div>
-
-          <div class="content-card">
-            <h3>1. Start a project</h3>
-            <pre><code>linkar config author set --name "Your Name"
-linkar project init --name demo
-cd demo</code></pre>
-          </div>
-
-          <div class="content-card">
-            <h3>2. Add a pack</h3>
-            <pre><code>linkar pack add ~/github/izkf_genomics_pack --id izkf
-linkar templates</code></pre>
-          </div>
-
-          <div class="content-card">
-            <h3>3. Run a template</h3>
-            <pre><code>linkar run fastqc --input sample.fastq.gz
-linkar project runs</code></pre>
-          </div>
-
-          <div class="content-card">
-            <h3>4. Inspect the run</h3>
-            <pre><code>linkar inspect run fastqc_001
-
-demo/
-  fastqc/
-  .linkar/
-    runs/
-      fastqc_001/</code></pre>
-          </div>
+          <article class="content-card">
+            <h3>1. Understand the concept</h3>
+            <p>
+              Start with the explanation pages to learn the product identity, the role of packs and
+              projects, and why templates and bindings are separate.
+            </p>
+            <div class="hero-actions">
+              <a class="button button-secondary" href={`${import.meta.env.BASE_URL}explanations/`}>Browse concepts</a>
+            </div>
+          </article>
+          <article class="content-card">
+            <h3>2. Follow a tutorial path</h3>
+            <p>
+              Use the tutorials to set up a project, run a pack, author templates, test them, and
+              expose Linkar to agents or other automation.
+            </p>
+            <div class="hero-actions">
+              <a class="button button-secondary" href={`${import.meta.env.BASE_URL}tutorials/`}>Browse tutorials</a>
+            </div>
+          </article>
         </div>
-      </section>
 
-      <section class="section">
-        <div class="section-heading">
-          <p class="eyebrow">Where To Go Next</p>
-          <h2>Use the site by page, not by section.</h2>
-          <p class="section-copy">
-            The homepage should introduce the model. The real learning and reference material now
-            lives in dedicated pages.
-          </p>
-        </div>
-        <div class="card-grid two-up">
-          {tutorials.map((entry) => (
+        <div class="card-grid two-up section-top-gap">
+          {explanations.slice(0, 2).map((entry) => (
+            <a class="doc-card" href={explanationHref(entry.slug)}>
+              <h3>{entry.data.title}</h3>
+              <p>{entry.data.description}</p>
+            </a>
+          ))}
+          {tutorials.slice(0, 2).map((entry) => (
             <a class="tutorial-card tutorial-link" href={tutorialHref(entry.slug)}>
               <h3>{entry.data.title}</h3>
               <p>{entry.data.description}</p>
@@ -175,16 +192,9 @@ demo/
             </a>
           ))}
         </div>
-        <div class="card-grid two-up section-top-gap">
-          {explanations.map((entry) => (
-            <a class="doc-card" href={explanationHref(entry.slug)}>
-              <h3>{entry.data.title}</h3>
-              <p>{entry.data.description}</p>
-            </a>
-          ))}
-        </div>
+
         <div class="hero-actions section-top-gap">
-          <a class="button button-primary" href={`${import.meta.env.BASE_URL}tutorials/`}>Browse tutorials</a>
+          <a class="button button-primary" href={`${import.meta.env.BASE_URL}tutorials/getting-started/`}>Start with getting started</a>
           <a class="button button-secondary" href={`${import.meta.env.BASE_URL}reference/`}>Open reference</a>
         </div>
       </section>
