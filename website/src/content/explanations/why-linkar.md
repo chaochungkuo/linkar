@@ -1,6 +1,6 @@
 ---
 title: Why Linkar exists
-description: Linkar is for the tension between customization and reuse: turning useful analysis resources into reusable building blocks without making them rigid.
+description: "Linkar is for the tension between customization and reuse: turning useful analysis resources into reusable building blocks without making them rigid."
 order: 1
 ---
 

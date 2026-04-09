@@ -1,6 +1,6 @@
 ---
 title: Build a real pack with templates and bindings
-description: Create a small but realistic pack: one standalone producer template, one consumer template, and one pack-level binding that removes repeated manual wiring.
+description: "Create a small but realistic pack: one standalone producer template, one consumer template, and one pack-level binding that removes repeated manual wiring."
 order: 3
 status: ready
 ---
