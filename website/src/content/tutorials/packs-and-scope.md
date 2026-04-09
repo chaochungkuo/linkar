@@ -18,7 +18,7 @@ That order is important because it keeps convenience available without weakening
 This is the most explicit path:
 
 ```bash
-linkar run fastqc --pack ~/github/izkf_genomics_pack --input sample.fastq.gz
+linkar run simple_echo --pack ./examples/packs/basic --param name=Linkar
 ```
 
 It is useful when:
@@ -34,9 +34,9 @@ Once a project should be reproducible on its own, add the pack to the project:
 ```bash
 linkar project init --name study
 cd study
-linkar pack add ~/github/izkf_genomics_pack --id izkf
+linkar pack add ../examples/packs/basic --id basic
 linkar templates
-linkar run fastqc --input sample.fastq.gz
+linkar run simple_echo --name Linkar
 ```
 
 Now the project remembers the pack, so later runs are shorter and the project remains readable.
@@ -48,7 +48,7 @@ This is the recommended path for normal work.
 Global packs are personal defaults:
 
 ```bash
-linkar config pack add ~/github/izkf_genomics_pack --id izkf
+linkar config pack add ./examples/packs/basic --id basic
 linkar templates
 ```
 

@@ -71,6 +71,12 @@ curl -s -X POST "http://127.0.0.1:8000/render" \
 curl -s -X POST "http://127.0.0.1:8000/collect" \
   -H "Content-Type: application/json" \
   -d '{"run_ref":"./simple_echo_bundle"}'
+```
+
+If you run inside a real project instead of using only `pack_refs`, then inspect the recorded run
+through:
+
+```bash
 curl -s "http://127.0.0.1:8000/runs/simple_echo_001/outputs?project=./study"
 curl -s "http://127.0.0.1:8000/runs/simple_echo_001/runtime?project=./study"
 ```

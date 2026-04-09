@@ -32,16 +32,16 @@ import SiteNav from "./SiteNav.astro";
         <pre><code>$ linkar project init --name study
 cd study
 
-$ linkar pack add ~/github/izkf_genomics_pack --id izkf
-$ linkar run cellranger_atac --fastqs ./fastqs
-$ linkar run atac_qc
-$ linkar inspect run atac_qc_001
+$ linkar pack add ../examples/packs/chaining --id chaining --binding default
+$ linkar run produce_message --message "hello"
+$ linkar run consume_message
+$ linkar inspect run consume_message_001
 
 study/
-  atac_qc/
+  consume_message/
   .linkar/
     runs/
-      atac_qc_001/
+      consume_message_001/
         results/
         .linkar/
           meta.json

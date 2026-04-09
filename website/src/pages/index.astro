@@ -71,9 +71,10 @@ import SiteHeader from "../components/SiteHeader.astro";
             <pre><code>linkar config author set --name "Your Name"
 linkar project init --name study
 cd study
-linkar pack add ~/github/izkf_genomics_pack --id izkf
-linkar run fastqc --input sample.fastq.gz
-linkar inspect run fastqc_001</code></pre>
+linkar pack add ../examples/packs/chaining --id chaining --binding default
+linkar run produce_message --message "hello"
+linkar run consume_message
+linkar inspect run consume_message_001</code></pre>
           </article>
 
           <article class="interface-card">

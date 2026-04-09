@@ -18,6 +18,9 @@ import SiteNav from "../../components/SiteNav.astro";
       <section class="section page-section-tight">
         <div class="card-grid two-up">
           <article class="feature-card">
+            <div class="card-tags">
+              <span class="card-tag">Authoring</span>
+            </div>
             <h3>Basic</h3>
             <p>
               Start here for the template contract: `run.command`, `run.sh`, `run.py`, declared
@@ -26,6 +29,9 @@ import SiteNav from "../../components/SiteNav.astro";
           </article>
 
           <article class="feature-card">
+            <div class="card-tags">
+              <span class="card-tag">Bindings</span>
+            </div>
             <h3>Chaining</h3>
             <p>
               Open this when you want to see pack-level default binding in action. The key lesson is
@@ -34,6 +40,9 @@ import SiteNav from "../../components/SiteNav.astro";
           </article>
 
           <article class="feature-card">
+            <div class="card-tags">
+              <span class="card-tag">Bindings</span>
+            </div>
             <h3>Binding overrides</h3>
             <p>
               Use this when you want to compare three things directly: project history, a pack's
@@ -42,11 +51,24 @@ import SiteNav from "../../components/SiteNav.astro";
           </article>
 
           <article class="feature-card">
-            <h3>Pack management and remote</h3>
+            <div class="card-tags">
+              <span class="card-tag">Pack Selection</span>
+            </div>
+            <h3>Pack management</h3>
             <p>
-              Use `pack_management` for duplicate template ids and active-pack selection. Use
-              `remote` once local packs are clear and you want to see `git+` references and
-              revision-aware provenance.
+              Use this when multiple packs expose the same template id and you want to see how
+              active-pack selection and `--pack` keep resolution explicit.
+            </p>
+          </article>
+
+          <article class="feature-card">
+            <div class="card-tags">
+              <span class="card-tag">Remote</span>
+            </div>
+            <h3>Remote</h3>
+            <p>
+              Use this once local packs are clear and you want to see `git+` references, cached
+              remote assets, and revision-aware provenance.
             </p>
           </article>
         </div>

@@ -35,9 +35,9 @@ Start with the shortest useful flow:
 linkar config author set --name "Your Name" --email "you@example.org" --organization "IZKF"
 linkar project init --name study
 cd study
-linkar pack add ~/github/izkf_genomics_pack --id izkf
-linkar run fastqc --input sample.fastq.gz
-linkar inspect run fastqc_001
+linkar pack add ../examples/packs/basic --id basic
+linkar run simple_echo --name Linkar
+linkar inspect run simple_echo_001
 ```
 
 This gives you:
@@ -45,7 +45,7 @@ This gives you:
 - a normal project directory
 - `project.yaml`
 - reused author metadata from your global Linkar config
-- a stable project-root directory such as `./fastqc`
+- a stable project-root directory such as `./simple_echo`
 - immutable run history under `.linkar/runs/`
 - `.linkar/runs/<instance_id>/.linkar/meta.json` for provenance
 - the option to render a standalone artifact with `linkar render ...`
@@ -54,8 +54,8 @@ This gives you:
 
 In project mode, Linkar now separates:
 
-- the stable project-facing alias, such as `./fastqc`
-- the immutable recorded run under `.linkar/runs/fastqc_001`
+- the stable project-facing alias, such as `./simple_echo`
+- the immutable recorded run under `.linkar/runs/simple_echo_001`
 
 That means the project root stays readable while the real history remains preserved.
 
@@ -63,7 +63,7 @@ That means the project root stays readable while the real history remains preser
 
 ```bash
 linkar project runs
-linkar inspect run fastqc_001
+linkar inspect run simple_echo_001
 linkar templates
 ```
 
@@ -80,7 +80,7 @@ linkar project init --name study --adopt /path/to/existing_run
 If you want a standalone runnable artifact instead of an executed run:
 
 ```bash
-linkar render simple_echo --pack ./examples/packs/basic --param name=Linkar
+linkar render simple_echo --pack ./examples/packs/basic --param name=Linkar --outdir ./simple_echo
 cd simple_echo
 bash run.sh
 linkar collect .
