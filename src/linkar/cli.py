@@ -131,10 +131,22 @@ def config_pack_add_command(ref: str, pack_id: str | None, activate: bool, ui: C
 
 
 @config_pack_group.command("list")
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["rich", "json", "yaml"]),
+    default="rich",
+    show_default=True,
+    help="Output format.",
+)
 @handle_linkar_errors
-def config_pack_list_command(ui: CliUI) -> None:
+def config_pack_list_command(output_format: str, ui: CliUI) -> None:
     """List global packs saved in user config."""
-    ui.print_packs(list_global_packs())
+    packs = list_global_packs()
+    if output_format == "rich":
+        ui.print_packs(packs)
+        return
+    ui.print_data(packs, format=output_format)
 
 
 @config_pack_group.command("use")
@@ -270,10 +282,22 @@ def pack_add_command(
     help="Project directory or project.yaml path. Defaults to the current directory.",
     show_default=False,
 )
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["rich", "json", "yaml"]),
+    default="rich",
+    show_default=True,
+    help="Output format.",
+)
 @handle_linkar_errors
-def pack_list_command(project: str | None, ui: CliUI) -> None:
+def pack_list_command(project: str | None, output_format: str, ui: CliUI) -> None:
     """List packs saved in the project configuration."""
-    ui.print_packs(list_configured_packs(project=project))
+    packs = list_configured_packs(project=project)
+    if output_format == "rich":
+        ui.print_packs(packs)
+        return
+    ui.print_data(packs, format=output_format)
 
 
 @pack_group.command("use")
@@ -707,10 +731,22 @@ render_group.add_command(render_raw_command)
     help="Project directory or project.yaml path. Defaults to the current directory.",
     show_default=False,
 )
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["rich", "json", "yaml"]),
+    default="rich",
+    show_default=True,
+    help="Output format.",
+)
 @handle_linkar_errors
-def templates_command(pack: tuple[str, ...], project: str | None, ui: CliUI) -> None:
+def templates_command(pack: tuple[str, ...], project: str | None, output_format: str, ui: CliUI) -> None:
     """List templates visible from explicit packs and the active project configuration."""
-    ui.print_templates(list_templates(pack_refs=list(pack), project=project))
+    templates = list_templates(pack_refs=list(pack), project=project)
+    if output_format == "rich":
+        ui.print_templates(templates)
+        return
+    ui.print_data(templates, format=output_format)
 
 
 @app.command("collect")

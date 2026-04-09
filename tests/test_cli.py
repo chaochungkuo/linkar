@@ -2051,6 +2051,64 @@ printf '%s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/name.txt"
     assert f"PACK\t{pack_root.resolve()}" in completed.stdout
     assert "listed_template\tTemplate used for listing tests\tname\tresults_dir,name_file\t1.2.3" in completed.stdout
 
+    templates_json = run_cli("templates", "--format", "json", cwd=project_dir)
+    assert templates_json.returncode == 0, templates_json.stderr
+    payload_json = json.loads(templates_json.stdout)
+    assert payload_json[0]["id"] == "listed_template"
+    assert payload_json[0]["version"] == "1.2.3"
+
+    templates_yaml = run_cli("templates", "--format", "yaml", cwd=project_dir)
+    assert templates_yaml.returncode == 0, templates_yaml.stderr
+    payload_yaml = yaml.safe_load(templates_yaml.stdout)
+    assert payload_yaml[0]["id"] == "listed_template"
+    assert payload_yaml[0]["description"] == "Template used for listing tests"
+
+
+def test_pack_list_commands_support_json_and_yaml_formats(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    project_file = project_dir / "project.yaml"
+    project_data = yaml.safe_load(project_file.read_text())
+    project_data["active_pack"] = "izkf_pack"
+    project_data["packs"] = [{"id": "izkf_pack", "ref": "/packs/izkf_pack", "binding": "default"}]
+    project_file.write_text(yaml.safe_dump(project_data, sort_keys=False))
+
+    project_json = run_cli("pack", "list", "--format", "json", cwd=project_dir)
+    assert project_json.returncode == 0, project_json.stderr
+    project_payload = json.loads(project_json.stdout)
+    assert project_payload[0]["id"] == "izkf_pack"
+    assert project_payload[0]["binding"] == "default"
+
+    project_yaml = run_cli("pack", "list", "--format", "yaml", cwd=project_dir)
+    assert project_yaml.returncode == 0, project_yaml.stderr
+    project_payload_yaml = yaml.safe_load(project_yaml.stdout)
+    assert project_payload_yaml[0]["active"] is True
+
+    env = {"LINKAR_HOME": str(tmp_path / "home")}
+    configured = run_cli(
+        "config",
+        "pack",
+        "add",
+        "/packs/izkf_pack",
+        "--id",
+        "izkf_pack",
+        cwd=tmp_path,
+        env_extra=env,
+    )
+    assert configured.returncode == 0, configured.stderr
+
+    global_json = run_cli("config", "pack", "list", "--format", "json", cwd=tmp_path, env_extra=env)
+    assert global_json.returncode == 0, global_json.stderr
+    global_payload = json.loads(global_json.stdout)
+    assert global_payload[0]["id"] == "izkf_pack"
+
+    global_yaml = run_cli("config", "pack", "list", "--format", "yaml", cwd=tmp_path, env_extra=env)
+    assert global_yaml.returncode == 0, global_yaml.stderr
+    global_payload_yaml = yaml.safe_load(global_yaml.stdout)
+    assert global_payload_yaml[0]["active"] is True
+
 
 def test_run_metadata_collects_declared_outputs_from_default_results_subpaths(tmp_path: Path) -> None:
     pack_root = tmp_path / "pack"
