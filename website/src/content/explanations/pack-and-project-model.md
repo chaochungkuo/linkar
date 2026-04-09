@@ -78,11 +78,11 @@ By keeping them separate, Linkar gets a cleaner model:
 A pack might look like:
 
 ```text
-izkf_genomics_pack/
+example_site_pack/
   linkar_pack.yaml
   discovery/
     projects.py
-    fastq_runs.py
+    input_runs.py
     references.py
   functions/
     resolve_reference.py

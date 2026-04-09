@@ -11,8 +11,8 @@ It should not have to know your facility's storage ontology.
 That means concepts like these usually do **not** belong in Linkar core:
 
 - where projects live on one server
-- where FASTQ runs are stored
-- how raw sequencing runs are named
+- where input runs are stored
+- how source runs are named
 - where local reference directories are mounted
 
 Those are site-specific facts, not universal workflow semantics.
@@ -41,19 +41,19 @@ A site-oriented pack can reasonably contain three different layers:
 An example pack layout:
 
 ```text
-izkf_pack/
+example_site_pack/
   linkar_pack.yaml
   templates/
-    demultiplex/
-    cellranger_atac/
-    dgea/
+    prepare_inputs/
+    analyze_dataset/
+    summarize_results/
   functions/
-    get_demultiplex_fastq_dir.py
+    select_input_dir.py
     get_host_max_cpus.py
   discovery/
     projects.py
-    fastq_runs.py
-    raw_runs.py
+    input_runs.py
+    source_runs.py
     references.py
 ```
 
@@ -61,14 +61,14 @@ izkf_pack/
 
 Bindings are best for workflow resolution, for example:
 
-- turn the latest `demultiplex.demux_fastq_files` output into one `fastq_dir`
+- turn the latest `prepare_inputs.generated_input_files` output into one `input_dir`
 - derive a default reference
 - compute sensible cores and memory
 
 Bindings are not the best place for broader inventory questions like:
 
 - list all projects on this server
-- list all FASTQ runs under a facility root
+- list all input runs under a facility root
 - search all reference directories
 
 Those are environment discovery tasks, not template-param resolution tasks.
@@ -83,7 +83,7 @@ Putting discovery into the pack gives you a good compromise:
 
 That means an agent can do:
 
-1. use pack discovery to find candidate projects or FASTQ runs
+1. use pack discovery to find candidate projects or input runs
 2. let the user choose the right one
 3. use Linkar API or MCP tools to inspect templates
 4. resolve params
@@ -98,21 +98,21 @@ Good project summary:
 ```json
 {
   "kind": "project_summary",
-  "id": "260330_Yildiz_ZimmerBensch_BioII_scATAcseq",
-  "path": "/data/projects/260330_Yildiz_ZimmerBensch_BioII_scATAcseq",
+  "id": "example_project_001",
+  "path": "/data/projects/example_project_001",
   "has_project_yaml": true,
   "linkar_runs": 2
 }
 ```
 
-Good FASTQ summary:
+Good input-run summary:
 
 ```json
 {
-  "kind": "fastq_run_summary",
-  "name": "260330_A01742_0623_AHL7YGDRX7",
-  "path": "/data/fastq/260330_A01742_0623_AHL7YGDRX7",
-  "fastq_file_count": 48
+  "kind": "input_run_summary",
+  "name": "example_input_run_001",
+  "path": "/data/inputs/example_input_run_001",
+  "file_count": 48
 }
 ```
 
