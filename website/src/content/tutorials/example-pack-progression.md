@@ -1,7 +1,7 @@
 ---
 title: Walk through the bundled example packs
 description: Move from the smallest shell template to chaining, pack collisions, and remote-pack demos.
-order: 4
+order: 8
 status: ready
 ---
 

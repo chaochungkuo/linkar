@@ -1,7 +1,7 @@
 ---
 title: Using Linkar from agents and automation
 description: Prefer the core helpers or the local API when an agent needs to inspect templates, run work, and read structured results.
-order: 3
+order: 7
 status: ready
 ---
 

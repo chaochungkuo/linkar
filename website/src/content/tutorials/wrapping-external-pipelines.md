@@ -1,7 +1,7 @@
 ---
 title: Wrapping an external pipeline
 description: Turn an existing script or external repo into a Linkar template without copying all its code.
-order: 4
+order: 5
 status: ready
 ---
 

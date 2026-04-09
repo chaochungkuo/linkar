@@ -1,7 +1,7 @@
 ---
 title: Test the bundled basic templates
 description: Use linkar test for the normal validation path, then fall back to test.sh or test.py when editing one template locally.
-order: 5
+order: 6
 status: ready
 ---
 
