@@ -370,7 +370,9 @@ def execute_optional_render_command(
     if project_obj is not None:
         env["LINKAR_PROJECT_DIR"] = str(project_obj.root)
     for key, value in sorted(resolved_params.items()):
-        env[env_key(key)] = format_env_value(value)
+        formatted = format_env_value(value)
+        env[env_key(key)] = formatted
+        env[key] = formatted
 
     command = resolve_render_command(
         template.render_command,
