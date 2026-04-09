@@ -6,6 +6,8 @@ order: 1
 
 Linkar starts from a very common data-science problem.
 
+The name is intentional: Linkar stands for `LINKing All Resources`.
+
 Useful work already exists in many forms:
 
 - a CLI tool you wrap for one dataset

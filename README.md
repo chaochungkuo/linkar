@@ -1,6 +1,8 @@
 # linkar
 
-`linkar` is a lightweight runtime for reusable computational templates, with a human-friendly CLI and a machine-readable execution model designed for reliable AI-agent use. The current implementation provides:
+`linkar` stands for `LINKing All Resources`.
+
+It is a lightweight runtime for reusable computational templates, with a human-friendly CLI and a machine-readable execution model designed for reliable AI-agent use. The current implementation provides:
 
 - A Python core with pure project and template orchestration logic
 - A Click-based CLI with template-aware run commands
