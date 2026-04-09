@@ -79,7 +79,16 @@ def test_server_v1_root_and_aliases(tmp_path: Path) -> None:
     assert payload["data"]["api_version"] == "v1"
     assert payload["data"]["linkar_version"]
     assert payload["data"]["identity"]["subject"] == "anonymous"
+    assert payload["data"]["auth"]["enabled"] is False
+    assert any(route["path"] == "/v1/schema" for route in payload["data"]["routes"])
     assert payload["data"]["features"]["resolve"] is True
+
+    status, _, payload = call_app(app, method="GET", path="/v1/schema")
+    assert status == "200 OK"
+    assert payload["data"]["kind"] == "schema"
+    assert payload["data"]["auth"]["enabled"] is False
+    assert payload["data"]["conventions"]["collections"]["items_field"] == "items"
+    assert any(route["path"] == "/v1/templates/{template_id}:resolve" for route in payload["data"]["routes"])
 
     status, _, payload = call_app(
         app,
@@ -171,6 +180,7 @@ def test_server_optional_bearer_auth_enforces_roles() -> None:
     assert status == "200 OK"
     assert payload["data"]["identity"]["roles"] == ["read"]
     assert payload["data"]["identity"]["auth_required"] is True
+    assert payload["data"]["auth"]["enabled"] is True
 
     status, _, payload = call_app(
         app,

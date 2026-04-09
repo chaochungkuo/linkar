@@ -418,6 +418,51 @@ def collection_payload(items_key: str, items: list[dict]) -> dict:
     }
 
 
+def v1_routes_document() -> list[dict[str, object]]:
+    return [
+        {"path": "/v1", "method": "GET", "kind": "service", "role": "read", "description": "Service discovery and API capabilities."},
+        {"path": "/v1/health", "method": "GET", "kind": "health", "role": "none", "description": "Lightweight health check."},
+        {"path": "/v1/schema", "method": "GET", "kind": "schema", "role": "read", "description": "Canonical route and capability document for agents."},
+        {"path": "/v1/projects/current", "method": "GET", "kind": "project", "role": "read", "description": "Summary of the current or selected Linkar project."},
+        {"path": "/v1/projects/current/runs", "method": "GET", "kind": "run_collection", "role": "read", "description": "Recorded runs for the current or selected project."},
+        {"path": "/v1/projects/current/assets", "method": "GET", "kind": "asset_collection", "role": "read", "description": "Resolved pack assets visible to the current or selected project."},
+        {"path": "/v1/templates", "method": "GET", "kind": "template_collection", "role": "read", "description": "Available templates for the selected project or pack scope."},
+        {"path": "/v1/templates/{template_id}", "method": "GET", "kind": "template", "role": "read", "description": "Template detail and declared contract."},
+        {"path": "/v1/templates/{template_id}:resolve", "method": "POST", "kind": "resolve", "role": "resolve", "description": "Resolve params, provenance, warnings, and confirmation requirements."},
+        {"path": "/v1/templates/{template_id}:run", "method": "POST", "kind": "run_submission", "role": "execute", "description": "Run a template directly or via a resolve token."},
+        {"path": "/v1/templates/{template_id}:render", "method": "POST", "kind": "render_submission", "role": "execute", "description": "Render a runnable template bundle without executing it."},
+        {"path": "/v1/templates/{template_id}:test", "method": "POST", "kind": "test_submission", "role": "execute", "description": "Run the template test workflow."},
+        {"path": "/v1/runs/{instance_id}", "method": "GET", "kind": "run", "role": "read", "description": "Detailed run metadata and provenance."},
+        {"path": "/v1/runs/{instance_id}/outputs", "method": "GET", "kind": "run_outputs", "role": "read", "description": "Collected outputs for a run."},
+        {"path": "/v1/runs/{instance_id}/status", "method": "GET", "kind": "run_status", "role": "read", "description": "Compact runtime status for a run."},
+        {"path": "/v1/runs/{instance_id}/runtime", "method": "GET", "kind": "run_runtime", "role": "read", "description": "Full recorded runtime metadata for a run."},
+    ]
+
+
+def v1_schema_document(identity: dict[str, object], *, auth_enabled: bool) -> dict:
+    return {
+        "kind": "schema",
+        "service": "linkar",
+        "api_version": "v1",
+        "auth": {
+            "enabled": auth_enabled,
+            "scheme": "bearer" if auth_enabled else "optional",
+            "roles": list(ALL_API_ROLES),
+            "identity": identity,
+        },
+        "conventions": {
+            "collections": {
+                "items_field": "items",
+                "count_field": "count",
+                "compatibility_fields": ["templates", "runs", "assets"],
+            },
+            "detail_kind_field": "kind",
+            "resolve_token_ttl_seconds": RESOLVE_TOKEN_TTL_SECONDS,
+        },
+        "routes": v1_routes_document(),
+    }
+
+
 def normalized_path(path: str) -> str:
     if path == "/v1":
         return path
@@ -469,8 +514,20 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
                             "render": True,
                             "events": False,
                         },
+                        "auth": {
+                            "enabled": bool(configured_tokens),
+                            "scheme": "bearer" if configured_tokens else "optional",
+                            "roles": list(ALL_API_ROLES),
+                        },
+                        "routes": v1_routes_document(),
                         "identity": identity,
                     },
+                )
+
+            if method == "GET" and raw_path == "/v1/schema":
+                return success_response(
+                    start_response,
+                    v1_schema_document(identity, auth_enabled=bool(configured_tokens)),
                 )
 
             if method == "GET" and path == "/templates":
