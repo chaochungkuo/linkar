@@ -95,6 +95,24 @@ def test_server_v1_root_and_aliases(tmp_path: Path) -> None:
     status, _, payload = call_app(
         app,
         method="GET",
+        path="/v1/projects/current/runs",
+        query=f"project={project_dir}",
+    )
+    assert status == "200 OK"
+    assert payload["data"]["runs"] == []
+
+    status, _, payload = call_app(
+        app,
+        method="GET",
+        path="/v1/projects/current/assets",
+        query=f"project={project_dir}",
+    )
+    assert status == "200 OK"
+    assert payload["data"]["assets"][0]["pack_ref"] == str(ROOT / "examples" / "packs" / "basic")
+
+    status, _, payload = call_app(
+        app,
+        method="GET",
         path="/v1/templates",
         query=f"project={project_dir}",
     )

@@ -392,6 +392,14 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
             if method == "GET" and raw_path == "/v1/projects/current":
                 return success_response(start_response, current_project_summary(query_value(query, "project")))
 
+            if method == "GET" and raw_path == "/v1/projects/current/runs":
+                runs = list_project_runs(project=query_value(query, "project"))
+                return success_response(start_response, {"runs": runs})
+
+            if method == "GET" and raw_path == "/v1/projects/current/assets":
+                assets = resolve_project_assets(project=query_value(query, "project"))
+                return success_response(start_response, {"assets": assets})
+
             if method == "GET" and path.startswith("/templates/"):
                 template_ref = unquote(path.removeprefix("/templates/"))
                 if not template_ref:
