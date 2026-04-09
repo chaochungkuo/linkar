@@ -178,6 +178,7 @@ def test_server_resolve_and_test_endpoints(tmp_path: Path) -> None:
     assert resolve_payload["data"]["ready"] is True
     assert resolve_payload["data"]["params"]["name"] == "Resolver"
     assert resolve_payload["data"]["missing_required"] == []
+    assert resolve_payload["data"]["warnings"] == []
 
     status, _, missing_payload = call_app(
         app,

@@ -125,7 +125,7 @@ def preview_resolution(payload: dict) -> dict:
             if entry.asset.root == template.pack_root:
                 selected_binding_ref = normalize_binding_ref(entry.binding)
                 break
-    params, provenance, missing_required = preview_params_detailed(
+    params, provenance, missing_required, warnings = preview_params_detailed(
         template,
         cli_params=payload.get("params"),
         project=project_obj,
@@ -136,6 +136,7 @@ def preview_resolution(payload: dict) -> dict:
         "params": params,
         "param_provenance": provenance,
         "missing_required": missing_required,
+        "warnings": warnings,
         "ready": not missing_required,
     }
 

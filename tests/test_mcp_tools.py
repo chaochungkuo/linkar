@@ -34,7 +34,8 @@ def test_mcp_tools_cover_discovery_resolution_and_inspection(tmp_path: Path) -> 
 
     described = describe_template_tool(template="simple_echo", project=project_dir)
     assert described["id"] == "simple_echo"
-    assert described["run"]["entry"] == "run.sh"
+    assert described["run"]["entry"] is None
+    assert "greeting.txt" in described["run"]["command"]
 
     resolved = resolve_template_tool(
         template="simple_echo",
@@ -55,7 +56,7 @@ def test_mcp_tools_cover_discovery_resolution_and_inspection(tmp_path: Path) -> 
     assert runs["runs"][0]["instance_id"] == "simple_echo_001"
 
     outputs = get_run_outputs_tool(run_ref="simple_echo_001", project=project_dir)
-    assert outputs["outputs"] == {}
+    assert outputs["outputs"]["greeting_file"].endswith("results/greeting.txt")
 
     runtime = get_run_runtime_tool(run_ref="simple_echo_001", project=project_dir)
     assert runtime["success"] is True

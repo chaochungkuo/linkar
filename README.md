@@ -123,6 +123,8 @@ Error responses use:
 {"ok": false, "error": {"code": "param_resolution_error", "message": "..."}}
 ```
 
+`POST /resolve` also includes a `warnings` field for non-fatal parameter-resolution warnings so agent clients can surface fallbacks without treating them as hard failures.
+
 ## MCP for agent clients
 
 Linkar also exposes a local stdio MCP server over the same core semantics.
