@@ -100,6 +100,8 @@ def test_server_v1_root_and_aliases(tmp_path: Path) -> None:
     )
     assert status == "200 OK"
     assert payload["data"]["runs"] == []
+    assert payload["data"]["items"] == []
+    assert payload["data"]["count"] == 0
 
     status, _, payload = call_app(
         app,
@@ -108,6 +110,8 @@ def test_server_v1_root_and_aliases(tmp_path: Path) -> None:
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
+    assert payload["data"]["count"] == 1
+    assert payload["data"]["items"] == payload["data"]["assets"]
     assert payload["data"]["assets"][0]["pack_ref"] == str(ROOT / "examples" / "packs" / "basic")
 
     status, _, payload = call_app(
@@ -117,6 +121,8 @@ def test_server_v1_root_and_aliases(tmp_path: Path) -> None:
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
+    assert payload["data"]["count"] >= 1
+    assert payload["data"]["items"] == payload["data"]["templates"]
     assert any(item["id"] == "simple_echo" for item in payload["data"]["templates"])
 
     status, _, payload = call_app(
@@ -364,6 +370,16 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
     assert status_payload["data"]["status"] == "succeeded"
     assert status_payload["data"]["success"] is True
     assert status_payload["data"]["finished_at"] is not None
+
+    status, _, outputs_payload = call_app(
+        app,
+        method="GET",
+        path=f"/v1/runs/{instance_id}/outputs",
+        query=f"project={project_dir}",
+    )
+    assert status == "200 OK"
+    assert outputs_payload["data"]["instance_id"] == instance_id
+    assert outputs_payload["data"]["outputs"] == inspect_payload["data"]["outputs"]
 
     status, _, templates_payload = call_app(
         app,

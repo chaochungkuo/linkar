@@ -408,6 +408,14 @@ def current_project_summary(project_ref: str | None = None) -> dict:
     }
 
 
+def collection_payload(items_key: str, items: list[dict]) -> dict:
+    return {
+        "items": items,
+        items_key: items,
+        "count": len(items),
+    }
+
+
 def normalized_path(path: str) -> str:
     if path == "/v1":
         return path
@@ -467,18 +475,19 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
                     pack_refs=query_values(query, "pack"),
                     project=query_value(query, "project"),
                 )
-                return success_response(start_response, {"templates": templates})
+                payload = collection_payload("templates", templates) if raw_path.startswith("/v1/") else {"templates": templates}
+                return success_response(start_response, payload)
 
             if method == "GET" and raw_path == "/v1/projects/current":
                 return success_response(start_response, current_project_summary(query_value(query, "project")))
 
             if method == "GET" and raw_path == "/v1/projects/current/runs":
                 runs = list_project_runs(project=query_value(query, "project"))
-                return success_response(start_response, {"runs": runs})
+                return success_response(start_response, collection_payload("runs", runs))
 
             if method == "GET" and raw_path == "/v1/projects/current/assets":
                 assets = resolve_project_assets(project=query_value(query, "project"))
-                return success_response(start_response, {"assets": assets})
+                return success_response(start_response, collection_payload("assets", assets))
 
             if method == "GET" and path.startswith("/templates/"):
                 template_ref = unquote(path.removeprefix("/templates/"))
@@ -493,7 +502,8 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
 
             if method == "GET" and path == "/projects/runs":
                 runs = list_project_runs(project=query_value(query, "project"))
-                return success_response(start_response, {"runs": runs})
+                payload = collection_payload("runs", runs) if raw_path.startswith("/v1/") else {"runs": runs}
+                return success_response(start_response, payload)
 
             if method == "GET" and path == "/projects/assets":
                 assets = resolve_project_assets(project=query_value(query, "project"))
@@ -518,7 +528,10 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
                     if not run_ref:
                         return not_found(start_response)
                     metadata = inspect_run(run_ref, project=query_value(query, "project"))
-                    return success_response(start_response, {"outputs": metadata.get("outputs", {})})
+                    outputs_payload = {"outputs": metadata.get("outputs", {})}
+                    if raw_path.startswith("/v1/"):
+                        outputs_payload["instance_id"] = run_ref
+                    return success_response(start_response, outputs_payload)
                 run_ref = suffix
                 if not run_ref:
                     return not_found(start_response)
