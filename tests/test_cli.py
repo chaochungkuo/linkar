@@ -2383,7 +2383,7 @@ def test_print_metadata_renders_rich_run_inspection_view(monkeypatch: pytest.Mon
     ui.print_metadata(metadata)
 
     rendered = ui.console.export_text()
-    assert "Run Inspection" in rendered
+    assert "Run Details" in rendered
     assert "demultiplex_001" in rendered
     assert "binding:function:get_api_samplesheet" in rendered
     assert "No outputs collected yet" not in rendered
@@ -2428,7 +2428,7 @@ def test_print_project_view_renders_rich_project_summary(monkeypatch: pytest.Mon
     ui.print_project_view(project_data, project_path=tmp_path / "study", runs=project_data["templates"])
 
     rendered = ui.console.export_text()
-    assert "Project View" in rendered
+    assert "Project Overview" in rendered
     assert "cellranger_atac_001" in rendered
     assert "count_web_summaries" in rendered
     assert "... (+1 more)" in rendered
@@ -2485,8 +2485,8 @@ def test_print_runs_and_packs_render_rich_panels(monkeypatch: pytest.MonkeyPatch
     )
 
     rendered = ui.console.export_text()
-    assert "Runs" in rendered
-    assert "Packs" in rendered
+    assert "Recorded Runs" in rendered
+    assert "Configured Packs" in rendered
     assert "cellranger_atac_001" in rendered
     assert ".../github/izkf_pack" in rendered
 

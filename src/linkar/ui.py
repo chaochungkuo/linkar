@@ -34,6 +34,7 @@ THEME = (
     Theme(
         {
             "accent": "bold cyan",
+            "info": "bold bright_blue",
             "muted": "dim white",
             "ok": "bold green",
             "warn": "bold yellow",
@@ -95,7 +96,7 @@ class CliUI:
         fields: list[tuple[str, Any]],
         *,
         plain_text: str | None = None,
-        border_style: str = "accent",
+        border_style: str = "info",
     ) -> None:
         if not self.rich_enabled:
             self.plain_print(plain_text if plain_text is not None else "\n".join(f"{key}: {value}" for key, value in fields))
@@ -123,7 +124,7 @@ class CliUI:
         table: Any,
         *,
         title: str,
-        border_style: str = "accent",
+        border_style: str = "info",
     ) -> None:
         self.console.print(
             Panel(
@@ -150,7 +151,7 @@ class CliUI:
     def status(self, message: str):
         if not self.rich_enabled:
             return nullcontext()
-        return self.console.status(f"[accent]{message}[/accent]", spinner="dots")
+        return self.console.status(f"[info]{message}[/info]", spinner="dots")
 
     def print_project_created(self, path: Path, project_id: str) -> None:
         self.print_summary_panel(
@@ -314,7 +315,7 @@ class CliUI:
 
     def print_runs(self, runs: list[dict[str, Any]]) -> None:
         if not runs:
-            self._print_empty_state("[warn]Runs[/warn]", "No runs recorded.")
+            self._print_empty_state("[warn]Recorded Runs[/warn]", "No runs recorded.")
             return
         if not self.rich_enabled:
             for run in runs:
@@ -326,7 +327,7 @@ class CliUI:
         table.add_column("Path", style="value")
         for run in runs:
             table.add_row(run["instance_id"], run["id"], self._project_value_text(run["path"]))
-        self._print_tabled_panel(table, title="[accent]Runs[/accent]")
+        self._print_tabled_panel(table, title="[info]Recorded Runs[/info]")
 
     def _project_author_text(self, author: dict[str, Any] | None) -> str:
         if not author:
@@ -484,8 +485,8 @@ class CliUI:
         self.console.print(
             Panel(
                 summary,
-                title="[accent]Project View[/accent]",
-                border_style="accent",
+                title="[info]Project Overview[/info]",
+                border_style="info",
                 box=box.ROUNDED,
             )
         )
@@ -511,8 +512,8 @@ class CliUI:
             self.console.print(
                 Panel(
                     pack_table,
-                    title="[accent]Packs[/accent]",
-                    border_style="accent",
+                    title="[info]Configured Packs[/info]",
+                    border_style="info",
                     box=box.ROUNDED,
                 )
             )
@@ -521,7 +522,7 @@ class CliUI:
             self.console.print(
                 Panel(
                     Text("No runs recorded in project.yaml.", style="muted"),
-                    title="[warn]Runs[/warn]",
+                    title="[warn]Recorded Runs[/warn]",
                     border_style="warn",
                     box=box.ROUNDED,
                 )
@@ -575,12 +576,12 @@ class CliUI:
                     box=box.ROUNDED,
                 )
             )
-            self._print_tabled_panel(params_table, title="[accent]Params[/accent]")
-            self._print_tabled_panel(outputs_table, title="[accent]Outputs[/accent]")
+            self._print_tabled_panel(params_table, title="[info]Parameters[/info]")
+            self._print_tabled_panel(outputs_table, title="[ok]Outputs[/ok]", border_style="ok")
 
     def print_templates(self, templates: list[dict[str, Any]]) -> None:
         if not templates:
-            self._print_empty_state("[warn]Templates[/warn]", "No templates found.")
+            self._print_empty_state("[warn]Template Catalog[/warn]", "No templates found.")
             return
         grouped: dict[str, list[dict[str, Any]]] = {}
         for template in templates:
@@ -621,11 +622,11 @@ class CliUI:
                     ", ".join(template.get("expected_outputs") or []) or "-",
                     template.get("version") or "-",
                 )
-            self._print_tabled_panel(table, title="[accent]Templates[/accent]")
+            self._print_tabled_panel(table, title="[info]Template Catalog[/info]")
 
     def print_packs(self, packs: list[dict[str, Any]]) -> None:
         if not packs:
-            self._print_empty_state("[warn]Packs[/warn]", "No packs configured.")
+            self._print_empty_state("[warn]Configured Packs[/warn]", "No packs configured.")
             return
         if not self.rich_enabled:
             for pack in packs:
@@ -645,7 +646,7 @@ class CliUI:
                 self._project_value_text(pack["ref"]),
                 pack.get("binding") or "",
             )
-        self._print_tabled_panel(table, title="[accent]Packs[/accent]")
+        self._print_tabled_panel(table, title="[info]Configured Packs[/info]")
 
     def _looks_like_run_metadata(self, metadata: dict[str, Any]) -> bool:
         required = {"template", "instance_id", "params", "outputs"}
@@ -728,7 +729,7 @@ class CliUI:
             if value in (None, "", []):
                 continue
             summary.add_row(label, self._metadata_value_text(value))
-        self._print_tabled_panel(summary, title="[accent]Run Inspection[/accent]")
+        self._print_tabled_panel(summary, title="[info]Run Details[/info]")
 
         params = metadata.get("params") or {}
         provenance = metadata.get("param_provenance") or {}
@@ -743,7 +744,7 @@ class CliUI:
                     self._metadata_value_text(value),
                     self._provenance_text(provenance.get(key)),
                 )
-            self._print_tabled_panel(table, title="[accent]Params[/accent]")
+            self._print_tabled_panel(table, title="[info]Resolved Parameters[/info]")
 
         outputs = metadata.get("outputs") or {}
         if isinstance(outputs, dict):
@@ -755,7 +756,7 @@ class CliUI:
                     table.add_row(key, self._metadata_value_text(value))
             else:
                 table.add_row("outputs", "No outputs collected yet")
-            self._print_tabled_panel(table, title="[accent]Outputs[/accent]")
+            self._print_tabled_panel(table, title="[ok]Collected Outputs[/ok]", border_style="ok")
 
         command = metadata.get("command")
         if command:
@@ -769,16 +770,16 @@ class CliUI:
             )
 
     def _print_generic_metadata(self, metadata: dict[str, Any]) -> None:
-        title = "[accent]Metadata[/accent]"
+        title = "[info]Metadata[/info]"
         rows: list[tuple[str, Any]] = []
 
         if len(metadata) == 1:
             key, value = next(iter(metadata.items()))
             if isinstance(value, dict):
-                title = f"[accent]{str(key).replace('_', ' ').title()}[/accent]"
+                title = f"[info]{str(key).replace('_', ' ').title()}[/info]"
                 rows = [(str(inner_key).replace("_", " ").title(), inner_value) for inner_key, inner_value in value.items()]
             else:
-                title = f"[accent]{str(key).replace('_', ' ').title()}[/accent]"
+                title = f"[info]{str(key).replace('_', ' ').title()}[/info]"
                 rows = [(str(key).replace("_", " ").title(), value)]
         else:
             rows = [(str(key).replace("_", " ").title(), value) for key, value in metadata.items()]
@@ -809,8 +810,8 @@ class CliUI:
         self.console.print(
             Panel(
                 text,
-                title="[accent]Methods Draft[/accent]",
-                border_style="accent",
+                title="[info]Methods Preview[/info]",
+                border_style="info",
                 box=box.ROUNDED,
             )
         )
@@ -830,8 +831,8 @@ class CliUI:
         self.console.print(
             Panel(
                 body,
-                title="[accent]Linkar Serve[/accent]",
-                border_style="accent",
+                title="[info]Local API Server[/info]",
+                border_style="info",
                 box=box.ROUNDED,
             )
         )
