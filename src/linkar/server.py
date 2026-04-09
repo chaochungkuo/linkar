@@ -369,6 +369,7 @@ def runtime_status_payload(run_ref: str, project: str | None = None) -> dict:
     else:
         status = "running"
     return {
+        "kind": "run_status",
         "instance_id": run_ref,
         "status": status,
         "started_at": runtime.get("started_at"),
@@ -391,6 +392,7 @@ def current_project_summary(project_ref: str | None = None) -> dict:
         raise ProjectValidationError("No Linkar project found. Pass ?project=/path/to/project or run inside a project directory.")
     runs = list_project_runs(project=project_obj)
     return {
+        "kind": "project",
         "id": project_obj.data.get("id"),
         "path": str(project_obj.root),
         "active_pack": project_obj.data.get("active_pack"),
@@ -455,6 +457,7 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
                 return success_response(
                     start_response,
                     {
+                        "kind": "service",
                         "service": "linkar",
                         "api_version": "v1",
                         "linkar_version": __version__,
@@ -498,6 +501,8 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
                     pack_refs=query_values(query, "pack"),
                     project=query_value(query, "project"),
                 )
+                if raw_path.startswith("/v1/"):
+                    template = {"kind": "template", **template}
                 return success_response(start_response, template)
 
             if method == "GET" and path == "/projects/runs":
@@ -522,6 +527,8 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
                     if not run_ref:
                         return not_found(start_response)
                     runtime = inspect_runtime(run_ref, project=query_value(query, "project"))
+                    if raw_path.startswith("/v1/"):
+                        runtime = {"kind": "run_runtime", **runtime}
                     return success_response(start_response, runtime)
                 if suffix.endswith("/outputs"):
                     run_ref = suffix.removesuffix("/outputs")
@@ -530,12 +537,15 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
                     metadata = inspect_run(run_ref, project=query_value(query, "project"))
                     outputs_payload = {"outputs": metadata.get("outputs", {})}
                     if raw_path.startswith("/v1/"):
+                        outputs_payload["kind"] = "run_outputs"
                         outputs_payload["instance_id"] = run_ref
                     return success_response(start_response, outputs_payload)
                 run_ref = suffix
                 if not run_ref:
                     return not_found(start_response)
                 metadata = inspect_run(run_ref, project=query_value(query, "project"))
+                if raw_path.startswith("/v1/"):
+                    metadata = {"kind": "run", **metadata}
                 return success_response(start_response, metadata)
 
             if method == "GET" and path == "/methods":

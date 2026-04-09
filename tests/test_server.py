@@ -74,6 +74,7 @@ def test_server_v1_root_and_aliases(tmp_path: Path) -> None:
 
     status, _, payload = call_app(app, method="GET", path="/v1")
     assert status == "200 OK"
+    assert payload["data"]["kind"] == "service"
     assert payload["data"]["service"] == "linkar"
     assert payload["data"]["api_version"] == "v1"
     assert payload["data"]["linkar_version"]
@@ -87,6 +88,7 @@ def test_server_v1_root_and_aliases(tmp_path: Path) -> None:
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
+    assert payload["data"]["kind"] == "project"
     assert payload["data"]["id"] == "project"
     assert payload["data"]["path"] == str(project_dir)
     assert payload["data"]["run_count"] == 0
@@ -132,6 +134,7 @@ def test_server_v1_root_and_aliases(tmp_path: Path) -> None:
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
+    assert payload["data"]["kind"] == "template"
     assert payload["data"]["id"] == "simple_echo"
 
     status, _, payload = call_app(
@@ -338,6 +341,7 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
+    assert inspect_payload["data"]["kind"] == "run"
     assert inspect_payload["data"]["template"] == "simple_echo"
     assert inspect_payload["data"]["params"]["name"] == "Server"
 
@@ -348,6 +352,7 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
+    assert outputs_payload["data"]["kind"] == "run_outputs"
     assert outputs_payload["data"]["outputs"] == inspect_payload["data"]["outputs"]
 
     status, _, runtime_payload = call_app(
@@ -366,6 +371,7 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
+    assert status_payload["data"]["kind"] == "run_status"
     assert status_payload["data"]["instance_id"] == instance_id
     assert status_payload["data"]["status"] == "succeeded"
     assert status_payload["data"]["success"] is True
