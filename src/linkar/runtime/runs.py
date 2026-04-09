@@ -546,12 +546,13 @@ def prepare_template_execution(
     )
     if display_dir is None:
         display_dir = output_dir
+
+    ensure_required_tools_available(template)
+
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "results").mkdir(exist_ok=True)
     linkar_dir = output_dir / ".linkar"
     linkar_dir.mkdir(exist_ok=True)
-
-    ensure_required_tools_available(template)
 
     env = os.environ.copy()
     for key, value in resolved_params.items():

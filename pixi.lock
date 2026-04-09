@@ -500,14 +500,15 @@ packages:
   timestamp: 1774072956767
 - pypi: ./
   name: linkar
-  version: 0.1.0
-  sha256: cc23b8e50eaeae10e95d5cd0cfa62690ff9e54063c9277621d61ec48b88537e8
+  version: 0.3.0
+  sha256: 04124141388d08977325acb4991cd4ef1d3d64a4a56f31e6fb33d39ed79736c5
   requires_dist:
   - click>=8.1
   - pyyaml>=6.0
   - rich>=13.7
   - rich-click>=1.8
   - pytest>=8.0 ; extra == 'dev'
+  - mcp>=1.0,<2 ; extra == 'mcp'
   requires_python: '>=3.9'
 - pypi: https://files.pythonhosted.org/packages/94/54/e7d793b573f298e1c9013b8c4dade17d481164aa517d1d7148619c2cedbf/markdown_it_py-4.0.0-py3-none-any.whl
   name: markdown-it-py

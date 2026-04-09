@@ -1032,3 +1032,38 @@ def test_run_template_checks_required_tools_before_execution(tmp_path: Path, mon
 
     with pytest.raises(ExecutionError, match="Template 'tool_checked' cannot run because required tools are unavailable"):
         run_template(template_dir, params={"name": "demo"})
+
+
+def test_render_template_checks_required_tools_before_creating_output_dir(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    template_dir = make_template(
+        tmp_path / "templates",
+        "tool_checked_render",
+        "#!/usr/bin/env bash\nset -euo pipefail\nprintf 'rendered\\n' > \"${LINKAR_RESULTS_DIR}/done.txt\"\n",
+    )
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: tool_checked_render",
+                "tools:",
+                "  required:",
+                "    - missingcmd",
+                "run:",
+                "  entry: run.sh",
+                "  mode: render",
+                "",
+            ]
+        )
+    )
+    monkeypatch.setenv("PATH", str(tmp_path / "empty-bin"))
+    outdir = tmp_path / "rendered"
+
+    with pytest.raises(
+        ExecutionError,
+        match="Template 'tool_checked_render' cannot run because required tools are unavailable",
+    ):
+        render_template(template_dir, outdir=outdir)
+
+    assert not outdir.exists()
