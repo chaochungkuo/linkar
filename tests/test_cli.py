@@ -2429,8 +2429,11 @@ def test_print_project_view_renders_rich_project_summary(monkeypatch: pytest.Mon
 
     rendered = ui.console.export_text()
     assert "Project Overview" in rendered
+    assert "Run Summary" in rendered
     assert "cellranger_atac_001" in rendered
     assert "count_web_summaries" in rendered
+    assert "adopted" in rendered
+    assert "default" in rendered
     assert "... (+1 more)" in rendered
     assert ".../cellranger-atac-2.2.0/bin/cellranger-atac" in rendered
     assert ".../results/output/260330_Yildiz_ZimmerBensch_BioII_scATAcseq" in rendered

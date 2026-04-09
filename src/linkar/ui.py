@@ -553,6 +553,38 @@ class CliUI:
             )
             return
 
+        summary_runs = Table(box=box.SIMPLE_HEAVY, header_style="accent")
+        summary_runs.add_column("Instance", style="label", no_wrap=True)
+        summary_runs.add_column("Template", style="value", no_wrap=True)
+        summary_runs.add_column("Path", style="value")
+        if any("adopted" in run for run in runs):
+            summary_runs.add_column("State", style="value", no_wrap=True)
+        if any(isinstance(run.get("binding"), dict) and run["binding"].get("ref") for run in runs):
+            summary_runs.add_column("Binding", style="value", no_wrap=True)
+        if any(run.get("template_version") not in (None, "") for run in runs):
+            summary_runs.add_column("Version", style="value", no_wrap=True)
+
+        show_state = any("adopted" in run for run in runs)
+        show_binding = any(isinstance(run.get("binding"), dict) and run["binding"].get("ref") for run in runs)
+        show_version = any(run.get("template_version") not in (None, "") for run in runs)
+
+        for run in runs:
+            row = [
+                str(run.get("instance_id") or "-"),
+                str(run.get("id") or "-"),
+                self._project_value_text(run.get("path") or "-"),
+            ]
+            if show_state:
+                row.append("adopted" if run.get("adopted") else "managed")
+            if show_binding:
+                binding = run.get("binding")
+                row.append(str(binding.get("ref")) if isinstance(binding, dict) and binding.get("ref") else "-")
+            if show_version:
+                row.append(str(run.get("template_version") or "-"))
+            summary_runs.add_row(*row)
+
+        self._print_tabled_panel(summary_runs, title="[info]Run Summary[/info]")
+
         for run in runs:
             meta_table = Table(box=box.SIMPLE_HEAVY, header_style="accent")
             meta_table.add_column("Field", style="label", no_wrap=True)
