@@ -394,6 +394,36 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
                 payload["template"] = template_ref
                 return success_response(start_response, preview_resolution_v1(payload))
 
+            if method == "POST" and raw_path.startswith("/v1/templates/") and raw_path.endswith(":run"):
+                template_ref = unquote(raw_path.removeprefix("/v1/templates/").removesuffix(":run"))
+                if not template_ref:
+                    return not_found(start_response)
+                payload = load_json_body(environ)
+                result = run_template(
+                    template_ref,
+                    params=payload.get("params"),
+                    project=payload.get("project"),
+                    outdir=payload.get("outdir"),
+                    pack_refs=payload.get("pack_refs"),
+                    binding_ref=payload.get("binding_ref"),
+                )
+                return success_response(start_response, result)
+
+            if method == "POST" and raw_path.startswith("/v1/templates/") and raw_path.endswith(":render"):
+                template_ref = unquote(raw_path.removeprefix("/v1/templates/").removesuffix(":render"))
+                if not template_ref:
+                    return not_found(start_response)
+                payload = load_json_body(environ)
+                result = render_template(
+                    template_ref,
+                    params=payload.get("params"),
+                    project=payload.get("project"),
+                    outdir=payload.get("outdir"),
+                    pack_refs=payload.get("pack_refs"),
+                    binding_ref=payload.get("binding_ref"),
+                )
+                return success_response(start_response, result)
+
             if method == "POST" and path == "/run":
                 payload = load_json_body(environ)
                 template = payload.get("template")

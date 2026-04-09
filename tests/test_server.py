@@ -156,6 +156,43 @@ def test_server_optional_bearer_auth_enforces_roles() -> None:
     assert payload["data"]["unresolved_params"][0]["name"] == "name"
 
 
+def test_server_v1_template_run_and_render_routes() -> None:
+    app = make_app(api_tokens={"executor-token": {"read", "resolve", "execute"}})
+
+    status, _, payload = call_app(
+        app,
+        method="POST",
+        path="/v1/templates/simple_echo:run",
+        body=json.dumps(
+            {
+                "pack_refs": [str(ROOT / "examples" / "packs" / "basic")],
+                "params": {"name": "Runner"},
+            }
+        ).encode("utf-8"),
+        headers={"HTTP_AUTHORIZATION": "Bearer executor-token"},
+    )
+    assert status == "200 OK"
+    outdir = Path(payload["data"]["outdir"])
+    assert (outdir / "results" / "greeting.txt").read_text().strip() == "Hello, Runner"
+
+    status, _, payload = call_app(
+        app,
+        method="POST",
+        path="/v1/templates/simple_echo:render",
+        body=json.dumps(
+            {
+                "pack_refs": [str(ROOT / "examples" / "packs" / "basic")],
+                "params": {"name": "Renderer"},
+            }
+        ).encode("utf-8"),
+        headers={"HTTP_AUTHORIZATION": "Bearer executor-token"},
+    )
+    assert status == "200 OK"
+    outdir = Path(payload["data"]["outdir"])
+    assert (outdir / "run.sh").exists()
+    assert not (outdir / "results" / "greeting.txt").exists()
+
+
 def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
     init_project(project_dir)
