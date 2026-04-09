@@ -491,6 +491,19 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
                 )
                 return success_response(start_response, result)
 
+            if method == "POST" and raw_path.startswith("/v1/templates/") and raw_path.endswith(":test"):
+                template_ref = unquote(raw_path.removeprefix("/v1/templates/").removesuffix(":test"))
+                if not template_ref:
+                    return not_found(start_response)
+                payload = load_json_body(environ)
+                result = test_template(
+                    template_ref,
+                    project=payload.get("project"),
+                    outdir=payload.get("outdir"),
+                    pack_refs=payload.get("pack_refs"),
+                )
+                return success_response(start_response, result)
+
             if method == "POST" and path == "/run":
                 payload = load_json_body(environ)
                 template = payload.get("template")

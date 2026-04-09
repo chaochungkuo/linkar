@@ -229,6 +229,21 @@ def test_server_v1_template_run_and_render_routes() -> None:
     assert (outdir / "run.sh").exists()
     assert not (outdir / "results" / "greeting.txt").exists()
 
+    status, _, payload = call_app(
+        app,
+        method="POST",
+        path="/v1/templates/simple_echo:test",
+        body=json.dumps(
+            {
+                "pack_refs": [str(ROOT / "examples" / "packs" / "basic")],
+            }
+        ).encode("utf-8"),
+        headers={"HTTP_AUTHORIZATION": "Bearer executor-token"},
+    )
+    assert status == "200 OK"
+    assert payload["data"]["template"] == "simple_echo"
+    assert Path(payload["data"]["runtime"]).exists()
+
 
 def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
