@@ -67,6 +67,14 @@ Binding functions should stay narrow. They are best for:
 
 They should not turn into a second workflow engine.
 
+They are also not the right place for broad site inventory logic such as:
+
+- listing all projects on a server
+- scanning all FASTQ roots
+- discovering all raw sequencing runs
+
+That kind of environment discovery is usually better as a separate pack-side discovery layer.
+
 ## Resolution is order-sensitive
 
 Bindings only see parameters already resolved earlier in the template.
@@ -79,6 +87,20 @@ Example:
 - `agendo_id` must appear before `genome` if the `genome` binding reads `ctx.resolved_params["agendo_id"]`
 
 This is runtime behavior, not an abstract principle.
+
+## Bindings versus discovery
+
+It helps to keep these two ideas separate:
+
+- bindings answer: "how should this template param be resolved?"
+- discovery answers: "what local projects, datasets, or references exist here?"
+
+For example:
+
+- "use the latest demultiplex output as `fastq_dir`" belongs in a binding
+- "list likely FASTQ run directories on this server" belongs in a discovery helper
+
+That boundary keeps bindings focused on workflow semantics instead of turning them into a general storage index.
 
 ## Structured warnings
 

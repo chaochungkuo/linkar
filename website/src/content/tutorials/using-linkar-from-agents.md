@@ -184,6 +184,29 @@ or:
 linkar-mcp
 ```
 
+For Codex, register it once in the shared Codex config:
+
+```bash
+codex mcp add linkar -- linkar mcp serve
+```
+
+If you are running from a local checkout instead of an installed CLI:
+
+```bash
+codex mcp add linkar \
+  --env PYTHONPATH=/home/ckuo/github/linkar/src \
+  -- python3 -m linkar.mcp_server
+```
+
+Then confirm the server is registered:
+
+```bash
+codex mcp list
+codex mcp get linkar
+```
+
+After restarting the Codex session in VS Code, the agent can use the Linkar MCP tools directly.
+
 The MCP tool surface mirrors the same high-value operations:
 
 - `linkar_list_templates`
@@ -199,3 +222,23 @@ The MCP tool surface mirrors the same high-value operations:
 
 This is the cleanest path for Codex-style clients because it exposes small, explicit tools instead
 of forcing shell parsing or a second wrapper layer over the HTTP API.
+
+## Pack-side discovery
+
+In some environments the agent also needs help finding likely project paths, FASTQ runs, or local
+references before it can call Linkar.
+
+That kind of facility-specific knowledge does not have to go into Linkar core. A site pack can
+carry a separate discovery layer instead.
+
+A good split looks like:
+
+- `templates/` for reusable workflows
+- `functions/` for binding-time param resolution
+- `discovery/` for read-only site-specific inventory helpers
+
+That lets an agent:
+
+1. discover likely project or dataset candidates from the pack
+2. choose the right one with the user
+3. use Linkar API or MCP tools to resolve and run workflows

@@ -117,4 +117,28 @@ Representative MCP tools:
 - `linkar_get_run_outputs`
 - `linkar_get_run_runtime`
 
+For Codex-style clients, the main advantage of MCP is that it exposes small explicit tools instead
+of forcing the client to wrap shell commands or raw HTTP itself.
+
+If `linkar` is already installed, a typical Codex setup looks like:
+
+```bash
+codex mcp add linkar -- linkar mcp serve
+```
+
+If you are working from a repo checkout instead:
+
+```bash
+codex mcp add linkar \
+  --env PYTHONPATH=/path/to/linkar/src \
+  -- python3 -m linkar.mcp_server
+```
+
+Then verify it with:
+
+```bash
+codex mcp list
+codex mcp get linkar
+```
+
 The product value here is consistency: humans and agents are using the same underlying contract.

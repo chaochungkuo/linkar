@@ -16,6 +16,7 @@ It can contain:
 
 - one or more templates
 - pack-level bindings
+- pack-level discovery helpers for site-specific context
 - pack-level documentation
 - custom helper functions used by bindings
 
@@ -79,6 +80,10 @@ A pack might look like:
 ```text
 izkf_genomics_pack/
   linkar_pack.yaml
+  discovery/
+    projects.py
+    fastq_runs.py
+    references.py
   functions/
     resolve_reference.py
   templates/
@@ -101,6 +106,25 @@ study/
 ```
 
 The pack tells Linkar what can be run. The project tells Linkar what was run locally.
+
+## Where site-specific discovery belongs
+
+Some environments need extra discovery logic that is not part of Linkar core:
+
+- where projects are usually stored
+- how FASTQ runs are named locally
+- where references live on this server
+- how to search local facility data before choosing a template input
+
+That logic belongs naturally with the site pack, not in Linkar core and not in the project.
+
+A good mental split is:
+
+- `templates/` define reusable workflows
+- `functions/` support binding-time param resolution
+- `discovery/` holds read-only helpers for site-specific context lookup
+
+This keeps Linkar generic while still letting a pack capture local operational knowledge.
 
 ## What bindings belong to
 
