@@ -280,6 +280,26 @@ def preview_resolution_v1(payload: dict) -> dict:
     }
 
 
+def runtime_status_payload(run_ref: str, project: str | None = None) -> dict:
+    runtime = inspect_runtime(run_ref, project=project)
+    if runtime.get("finished_at"):
+        status = "succeeded" if runtime.get("success") else "failed"
+    else:
+        status = "running"
+    return {
+        "instance_id": run_ref,
+        "status": status,
+        "started_at": runtime.get("started_at"),
+        "finished_at": runtime.get("finished_at"),
+        "returncode": runtime.get("returncode"),
+        "success": runtime.get("success"),
+        "duration_seconds": runtime.get("duration_seconds"),
+        "warnings": runtime.get("warnings") or [],
+        "command": runtime.get("command"),
+        "cwd": runtime.get("cwd"),
+    }
+
+
 def normalized_path(path: str) -> str:
     if path == "/v1":
         return path
@@ -360,6 +380,12 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
 
             if method == "GET" and path.startswith("/runs/"):
                 suffix = unquote(path.removeprefix("/runs/"))
+                if suffix.endswith("/status"):
+                    run_ref = suffix.removesuffix("/status")
+                    if not run_ref:
+                        return not_found(start_response)
+                    status_payload = runtime_status_payload(run_ref, project=query_value(query, "project"))
+                    return success_response(start_response, status_payload)
                 if suffix.endswith("/runtime"):
                     run_ref = suffix.removesuffix("/runtime")
                     if not run_ref:

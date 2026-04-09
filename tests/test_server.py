@@ -259,6 +259,18 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
     assert status == "200 OK"
     assert runtime_payload["data"]["success"] is True
 
+    status, _, status_payload = call_app(
+        app,
+        method="GET",
+        path=f"/v1/runs/{instance_id}/status",
+        query=f"project={project_dir}",
+    )
+    assert status == "200 OK"
+    assert status_payload["data"]["instance_id"] == instance_id
+    assert status_payload["data"]["status"] == "succeeded"
+    assert status_payload["data"]["success"] is True
+    assert status_payload["data"]["finished_at"] is not None
+
     status, _, templates_payload = call_app(
         app,
         method="GET",
