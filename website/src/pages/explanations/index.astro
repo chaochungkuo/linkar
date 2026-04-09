@@ -22,25 +22,6 @@ const explanationHref = (slug: string) => `${import.meta.env.BASE_URL}explanatio
       </section>
 
       <section class="section page-section-tight">
-        <div class="split-grid">
-          <article class="content-card">
-            <h3>Read this before designing a pack</h3>
-            <p>
-              These pages define the product identity. They explain what should live in templates,
-              what should live in bindings, and what should remain local to the project.
-            </p>
-          </article>
-          <article class="content-card">
-            <h3>Why this matters</h3>
-            <p>
-              Once the model is clear, the CLI, pack structure, run outputs, and local API become
-              much easier to understand. Most design questions reduce to the same few boundaries.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <section class="section page-section-tight">
         <div class="card-grid two-up">
           {explanations.map((entry) => (
             <a class="doc-card" href={explanationHref(entry.slug)}>

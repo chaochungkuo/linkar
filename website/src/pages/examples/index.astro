@@ -11,29 +11,8 @@ import SiteNav from "../../components/SiteNav.astro";
         <p class="eyebrow">Examples</p>
         <h1 class="page-title">Bundled packs you can read and run.</h1>
         <p class="lede page-lede">
-          Use this page to pick the smallest example that answers your question. The bundled packs
-          are not filler data. Each one exists to clarify one part of the runtime model.
+          Pick the smallest example that answers your question.
         </p>
-      </section>
-
-      <section class="section page-section-tight">
-        <div class="split-grid">
-          <article class="content-card">
-            <h3>Fastest way to explore</h3>
-            <pre><code>linkar test simple_echo --pack ./examples/packs/basic
-linkar test fastq_stats --pack ./examples/packs/basic
-linkar test produce_message --pack ./examples/packs/chaining</code></pre>
-          </article>
-
-          <article class="content-card">
-            <h3>How to choose</h3>
-            <p>
-              Start with `basic` if you are learning template shape. Move to `chaining` when you
-              want one template to feed another. Use `binding_overrides` when you want to compare
-              pack defaults with explicit caller control.
-            </p>
-          </article>
-        </div>
       </section>
 
       <section class="section page-section-tight">
@@ -41,17 +20,9 @@ linkar test produce_message --pack ./examples/packs/chaining</code></pre>
           <article class="feature-card">
             <h3>Basic</h3>
             <p>
-              Start here for the current template contract. This pack shows `run.command`,
-              `run.sh`, `run.py`, declared outputs, file inputs, boolean flags, and local tests.
+              Start here for the template contract: `run.command`, `run.sh`, `run.py`, declared
+              outputs, file inputs, and local tests.
             </p>
-            <pre><code>examples/packs/basic
-  simple_echo
-  simple_file_input
-  simple_boolean_flag
-  download_test_data
-  fastq_stats
-  pixi_echo
-  pixi_pytest</code></pre>
           </article>
 
           <article class="feature-card">
@@ -60,11 +31,6 @@ linkar test produce_message --pack ./examples/packs/chaining</code></pre>
               Open this when you want to see pack-level default binding in action. The key lesson is
               that template-to-template connection lives in the pack, not in manual operator steps.
             </p>
-            <pre><code>examples/packs/chaining
-  linkar_pack.yaml
-  templates/
-    produce_message
-    consume_message</code></pre>
           </article>
 
           <article class="feature-card">
@@ -73,12 +39,6 @@ linkar test produce_message --pack ./examples/packs/chaining</code></pre>
               Use this when you want to compare three things directly: project history, a pack's
               default binding, and an explicit override binding passed by the caller.
             </p>
-            <pre><code>examples/packs/binding_overrides
-  linkar_pack.yaml
-  override_binding/
-  templates/
-    produce_data
-    consume_data</code></pre>
           </article>
 
           <article class="feature-card">
@@ -88,8 +48,6 @@ linkar test produce_message --pack ./examples/packs/chaining</code></pre>
               `remote` once local packs are clear and you want to see `git+` references and
               revision-aware provenance.
             </p>
-            <pre><code>examples/packs/pack_management
-examples/packs/remote</code></pre>
           </article>
         </div>
       </section>
