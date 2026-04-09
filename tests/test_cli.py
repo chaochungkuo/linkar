@@ -2470,6 +2470,9 @@ def test_print_runs_and_packs_render_rich_panels(monkeypatch: pytest.MonkeyPatch
                 "instance_id": "cellranger_atac_001",
                 "id": "cellranger_atac",
                 "path": "/data/projects/demo/cellranger_atac",
+                "adopted": True,
+                "binding": {"ref": "default"},
+                "template_version": "0.1.0",
             }
         ]
     )
@@ -2488,6 +2491,9 @@ def test_print_runs_and_packs_render_rich_panels(monkeypatch: pytest.MonkeyPatch
     assert "Recorded Runs" in rendered
     assert "Configured Packs" in rendered
     assert "cellranger_atac_001" in rendered
+    assert "adopted" in rendered
+    assert "default" in rendered
+    assert "0.1.0" in rendered
     assert ".../github/izkf_pack" in rendered
 
 

@@ -321,12 +321,36 @@ class CliUI:
             for run in runs:
                 self.plain_print(f"{run['instance_id']}\t{run['id']}\t{run['path']}")
             return
+
+        has_state = any("adopted" in run for run in runs)
+        has_binding = any(isinstance(run.get("binding"), dict) and run["binding"].get("ref") for run in runs)
+        has_version = any(run.get("template_version") not in (None, "") for run in runs)
+
         table = Table(box=box.SIMPLE_HEAVY, header_style="accent")
         table.add_column("Instance")
         table.add_column("Template")
         table.add_column("Path", style="value")
+        if has_state:
+            table.add_column("State", style="value", no_wrap=True)
+        if has_binding:
+            table.add_column("Binding", style="value", no_wrap=True)
+        if has_version:
+            table.add_column("Version", style="value", no_wrap=True)
         for run in runs:
-            table.add_row(run["instance_id"], run["id"], self._project_value_text(run["path"]))
+            row = [
+                str(run["instance_id"]),
+                str(run["id"]),
+                self._project_value_text(run["path"]),
+            ]
+            if has_state:
+                adopted = run.get("adopted")
+                row.append("adopted" if adopted else "managed")
+            if has_binding:
+                binding = run.get("binding")
+                row.append(str(binding.get("ref")) if isinstance(binding, dict) and binding.get("ref") else "-")
+            if has_version:
+                row.append(str(run.get("template_version") or "-"))
+            table.add_row(*row)
         self._print_tabled_panel(table, title="[info]Recorded Runs[/info]")
 
     def _project_author_text(self, author: dict[str, Any] | None) -> str:
