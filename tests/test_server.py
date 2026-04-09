@@ -22,6 +22,7 @@ def call_app(
     query: str = "",
     body: bytes = b"",
     content_type: str = "application/json",
+    headers: dict[str, str] | None = None,
 ) -> tuple[str, dict[str, str], dict]:
     status_holder: list[str] = []
     headers_holder: list[tuple[str, str]] = []
@@ -38,6 +39,8 @@ def call_app(
         "CONTENT_TYPE": content_type,
         "wsgi.input": io.BytesIO(body),
     }
+    for key, value in (headers or {}).items():
+        environ[key] = value
     chunks = app(environ, start_response)
     raw = b"".join(chunks)
     headers = dict(headers_holder)
@@ -52,6 +55,101 @@ def test_server_health_endpoint() -> None:
     assert status == "200 OK"
     assert headers["Content-Type"] == "application/json"
     assert payload == {"ok": True}
+
+    status, _, payload = call_app(app, method="GET", path="/v1/health")
+    assert status == "200 OK"
+    assert payload == {"ok": True}
+
+
+def test_server_v1_root_and_aliases(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    init_project(project_dir)
+
+    project_file = project_dir / "project.yaml"
+    project = yaml.safe_load(project_file.read_text())
+    project["packs"] = [{"ref": str(ROOT / "examples" / "packs" / "basic")}]
+    project_file.write_text(yaml.safe_dump(project, sort_keys=False))
+
+    app = make_app()
+
+    status, _, payload = call_app(app, method="GET", path="/v1")
+    assert status == "200 OK"
+    assert payload["data"]["service"] == "linkar"
+    assert payload["data"]["api_version"] == "v1"
+    assert payload["data"]["linkar_version"]
+    assert payload["data"]["identity"]["subject"] == "anonymous"
+    assert payload["data"]["features"]["resolve"] is True
+
+    status, _, payload = call_app(
+        app,
+        method="GET",
+        path="/v1/templates",
+        query=f"project={project_dir}",
+    )
+    assert status == "200 OK"
+    assert any(item["id"] == "simple_echo" for item in payload["data"]["templates"])
+
+    status, _, payload = call_app(
+        app,
+        method="GET",
+        path="/v1/templates/simple_echo",
+        query=f"project={project_dir}",
+    )
+    assert status == "200 OK"
+    assert payload["data"]["id"] == "simple_echo"
+
+    status, _, payload = call_app(
+        app,
+        method="POST",
+        path="/v1/templates/simple_echo:resolve",
+        body=json.dumps(
+            {
+                "project": str(project_dir),
+                "params": {"name": "Versioned"},
+            }
+        ).encode("utf-8"),
+    )
+    assert status == "200 OK"
+    assert payload["data"]["template"] == "simple_echo"
+    assert payload["data"]["params"]["name"] == "Versioned"
+
+
+def test_server_optional_bearer_auth_enforces_roles() -> None:
+    app = make_app(api_tokens={"reader-token": {"read"}, "resolver-token": {"read", "resolve"}})
+
+    status, _, payload = call_app(app, method="GET", path="/v1")
+    assert status == "401 Unauthorized"
+    assert payload["error"]["code"] == "unauthorized"
+
+    status, _, payload = call_app(
+        app,
+        method="GET",
+        path="/v1",
+        headers={"HTTP_AUTHORIZATION": "Bearer reader-token"},
+    )
+    assert status == "200 OK"
+    assert payload["data"]["identity"]["roles"] == ["read"]
+    assert payload["data"]["identity"]["auth_required"] is True
+
+    status, _, payload = call_app(
+        app,
+        method="POST",
+        path="/v1/templates/simple_echo:resolve",
+        body=json.dumps({"pack_refs": [str(ROOT / "examples" / "packs" / "basic")]}).encode("utf-8"),
+        headers={"HTTP_AUTHORIZATION": "Bearer reader-token"},
+    )
+    assert status == "403 Forbidden"
+    assert payload["error"]["code"] == "forbidden"
+
+    status, _, payload = call_app(
+        app,
+        method="POST",
+        path="/v1/templates/simple_echo:resolve",
+        body=json.dumps({"pack_refs": [str(ROOT / "examples" / "packs" / "basic")]}).encode("utf-8"),
+        headers={"HTTP_AUTHORIZATION": "Bearer resolver-token"},
+    )
+    assert status == "200 OK"
+    assert payload["data"]["template"] == "simple_echo"
 
 
 def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:

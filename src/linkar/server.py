@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Callable, Iterable
 from urllib.parse import parse_qs, unquote
 
 from wsgiref.simple_server import make_server
 
+from linkar import __version__
 from linkar.assets import resolve_asset_refs
 from linkar.core import (
     collect_run_outputs,
@@ -36,6 +38,7 @@ from linkar.runtime.templates import combined_configured_pack_entries
 
 StartResponse = Callable[[str, list[tuple[str, str]]], object]
 WSGIApp = Callable[[dict, StartResponse], Iterable[bytes]]
+ALL_API_ROLES = ("read", "resolve", "execute")
 
 
 def json_response(
@@ -66,6 +69,70 @@ def error_status(exc: LinkarError) -> str:
     if isinstance(exc, ExecutionError):
         return "422 Unprocessable Entity"
     return "500 Internal Server Error"
+
+
+def load_api_tokens_from_env() -> dict[str, set[str]]:
+    configured = os.environ.get("LINKAR_API_TOKENS", "").strip()
+    if not configured:
+        return {}
+
+    tokens: dict[str, set[str]] = {}
+    for chunk in configured.split(";"):
+        entry = chunk.strip()
+        if not entry:
+            continue
+        token, _, roles_part = entry.partition(":")
+        token = token.strip()
+        if not token:
+            continue
+        roles = {role.strip() for role in roles_part.split(",") if role.strip()} if roles_part else set(ALL_API_ROLES)
+        tokens[token] = roles or set(ALL_API_ROLES)
+    return tokens
+
+
+def unauthorized_response(start_response: StartResponse, message: str = "Missing or invalid bearer token") -> list[bytes]:
+    return json_response(
+        start_response,
+        "401 Unauthorized",
+        {"ok": False, "error": {"code": "unauthorized", "message": message}},
+    )
+
+
+def forbidden_response(start_response: StartResponse, message: str = "Insufficient API role for this route") -> list[bytes]:
+    return json_response(
+        start_response,
+        "403 Forbidden",
+        {"ok": False, "error": {"code": "forbidden", "message": message}},
+    )
+
+
+def parse_bearer_token(environ: dict) -> str | None:
+    header = (environ.get("HTTP_AUTHORIZATION") or "").strip()
+    if not header:
+        return None
+    scheme, _, value = header.partition(" ")
+    if scheme.lower() != "bearer" or not value.strip():
+        return None
+    return value.strip()
+
+
+def authenticate_request(
+    environ: dict,
+    configured_tokens: dict[str, set[str]],
+    *,
+    required_role: str | None,
+) -> tuple[dict[str, object] | None, list[bytes] | None]:
+    if not configured_tokens:
+        return {"subject": "anonymous", "roles": list(ALL_API_ROLES), "auth_required": False}, None
+
+    token = parse_bearer_token(environ)
+    if token is None or token not in configured_tokens:
+        return None, unauthorized_response
+
+    roles = configured_tokens[token]
+    if required_role is not None and required_role not in roles:
+        return None, forbidden_response
+    return {"subject": "token", "roles": sorted(roles), "auth_required": True}, None
 
 
 def query_value(query: dict[str, list[str]], key: str) -> str | None:
@@ -141,15 +208,57 @@ def preview_resolution(payload: dict) -> dict:
     }
 
 
-def make_app() -> WSGIApp:
+def normalized_path(path: str) -> str:
+    if path == "/v1":
+        return path
+    if path.startswith("/v1/"):
+        return path.removeprefix("/v1")
+    return path
+
+
+def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
+    configured_tokens = api_tokens if api_tokens is not None else load_api_tokens_from_env()
+
     def app(environ: dict, start_response: StartResponse) -> Iterable[bytes]:
         method = environ.get("REQUEST_METHOD", "GET")
-        path = environ.get("PATH_INFO", "")
+        raw_path = environ.get("PATH_INFO", "")
+        path = normalized_path(raw_path)
         query = parse_qs(environ.get("QUERY_STRING", ""), keep_blank_values=False)
 
         try:
-            if method == "GET" and path == "/health":
+            if method == "GET" and raw_path in {"/health", "/v1/health"}:
                 return json_response(start_response, "200 OK", {"ok": True})
+
+            required_role = "read" if method == "GET" else "execute"
+            if raw_path in {"/resolve", "/v1/resolve"} or raw_path.startswith("/v1/templates/") and raw_path.endswith(":resolve"):
+                required_role = "resolve"
+
+            identity, auth_error_factory = authenticate_request(
+                environ,
+                configured_tokens,
+                required_role=required_role,
+            )
+            if auth_error_factory is not None:
+                return auth_error_factory(start_response)
+
+            if method == "GET" and raw_path == "/v1":
+                return success_response(
+                    start_response,
+                    {
+                        "service": "linkar",
+                        "api_version": "v1",
+                        "linkar_version": __version__,
+                        "features": {
+                            "projects": True,
+                            "templates": True,
+                            "resolve": True,
+                            "run": True,
+                            "render": True,
+                            "events": False,
+                        },
+                        "identity": identity,
+                    },
+                )
 
             if method == "GET" and path == "/templates":
                 templates = list_templates(
@@ -203,6 +312,14 @@ def make_app() -> WSGIApp:
 
             if method == "POST" and path == "/resolve":
                 payload = load_json_body(environ)
+                return success_response(start_response, preview_resolution(payload))
+
+            if method == "POST" and raw_path.startswith("/v1/templates/") and raw_path.endswith(":resolve"):
+                template_ref = unquote(raw_path.removeprefix("/v1/templates/").removesuffix(":resolve"))
+                if not template_ref:
+                    return not_found(start_response)
+                payload = load_json_body(environ)
+                payload["template"] = template_ref
                 return success_response(start_response, preview_resolution(payload))
 
             if method == "POST" and path == "/run":
