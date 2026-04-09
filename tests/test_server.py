@@ -8,7 +8,7 @@ from pathlib import Path
 import yaml
 
 from linkar.core import init_project
-from linkar.server import make_app
+from linkar.server import make_app, parse_api_token_specs
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -154,6 +154,13 @@ def test_server_optional_bearer_auth_enforces_roles() -> None:
     assert payload["data"]["template"]["id"] == "simple_echo"
     assert payload["data"]["ready"] is False
     assert payload["data"]["unresolved_params"][0]["name"] == "name"
+
+
+def test_parse_api_token_specs_supports_default_and_explicit_roles() -> None:
+    parsed = parse_api_token_specs(["reader-token:read", "full-token"])
+
+    assert parsed["reader-token"] == {"read"}
+    assert parsed["full-token"] == {"read", "resolve", "execute"}
 
 
 def test_server_v1_template_run_and_render_routes() -> None:

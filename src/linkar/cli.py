@@ -52,7 +52,7 @@ from linkar.core import (
 from linkar.errors import ProjectValidationError
 from linkar.mcp_server import main as serve_mcp
 from linkar.runtime.projects import missing_project_error
-from linkar.server import serve
+from linkar.server import parse_api_token_specs, serve
 from linkar.ui import CliUI
 
 if hasattr(click, "rich_click"):
@@ -869,11 +869,18 @@ def methods_command(project: str | None, ui: CliUI) -> None:
 @app.command("serve")
 @click.option("--host", default="127.0.0.1", metavar="HOST", show_default=True, help="Host interface to bind.")
 @click.option("--port", default=8000, type=int, metavar="PORT", show_default=True, help="Port to listen on.")
-def serve_command(host: str, port: int) -> None:
+@click.option(
+    "--api-token",
+    "api_tokens",
+    multiple=True,
+    metavar="TOKEN[:ROLES]",
+    help="Bearer token spec for the local API. Repeat as needed. Roles default to read,resolve,execute.",
+)
+def serve_command(host: str, port: int, api_tokens: tuple[str, ...]) -> None:
     """Expose the local project/runtime API over HTTP for automation and agents."""
     ui = CliUI()
     ui.print_server_banner(host, port)
-    serve(host=host, port=port)
+    serve(host=host, port=port, api_tokens=parse_api_token_specs(list(api_tokens)) or None)
 
 
 def main() -> int:

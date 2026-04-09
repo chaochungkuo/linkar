@@ -71,13 +71,9 @@ def error_status(exc: LinkarError) -> str:
     return "500 Internal Server Error"
 
 
-def load_api_tokens_from_env() -> dict[str, set[str]]:
-    configured = os.environ.get("LINKAR_API_TOKENS", "").strip()
-    if not configured:
-        return {}
-
+def parse_api_token_specs(specs: list[str]) -> dict[str, set[str]]:
     tokens: dict[str, set[str]] = {}
-    for chunk in configured.split(";"):
+    for chunk in specs:
         entry = chunk.strip()
         if not entry:
             continue
@@ -88,6 +84,13 @@ def load_api_tokens_from_env() -> dict[str, set[str]]:
         roles = {role.strip() for role in roles_part.split(",") if role.strip()} if roles_part else set(ALL_API_ROLES)
         tokens[token] = roles or set(ALL_API_ROLES)
     return tokens
+
+
+def load_api_tokens_from_env() -> dict[str, set[str]]:
+    configured = os.environ.get("LINKAR_API_TOKENS", "").strip()
+    if not configured:
+        return {}
+    return parse_api_token_specs(configured.split(";"))
 
 
 def unauthorized_response(start_response: StartResponse, message: str = "Missing or invalid bearer token") -> list[bytes]:
@@ -515,7 +518,7 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
     return app
 
 
-def serve(host: str = "127.0.0.1", port: int = 8000) -> None:
-    app = make_app()
+def serve(host: str = "127.0.0.1", port: int = 8000, *, api_tokens: dict[str, set[str]] | None = None) -> None:
+    app = make_app(api_tokens=api_tokens)
     with make_server(host, port, app) as httpd:
         httpd.serve_forever()
