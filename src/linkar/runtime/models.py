@@ -19,6 +19,7 @@ class TemplateSpec:
     tools_required_any: list[list[str]]
     run_entry: str | None
     run_command: str | None
+    render_command: str | None
     run_mode: str
     run_verbose_by_default: bool = False
     pack_root: Path | None = None

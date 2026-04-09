@@ -411,6 +411,41 @@ def test_render_template_stages_bundle_and_writes_launcher_without_executing(tmp
     assert 'template-entry-run.sh' in text
 
 
+def test_render_template_can_execute_optional_render_command(tmp_path: Path) -> None:
+    template_dir = make_template(
+        tmp_path / "templates",
+        "render_prepare_demo",
+        "#!/usr/bin/env bash\nset -euo pipefail\nprintf 'run\\n' > \"${LINKAR_RESULTS_DIR}/run.txt\"\n",
+    )
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: render_prepare_demo",
+                "outputs:",
+                "  prepared_file:",
+                "    path: prepared.txt",
+                "run:",
+                "  entry: run.sh",
+                "  mode: render",
+                "render:",
+                "  command: |",
+                "    printf 'prepared\\n' > \"${LINKAR_RESULTS_DIR}/prepared.txt\"",
+                "",
+            ]
+        )
+    )
+
+    result = render_template(template_dir, outdir=tmp_path / "rendered")
+    rendered_dir = Path(result["history_outdir"])
+    runtime = json.loads((rendered_dir / ".linkar" / "runtime.json").read_text(encoding="utf-8"))
+    meta = json.loads((rendered_dir / ".linkar" / "meta.json").read_text(encoding="utf-8"))
+
+    assert (rendered_dir / "results" / "prepared.txt").read_text(encoding="utf-8") == "prepared\n"
+    assert not (rendered_dir / "results" / "run.txt").exists()
+    assert runtime["success"] is True
+    assert meta["outputs"]["prepared_file"] == str((rendered_dir / "results" / "prepared.txt").resolve())
+
+
 def test_render_template_does_not_update_project_history_or_alias(tmp_path: Path) -> None:
     template_dir = make_template(
         tmp_path / "templates",

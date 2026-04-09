@@ -97,12 +97,24 @@ def load_template(
         raise TemplateValidationError(f"Template description must be a string in {spec_path}")
 
     run = data.get("run") or {}
+    if not isinstance(run, dict):
+        raise TemplateValidationError(f"Template run must be a mapping in {spec_path}")
+    render = data.get("render") or {}
+    if not isinstance(render, dict):
+        raise TemplateValidationError(f"Template render must be a mapping in {spec_path}")
     entry = run.get("entry")
     command = run.get("command")
+    render_command = render.get("command")
     if entry is not None and (not isinstance(entry, str) or not entry.strip()):
         raise TemplateValidationError(f"Template run.entry must be a non-empty string in {spec_path}")
     if command is not None and (not isinstance(command, str) or not command.strip()):
         raise TemplateValidationError(f"Template run.command must be a non-empty string in {spec_path}")
+    if render_command is not None and (
+        not isinstance(render_command, str) or not render_command.strip()
+    ):
+        raise TemplateValidationError(
+            f"Template render.command must be a non-empty string in {spec_path}"
+        )
     if not entry and not command:
         raise TemplateValidationError(f"Template run.entry or run.command is required in {spec_path}")
     if entry and command:
@@ -198,6 +210,7 @@ def load_template(
         tools_required_any=[[item.strip() for item in group] for group in tools_required_any],
         run_entry=entry,
         run_command=command.strip() if isinstance(command, str) else None,
+        render_command=render_command.strip() if isinstance(render_command, str) else None,
         run_mode=run.get("mode", "direct"),
         run_verbose_by_default=run_verbose_by_default,
         pack_root=root.parent.parent if root.parent.name == "templates" else None,

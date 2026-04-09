@@ -348,6 +348,39 @@ def render_command_param_keys(command: str, resolved_params: dict[str, Any]) -> 
     return keys
 
 
+def execute_optional_render_command(
+    template: TemplateSpec,
+    resolved_params: dict[str, Any],
+    instance_id: str,
+    project_obj: Project | None,
+    output_dir: Path,
+    *,
+    verbose: bool = False,
+) -> tuple[subprocess.CompletedProcess[str], Any, Any] | None:
+    if template.render_command is None:
+        return None
+    env = os.environ.copy()
+    env["LINKAR_OUTPUT_DIR"] = "."
+    env["LINKAR_RESULTS_DIR"] = "./results"
+    env["LINKAR_INSTANCE_ID"] = instance_id
+    env["LINKAR_TEMPLATE_DIR"] = str(output_dir)
+    env["LINKAR_TEMPLATE_ID"] = template.id
+    if template.pack_root is not None:
+        env["LINKAR_PACK_ROOT"] = str(template.pack_root)
+    if project_obj is not None:
+        env["LINKAR_PROJECT_DIR"] = str(project_obj.root)
+    for key, value in sorted(resolved_params.items()):
+        env[env_key(key)] = format_env_value(value)
+
+    command = resolve_render_command(
+        template.render_command,
+        resolved_params,
+        instance_id,
+        project_obj,
+    )
+    return execute_subprocess(["bash", "-lc", command], cwd=output_dir, env=env, verbose=verbose)
+
+
 def write_render_script(
     script_path: Path,
     template: TemplateSpec,
@@ -1411,7 +1444,7 @@ def render_template(
     )
     resolved_params = localize_render_params(template, resolved_params, param_provenance, output_dir)
 
-    command = [
+    launcher_command = [
         str(
             write_render_script(
                 render_mode_launcher_path(output_dir),
@@ -1423,20 +1456,49 @@ def render_template(
             ).resolve()
         )
     ]
-    started_at = utc_now()
-    finished_at = started_at
-    completed = subprocess.CompletedProcess(
-        args=command,
-        returncode=0,
-        stdout=f"Rendered template bundle to {output_dir}\n",
-        stderr="",
+    render_hook_result = execute_optional_render_command(
+        template,
+        resolved_params,
+        instance_id,
+        project_obj,
+        output_dir,
+        verbose=template.run_verbose_by_default,
     )
+    if render_hook_result is None:
+        started_at = utc_now()
+        finished_at = started_at
+        completed = subprocess.CompletedProcess(
+            args=launcher_command,
+            returncode=0,
+            stdout=f"Rendered template bundle to {output_dir}\n",
+            stderr="",
+        )
+        runtime_command: list[str] = launcher_command
+    else:
+        completed, started_at, finished_at = render_hook_result
+        runtime_command = [
+            "bash",
+            "-lc",
+            resolve_render_command(
+                template.render_command or "",
+                resolved_params,
+                instance_id,
+                project_obj,
+            ),
+        ]
+        if completed.returncode == 0:
+            completed = subprocess.CompletedProcess(
+                args=completed.args,
+                returncode=completed.returncode,
+                stdout=f"Rendered template bundle to {output_dir}\n{completed.stdout or ''}",
+                stderr=completed.stderr,
+            )
 
     runtime_path = linkar_dir / "runtime.json"
     write_json(
         runtime_path,
         {
-            "command": command,
+            "command": runtime_command,
             "cwd": str(output_dir),
             "returncode": completed.returncode,
             "success": completed.returncode == 0,
@@ -1448,6 +1510,13 @@ def render_template(
             "warnings": warnings,
         },
     )
+    if completed.returncode != 0:
+        raise ExecutionError(
+            f"Template render preparation failed with exit code {completed.returncode}. "
+            f"See {runtime_path}"
+        )
+
+    outputs = collect_outputs(template, output_dir) if template.render_command is not None else {}
 
     meta_path = linkar_dir / "meta.json"
     write_json(
@@ -1459,7 +1528,7 @@ def render_template(
             "params": resolved_params,
             "param_provenance": param_provenance,
             "declared_outputs": declared_outputs_or_default(template.outputs),
-            "outputs": {},
+            "outputs": outputs,
             "software": [{"name": "linkar", "version": __version__}],
             "pack": (
                 {"ref": template.pack_ref, "revision": template.pack_revision}
@@ -1473,7 +1542,7 @@ def render_template(
             ),
             "outdir_provenance": outdir_provenance,
             "warnings": warnings,
-            "command": command,
+            "command": runtime_command,
             "timestamp": finished_at.isoformat(),
             "run_mode": "render",
             "template_run_mode": template.run_mode,
