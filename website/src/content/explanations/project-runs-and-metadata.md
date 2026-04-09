@@ -8,7 +8,7 @@ Linkar projects are local working state, not a registry and not a hidden databas
 
 ## What a project records
 
-`project.yaml` currently records:
+`project.yaml` records:
 
 - project id
 - optional author metadata
@@ -101,7 +101,7 @@ linkar project adopt-run /path/to/run
 Adoption requires real Linkar metadata. It is not a generic import of arbitrary folders.
 
 Before adoption, Linkar refreshes outputs through the declared output contract so imported metadata
-is current.
+matches the declared output contract.
 
 ## Collecting outputs after manual execution
 
@@ -118,14 +118,14 @@ This updates:
 
 ## Removing runs from a project
 
-Project run removal is now first-class:
+Project run removal is first-class:
 
 ```bash
 linkar project remove-run fastqc_001
 linkar project remove-run fastqc --delete-files
 ```
 
-Current behavior:
+Behavior:
 
 - accepts `instance_id`
 - accepts a unique template id if it is unambiguous in the project

@@ -8,7 +8,7 @@ Parameter resolution is where Linkar turns a reusable template contract into one
 
 ## Resolution order
 
-Today Linkar resolves parameters in this order:
+Linkar resolves parameters in this order:
 
 1. explicit CLI or API values
 2. pack binding rules
@@ -35,7 +35,7 @@ templates:
         function: get_agendo_genome
 ```
 
-Bindings can currently resolve values through:
+Bindings can resolve values through:
 
 - `function`
 - another template's `output`
@@ -78,7 +78,7 @@ Example:
 
 - `agendo_id` must appear before `genome` if the `genome` binding reads `ctx.resolved_params["agendo_id"]`
 
-This is current behavior, not an abstract principle.
+This is runtime behavior, not an abstract principle.
 
 ## Structured warnings
 

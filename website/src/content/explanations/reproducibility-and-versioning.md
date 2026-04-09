@@ -64,7 +64,7 @@ convenient, but it is not a stable scientific contract.
 
 Rendered `run.sh` files should be easy to inspect and edit.
 
-Current conventions that support this:
+Conventions that support this:
 
 - one final `run.sh`
 - resolved values in the script

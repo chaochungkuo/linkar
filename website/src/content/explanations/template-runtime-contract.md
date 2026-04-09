@@ -1,6 +1,6 @@
 ---
 title: Template runtime contract
-description: The current `linkar_template.yaml` contract, `run.command` versus `run.sh`, and what render/run actually do.
+description: The `linkar_template.yaml` contract, `run.command` versus `run.sh`, and what render and run do.
 order: 3
 ---
 
@@ -9,7 +9,7 @@ Linkar templates are small runtime contracts, not mini workflow languages.
 The canonical template file is `linkar_template.yaml`. Linkar still accepts `template.yaml` for
 backward compatibility, but new templates should use the canonical name.
 
-## Current template shape
+## Template shape
 
 The smallest useful template is usually:
 
@@ -30,7 +30,7 @@ run:
     printf 'hello %s\n' "${param:name}" > "${LINKAR_RESULTS_DIR}/greeting.txt"
 ```
 
-Current top-level fields:
+Top-level fields:
 
 - `id`
 - `version`
@@ -42,7 +42,7 @@ Current top-level fields:
 
 ## Parameter types
 
-Linkar currently supports:
+Linkar supports:
 
 - `str`
 - `int`
@@ -58,7 +58,7 @@ CLI help clearer.
 
 Outputs are how Linkar records what a template produced.
 
-Current patterns:
+Common patterns:
 
 ```yaml
 outputs:
@@ -106,7 +106,7 @@ Use `run.sh` only when the template needs real local logic:
 
 ## Explicit parameter placeholders
 
-The preferred form in `run.command` is now:
+The preferred form in `run.command` is:
 
 ```bash
 "${param:bcl_dir}"
@@ -124,7 +124,7 @@ prefer `${param:...}`.
 
 `linkar render ...` stages a standalone runnable artifact and stops there.
 
-Current render behavior:
+Render behavior:
 
 - writes one final `run.sh`
 - resolves parameters into the rendered script
@@ -140,7 +140,7 @@ In a project, render defaults to the visible project path such as `./demultiplex
 
 `linkar run ...` always executes.
 
-Current run behavior:
+Run behavior:
 
 - stages the run under `.linkar/runs/<instance_id>/`
 - executes the template

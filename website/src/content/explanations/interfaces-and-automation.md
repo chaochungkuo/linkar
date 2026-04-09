@@ -16,7 +16,7 @@ They are meant to expose the same runtime model, not three different products.
 
 The CLI is intentionally thin.
 
-Important current commands:
+Important commands:
 
 - `linkar run ...`
 - `linkar render ...`
@@ -29,7 +29,7 @@ Important current commands:
 - `linkar config author ...`
 - `linkar completion ...`
 
-Recent behavior worth knowing:
+Key behavior:
 
 - `run` always executes
 - `render` always stages only
@@ -39,7 +39,7 @@ Recent behavior worth knowing:
 
 ## Help and shell completion
 
-The main CLI and dynamic template subcommands now use the same Rich help style.
+The main CLI and dynamic template subcommands use the same Rich help style.
 
 Shell completion supports:
 
@@ -62,7 +62,7 @@ same core semantics:
 linkar serve --port 8000
 ```
 
-Current high-value endpoints include:
+High-value endpoints include:
 
 - `GET /templates`
 - `GET /templates/{template_id}`
