@@ -12,13 +12,16 @@ export async function getStaticPaths() {
 }
 
 const { entry } = Astro.props;
-const { Content } = await render(entry);
+const { Content, headings } = await render(entry);
+const tocHeadings = headings.filter((heading) => heading.depth === 2 || heading.depth === 3);
+const hasLongFormToc =
+  tocHeadings.filter((heading) => heading.depth === 2).length >= 3 || tocHeadings.length >= 4;
 ---
 
-<BaseLayout title={`${entry.data.title} | Linkar`}>
+<BaseLayout title={`${entry.data.title} | Linkar`} description={entry.data.description}>
   <div class="page-shell">
     <SiteNav />
-    <main class="article-shell">
+    <main class:list={["article-shell", hasLongFormToc && "article-shell-with-toc"]}>
       <a class="back-link" href={`${import.meta.env.BASE_URL}explanations/`}>Back to explanations</a>
       <article class="article-card prose">
         <p class="eyebrow">Explanation</p>
@@ -26,6 +29,23 @@ const { Content } = await render(entry);
         <p class="lede article-lede">{entry.data.description}</p>
         <Content />
       </article>
+      {
+        hasLongFormToc && (
+          <aside class="toc-card" aria-label="On this page">
+            <p class="toc-title">On this page</p>
+            <nav class="toc-nav">
+              {tocHeadings.map((heading) => (
+                <a
+                  class:list={["toc-link", heading.depth === 3 && "toc-link-nested"]}
+                  href={`#${heading.slug}`}
+                >
+                  {heading.text}
+                </a>
+              ))}
+            </nav>
+          </aside>
+        )
+      }
     </main>
   </div>
 </BaseLayout>
