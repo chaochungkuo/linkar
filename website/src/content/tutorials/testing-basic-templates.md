@@ -15,6 +15,8 @@ linkar test simple_file_input --pack ./examples/packs/basic
 linkar test simple_boolean_flag --pack ./examples/packs/basic
 linkar test download_test_data --pack ./examples/packs/basic
 linkar test fastq_stats --pack ./examples/packs/basic
+linkar test glob_reports --pack ./examples/packs/basic
+linkar test portable_python --pack ./examples/packs/basic
 linkar test pixi_echo --pack ./examples/packs/basic
 linkar test pixi_pytest --pack ./examples/packs/basic
 ```

@@ -9,8 +9,10 @@ Suggested order:
 3. `simple_boolean_flag`
 4. `download_test_data`
 5. `fastq_stats`
-6. `pixi_echo`
-7. `pixi_pytest`
+6. `glob_reports`
+7. `portable_python`
+8. `pixi_echo`
+9. `pixi_pytest`
 
 Most templates keep the same shape:
 
@@ -24,6 +26,11 @@ the pack shows both authoring styles:
 
 - `run.command` for thin one-command wrappers
 - `run.sh` when real script logic is needed
+
+Additional examples cover:
+
+- declared `glob` outputs via `glob_reports`
+- `tools.required_any` via `portable_python`
 
 To stage a runnable bundle without executing it, use:
 

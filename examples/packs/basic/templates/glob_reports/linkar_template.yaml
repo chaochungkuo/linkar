@@ -1,0 +1,13 @@
+id: glob_reports
+version: 0.1.0
+description: Generate multiple report files and record them through a declared glob output.
+params:
+  sample_name:
+    type: str
+    default: demo
+outputs:
+  results_dir: {}
+  report_files:
+    glob: reports/*.html
+run:
+  entry: run.sh

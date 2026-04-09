@@ -1,0 +1,15 @@
+id: portable_python
+version: 0.1.0
+description: Demonstrate tools.required_any by allowing either python3 or python.
+params:
+  name:
+    type: str
+    required: true
+outputs:
+  greeting_file:
+    path: greeting.txt
+tools:
+  required_any:
+    - [python3, python]
+run:
+  entry: run.sh

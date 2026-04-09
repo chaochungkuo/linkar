@@ -10,4 +10,4 @@ outputs:
     path: greeting.txt
 run:
   command: >-
-    printf 'Hello, %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/greeting.txt"
+    printf 'Hello, %s\n' "${param:name}" > "${LINKAR_RESULTS_DIR}/greeting.txt"

@@ -20,6 +20,8 @@ linkar test simple_file_input --pack ./examples/packs/basic
 linkar test simple_boolean_flag --pack ./examples/packs/basic
 linkar test download_test_data --pack ./examples/packs/basic
 linkar test fastq_stats --pack ./examples/packs/basic
+linkar test glob_reports --pack ./examples/packs/basic
+linkar test portable_python --pack ./examples/packs/basic
 linkar test pixi_echo --pack ./examples/packs/basic
 linkar test pixi_pytest --pack ./examples/packs/basic
 ```
@@ -29,6 +31,8 @@ What you should notice:
 - `simple_echo` shows `run.command`
 - `simple_file_input` and `fastq_stats` show `run.sh`
 - `download_test_data` shows `run.py`
+- `glob_reports` shows declared `glob` outputs
+- `portable_python` shows `tools.required_any`
 - `pixi_echo` and `pixi_pytest` show template-local environment files
 - every template keeps its own local test entrypoint
 
@@ -110,6 +114,8 @@ Use this pack first. It covers:
 - `linkar run ...` vs `linkar render ...`
 - file inputs
 - explicit defaults
+- `glob` outputs
+- `tools.required_any`
 - `test.py` vs `test.sh`
 - declared outputs with `path` and `glob`
 

@@ -30,8 +30,10 @@ def test_all_basic_pack_templates_have_passing_template_tests(tmp_path: Path) ->
         "simple_boolean_flag",
         "download_test_data",
         "fastq_stats",
+        "glob_reports",
         "pixi_echo",
         "pixi_pytest",
+        "portable_python",
     ]
 
     for template_id in template_ids:

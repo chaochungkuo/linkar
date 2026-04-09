@@ -11,7 +11,7 @@ def main() -> None:
     text = (TEMPLATE_DIR / "linkar_template.yaml").read_text(encoding="utf-8")
     assert "command:" in text
     assert "path: greeting.txt" in text
-    assert 'printf \'Hello, %s\\n\' "${NAME}" > "${LINKAR_RESULTS_DIR}/greeting.txt"' in text
+    assert 'printf \'Hello, %s\\n\' "${param:name}" > "${LINKAR_RESULTS_DIR}/greeting.txt"' in text
     print("simple_echo template test passed")
 
 

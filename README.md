@@ -187,7 +187,7 @@ Bundled examples are organized by teaching purpose:
 
 - `examples/packs/basic`
   - minimal templates and local authoring patterns
-  - includes `simple_echo`, `simple_file_input`, `simple_boolean_flag`, `download_test_data`, `fastq_stats`, `pixi_echo`, and `pixi_pytest`
+  - includes `simple_echo`, `simple_file_input`, `simple_boolean_flag`, `download_test_data`, `fastq_stats`, `glob_reports`, `portable_python`, `pixi_echo`, and `pixi_pytest`
   - `simple_echo` demonstrates `run.command`; the others show script-based templates
 - `examples/packs/chaining`
   - a small project-mode pack showing output reuse through a default binding
@@ -206,6 +206,8 @@ linkar test simple_file_input --pack ./examples/packs/basic
 linkar test simple_boolean_flag --pack ./examples/packs/basic
 linkar test download_test_data --pack ./examples/packs/basic
 linkar test fastq_stats --pack ./examples/packs/basic
+linkar test glob_reports --pack ./examples/packs/basic
+linkar test portable_python --pack ./examples/packs/basic
 ```
 
 The basic pack is for didactic templates. Real domain templates should live in a dedicated external pack such as `izkf_genomics_pack`.
