@@ -23,7 +23,7 @@ def call_app(
     body: bytes = b"",
     content_type: str = "application/json",
     headers: dict[str, str] | None = None,
-) -> tuple[str, dict[str, str], dict]:
+) -> tuple[str, dict[str, str], dict | str]:
     status_holder: list[str] = []
     headers_holder: list[tuple[str, str]] = []
 
@@ -44,7 +44,11 @@ def call_app(
     chunks = app(environ, start_response)
     raw = b"".join(chunks)
     headers = dict(headers_holder)
-    payload = json.loads(raw.decode("utf-8"))
+    decoded = raw.decode("utf-8")
+    if headers.get("Content-Type", "").startswith("application/json"):
+        payload: dict | str = json.loads(decoded)
+    else:
+        payload = decoded
     return status_holder[0], headers, payload
 
 
@@ -88,7 +92,15 @@ def test_server_v1_root_and_aliases(tmp_path: Path) -> None:
     assert payload["data"]["kind"] == "schema"
     assert payload["data"]["auth"]["enabled"] is False
     assert payload["data"]["conventions"]["collections"]["items_field"] == "items"
+    assert any(route["path"] == "/v1/docs" for route in payload["data"]["routes"])
     assert any(route["path"] == "/v1/templates/{template_id}:resolve" for route in payload["data"]["routes"])
+
+    status, headers, payload = call_app(app, method="GET", path="/v1/docs")
+    assert status == "200 OK"
+    assert headers["Content-Type"] == "text/html; charset=utf-8"
+    assert isinstance(payload, str)
+    assert "Linkar Local API v1" in payload
+    assert "/v1/schema" in payload
 
     status, _, payload = call_app(
         app,

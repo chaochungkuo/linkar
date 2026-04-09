@@ -5,6 +5,7 @@ import os
 import secrets
 import time
 from collections.abc import Callable, Iterable
+from html import escape
 from urllib.parse import parse_qs, unquote
 
 from wsgiref.simple_server import make_server
@@ -63,6 +64,18 @@ def json_response(
 
 def success_response(start_response: StartResponse, payload: dict | list) -> list[bytes]:
     return json_response(start_response, "200 OK", {"ok": True, "data": payload})
+
+
+def html_response(start_response: StartResponse, status: str, body: str) -> list[bytes]:
+    encoded = body.encode("utf-8")
+    start_response(
+        status,
+        [
+            ("Content-Type", "text/html; charset=utf-8"),
+            ("Content-Length", str(len(encoded))),
+        ],
+    )
+    return [encoded]
 
 
 def error_status(exc: LinkarError) -> str:
@@ -444,6 +457,7 @@ def v1_routes_document() -> list[dict[str, object]]:
         {"path": "/v1", "method": "GET", "kind": "service", "role": "read", "description": "Service discovery and API capabilities."},
         {"path": "/v1/health", "method": "GET", "kind": "health", "role": "none", "description": "Lightweight health check."},
         {"path": "/v1/schema", "method": "GET", "kind": "schema", "role": "read", "description": "Canonical route and capability document for agents."},
+        {"path": "/v1/docs", "method": "GET", "kind": "docs", "role": "read", "description": "Live HTML documentation for the running local API server."},
         {"path": "/v1/projects/current", "method": "GET", "kind": "project", "role": "read", "description": "Summary of the current or selected Linkar project."},
         {"path": "/v1/projects/current/runs", "method": "GET", "kind": "run_collection", "role": "read", "description": "Recorded runs for the current or selected project."},
         {"path": "/v1/projects/current/assets", "method": "GET", "kind": "asset_collection", "role": "read", "description": "Resolved pack assets visible to the current or selected project."},
@@ -482,6 +496,122 @@ def v1_schema_document(identity: dict[str, object], *, auth_enabled: bool) -> di
         },
         "routes": v1_routes_document(),
     }
+
+
+def v1_docs_html(identity: dict[str, object], *, auth_enabled: bool) -> str:
+    schema = v1_schema_document(identity, auth_enabled=auth_enabled)
+    route_rows = "\n".join(
+        (
+            "<tr>"
+            f"<td><code>{escape(str(route['method']))}</code></td>"
+            f"<td><code>{escape(str(route['path']))}</code></td>"
+            f"<td>{escape(str(route['role']))}</td>"
+            f"<td>{escape(str(route['kind']))}</td>"
+            f"<td>{escape(str(route['description']))}</td>"
+            "</tr>"
+        )
+        for route in schema["routes"]
+    )
+    roles = ", ".join(schema["auth"]["roles"])
+    compatibility = ", ".join(schema["conventions"]["collections"]["compatibility_fields"])
+    current_identity = escape(json.dumps(schema["auth"]["identity"], sort_keys=True))
+    return f"""<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Linkar Local API v1</title>
+    <style>
+      :root {{
+        color-scheme: light dark;
+        --bg: #07131f;
+        --panel: #0d1d2d;
+        --muted: #9fb3c8;
+        --text: #eaf2fb;
+        --accent: #8ae234;
+        --border: #27415b;
+      }}
+      body {{
+        margin: 0;
+        padding: 2rem;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }}
+      main {{
+        max-width: 1120px;
+        margin: 0 auto;
+      }}
+      h1, h2 {{ margin-top: 0; }}
+      p, li {{ line-height: 1.5; }}
+      .panel {{
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1rem 1.25rem;
+        margin: 1rem 0 1.5rem;
+      }}
+      .lede {{ color: var(--muted); max-width: 72ch; }}
+      code {{ font-family: ui-monospace, monospace; }}
+      table {{
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+      }}
+      th, td {{
+        border-top: 1px solid var(--border);
+        padding: 0.75rem;
+        text-align: left;
+        vertical-align: top;
+      }}
+      th {{ color: var(--accent); }}
+      a {{ color: var(--accent); }}
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Linkar Local API v1</h1>
+      <p class="lede">
+        Live reference for the running Linkar server. For machine-readable discovery use
+        <code>/v1</code> and <code>/v1/schema</code>.
+      </p>
+      <section class="panel">
+        <h2>Auth</h2>
+        <p>Enabled: <strong>{str(schema['auth']['enabled']).lower()}</strong></p>
+        <p>Scheme: <code>{escape(str(schema['auth']['scheme']))}</code></p>
+        <p>Roles: <code>{escape(roles)}</code></p>
+        <p>Current identity: <code>{current_identity}</code></p>
+      </section>
+      <section class="panel">
+        <h2>Conventions</h2>
+        <ul>
+          <li>Collections expose <code>items</code> and <code>count</code>.</li>
+          <li>Compatibility keys remain available: <code>{escape(compatibility)}</code>.</li>
+          <li>Major detail responses expose a <code>kind</code> field.</li>
+          <li>Resolve token TTL: <code>{schema['conventions']['resolve_token_ttl_seconds']}</code> seconds.</li>
+        </ul>
+      </section>
+      <section class="panel">
+        <h2>Routes</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Path</th>
+              <th>Role</th>
+              <th>Kind</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            {route_rows}
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </body>
+</html>
+"""
 
 
 def normalized_path(path: str) -> str:
@@ -549,6 +679,13 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
                 return success_response(
                     start_response,
                     v1_schema_document(identity, auth_enabled=bool(configured_tokens)),
+                )
+
+            if method == "GET" and raw_path == "/v1/docs":
+                return html_response(
+                    start_response,
+                    "200 OK",
+                    v1_docs_html(identity, auth_enabled=bool(configured_tokens)),
                 )
 
             if method == "GET" and path == "/templates":
