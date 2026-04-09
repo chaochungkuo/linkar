@@ -1,6 +1,8 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import SiteNav from "../../components/SiteNav.astro";
+
+const base = import.meta.env.BASE_URL;
 ---
 
 <BaseLayout title="Examples | Linkar" description="Choose the right bundled Linkar example pack based on what you want to learn: basic template authoring, chaining, binding overrides, pack selection, or remote packs.">
@@ -17,7 +19,7 @@ import SiteNav from "../../components/SiteNav.astro";
 
       <section class="section page-section-tight">
         <div class="card-grid two-up">
-          <article class="feature-card">
+          <a class="doc-card" href={`${base}tutorials/testing-basic-templates/`}>
             <div class="card-tags">
               <span class="card-tag">Authoring</span>
             </div>
@@ -26,9 +28,9 @@ import SiteNav from "../../components/SiteNav.astro";
               Start here for the template contract: `run.command`, `run.sh`, `run.py`, declared
               outputs, `glob` outputs, `tools.required_any`, file inputs, and local tests.
             </p>
-          </article>
+          </a>
 
-          <article class="feature-card">
+          <a class="doc-card" href={`${base}tutorials/example-pack-progression/#2-learn-pack-level-chaining-with-chaining`}>
             <div class="card-tags">
               <span class="card-tag">Bindings</span>
             </div>
@@ -37,9 +39,9 @@ import SiteNav from "../../components/SiteNav.astro";
               Open this when you want to see pack-level default binding in action. The key lesson is
               that template-to-template connection lives in the pack, not in manual operator steps.
             </p>
-          </article>
+          </a>
 
-          <article class="feature-card">
+          <a class="doc-card" href={`${base}tutorials/example-pack-progression/#3-compare-defaults-and-caller-overrides-with-binding_overrides`}>
             <div class="card-tags">
               <span class="card-tag">Bindings</span>
             </div>
@@ -48,9 +50,9 @@ import SiteNav from "../../components/SiteNav.astro";
               Use this when you want to compare three things directly: project history, a pack's
               default binding, and an explicit override binding passed by the caller.
             </p>
-          </article>
+          </a>
 
-          <article class="feature-card">
+          <a class="doc-card" href={`${base}tutorials/example-pack-progression/#4-learn-pack-selection-with-pack_management`}>
             <div class="card-tags">
               <span class="card-tag">Pack Selection</span>
             </div>
@@ -59,9 +61,9 @@ import SiteNav from "../../components/SiteNav.astro";
               Use this when multiple packs expose the same template id and you want to see how
               active-pack selection and `--pack` keep resolution explicit.
             </p>
-          </article>
+          </a>
 
-          <article class="feature-card">
+          <a class="doc-card" href={`${base}tutorials/example-pack-progression/#5-learn-remote-pack-references-with-remote`}>
             <div class="card-tags">
               <span class="card-tag">Remote</span>
             </div>
@@ -70,7 +72,7 @@ import SiteNav from "../../components/SiteNav.astro";
               Use this once local packs are clear and you want to see `git+` references, cached
               remote assets, and revision-aware provenance.
             </p>
-          </article>
+          </a>
         </div>
       </section>
     </main>
