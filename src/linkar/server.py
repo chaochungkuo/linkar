@@ -15,6 +15,7 @@ from linkar.core import (
     generate_methods,
     inspect_run,
     inspect_runtime,
+    list_configured_packs,
     list_project_runs,
     list_templates,
     load_template,
@@ -303,6 +304,32 @@ def runtime_status_payload(run_ref: str, project: str | None = None) -> dict:
     }
 
 
+def current_project_summary(project_ref: str | None = None) -> dict:
+    if project_ref is not None:
+        project_obj = load_project(project_ref)
+    else:
+        project_obj = discover_project()
+    if project_obj is None:
+        raise ProjectValidationError("No Linkar project found. Pass ?project=/path/to/project or run inside a project directory.")
+    runs = list_project_runs(project=project_obj)
+    return {
+        "id": project_obj.data.get("id"),
+        "path": str(project_obj.root),
+        "active_pack": project_obj.data.get("active_pack"),
+        "packs": list_configured_packs(project=project_obj),
+        "author": project_obj.data.get("author"),
+        "run_count": len(runs),
+        "recent_runs": [
+            {
+                "instance_id": entry.get("instance_id"),
+                "template": entry.get("id"),
+                "path": entry.get("path"),
+            }
+            for entry in runs[-5:]
+        ],
+    }
+
+
 def normalized_path(path: str) -> str:
     if path == "/v1":
         return path
@@ -361,6 +388,9 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
                     project=query_value(query, "project"),
                 )
                 return success_response(start_response, {"templates": templates})
+
+            if method == "GET" and raw_path == "/v1/projects/current":
+                return success_response(start_response, current_project_summary(query_value(query, "project")))
 
             if method == "GET" and path.startswith("/templates/"):
                 template_ref = unquote(path.removeprefix("/templates/"))

@@ -83,6 +83,18 @@ def test_server_v1_root_and_aliases(tmp_path: Path) -> None:
     status, _, payload = call_app(
         app,
         method="GET",
+        path="/v1/projects/current",
+        query=f"project={project_dir}",
+    )
+    assert status == "200 OK"
+    assert payload["data"]["id"] == "project"
+    assert payload["data"]["path"] == str(project_dir)
+    assert payload["data"]["run_count"] == 0
+    assert payload["data"]["packs"][0]["ref"] == str(ROOT / "examples" / "packs" / "basic")
+
+    status, _, payload = call_app(
+        app,
+        method="GET",
         path="/v1/templates",
         query=f"project={project_dir}",
     )
