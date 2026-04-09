@@ -73,24 +73,63 @@ class CliUI:
     def print_text(self, value: str) -> None:
         self.plain_print(value)
 
+    def print_summary_panel(
+        self,
+        title: str,
+        fields: list[tuple[str, Any]],
+        *,
+        plain_text: str | None = None,
+        border_style: str = "accent",
+    ) -> None:
+        if not self.rich_enabled:
+            self.plain_print(plain_text if plain_text is not None else "\n".join(f"{key}: {value}" for key, value in fields))
+            return
+        body = Text()
+        first = True
+        for label, value in fields:
+            if not first:
+                body.append("\n")
+            first = False
+            body.append(str(label), style="label")
+            body.append(": ", style="muted")
+            body.append(str(value), style="value")
+        self.console.print(
+            Panel(
+                body,
+                title=title,
+                border_style=border_style,
+                box=box.ROUNDED,
+            )
+        )
+
+    def _print_tabled_panel(
+        self,
+        table: Any,
+        *,
+        title: str,
+        border_style: str = "accent",
+    ) -> None:
+        self.console.print(
+            Panel(
+                table,
+                title=title,
+                border_style=border_style,
+                box=box.ROUNDED,
+            )
+        )
+
     def status(self, message: str):
         if not self.rich_enabled:
             return nullcontext()
         return self.console.status(f"[accent]{message}[/accent]", spinner="dots")
 
     def print_project_created(self, path: Path, project_id: str) -> None:
-        if not self.rich_enabled:
-            self.plain_print(str(path))
-            return
-        body = Text()
-        body.append("Project", style="label")
-        body.append(": ", style="muted")
-        body.append(project_id, style="accent")
-        body.append("\n")
-        body.append("Path", style="label")
-        body.append(": ", style="muted")
-        body.append(str(path), style="value")
-        self.console.print(Panel(body, title="[accent]Linkar[/accent]", border_style="accent"))
+        self.print_summary_panel(
+            "[ok]Project Created[/ok]",
+            [("Project", project_id), ("Path", path)],
+            plain_text=str(path),
+            border_style="ok",
+        )
 
     def print_run_completed(self, result: dict[str, Any]) -> None:
         outdir = Path(result["outdir"])
@@ -254,8 +293,258 @@ class CliUI:
         table.add_column("Template")
         table.add_column("Path", style="value")
         for run in runs:
-            table.add_row(run["instance_id"], run["id"], run["path"])
-        self.console.print(table)
+            table.add_row(run["instance_id"], run["id"], self._project_value_text(run["path"]))
+        self._print_tabled_panel(table, title="[accent]Runs[/accent]")
+
+    def _project_author_text(self, author: dict[str, Any] | None) -> str:
+        if not author:
+            return "-"
+        fields = [str(author.get(key) or "").strip() for key in ("name", "email", "organization")]
+        values = [value for value in fields if value]
+        return ", ".join(values) if values else "-"
+
+    def _project_pack_fields(
+        self,
+        pack: Any,
+        *,
+        active_pack: str | None,
+        total_packs: int,
+    ) -> tuple[str, str, str, bool]:
+        if isinstance(pack, str):
+            return ("", pack, "", active_pack == pack or (active_pack is None and total_packs == 1))
+        if isinstance(pack, dict):
+            pack_id = str(pack.get("id") or "")
+            pack_ref = str(pack.get("ref") or "")
+            binding = str(pack.get("binding") or "")
+            is_active = active_pack == pack_id or active_pack == pack_ref or (active_pack is None and total_packs == 1)
+            return (pack_id, pack_ref, binding, is_active)
+        return ("", str(pack), "", False)
+
+    def _looks_like_path_text(self, value: str) -> bool:
+        return "/" in value or "\\" in value
+
+    def _shorten_project_path(self, value: str, *, max_length: int = 72) -> str:
+        text = value.strip()
+        if len(text) <= max_length:
+            return text
+
+        separator = "/" if "/" in text else "\\"
+        parts = [part for part in text.split(separator) if part]
+        if not parts:
+            return text
+
+        suffix_parts: list[str] = []
+        current = ""
+        budget = max_length - 4
+        for part in reversed(parts):
+            candidate = part if not current else f"{part}{separator}{current}"
+            if len(candidate) > budget and suffix_parts:
+                break
+            current = candidate
+            suffix_parts.append(part)
+            if len(candidate) >= budget:
+                break
+
+        if not current:
+            return "..." + text[-(max_length - 3) :]
+        return f"...{separator}{current}"
+
+    def _project_value_text(self, value: Any, *, max_list_items: int | None = None) -> str:
+        if isinstance(value, list):
+            if not value:
+                return "-"
+            items = [self._project_value_text(item) for item in value]
+            if max_list_items is not None and len(items) > max_list_items:
+                remaining = len(items) - max_list_items
+                items = items[:max_list_items] + [f"... (+{remaining} more)"]
+            return "\n".join(items)
+        if isinstance(value, dict):
+            if not value:
+                return "-"
+            return json.dumps(value, sort_keys=True)
+        if value is None:
+            return "-"
+        text = str(value)
+        if self.rich_enabled and self._looks_like_path_text(text):
+            return self._shorten_project_path(text)
+        return text
+
+    def _plain_append_mapping(self, lines: list[str], title: str, mapping: dict[str, Any] | None) -> None:
+        lines.append(f"{title}:")
+        if not mapping:
+            lines.append("  -")
+            return
+        for key, value in mapping.items():
+            if isinstance(value, list):
+                if not value:
+                    lines.append(f"  {key}: []")
+                    continue
+                lines.append(f"  {key}:")
+                for item in value:
+                    item_text = self._project_value_text(item)
+                    indented = item_text.replace("\n", "\n      ")
+                    lines.append(f"    - {indented}")
+                continue
+            value_text = self._project_value_text(value).replace("\n", "\n    ")
+            lines.append(f"  {key}: {value_text}")
+
+    def print_project_view(
+        self,
+        project_data: dict[str, Any],
+        *,
+        project_path: Path,
+        runs: list[dict[str, Any]],
+    ) -> None:
+        project_id = str(project_data.get("id") or project_path.name)
+        active_pack = project_data.get("active_pack")
+        active_pack_text = str(active_pack) if active_pack is not None else "-"
+        author_text = self._project_author_text(project_data.get("author"))
+        packs = list(project_data.get("packs") or [])
+
+        if not self.rich_enabled:
+            lines = [
+                f"Project: {project_id}",
+                f"Path: {project_path}",
+                f"Active Pack: {active_pack_text}",
+                f"Author: {author_text}",
+                f"Packs: {len(packs)}",
+            ]
+            if packs:
+                for pack in packs:
+                    pack_id, pack_ref, binding, is_active = self._project_pack_fields(
+                        pack,
+                        active_pack=active_pack if isinstance(active_pack, str) else None,
+                        total_packs=len(packs),
+                    )
+                    marker = "*" if is_active else "-"
+                    parts = [marker]
+                    if pack_id:
+                        parts.append(pack_id)
+                    if pack_ref:
+                        parts.append(pack_ref)
+                    if binding:
+                        parts.append(f"binding={binding}")
+                    lines.append("  " + " ".join(parts))
+            lines.append(f"Runs: {len(runs)}")
+            for run in runs:
+                lines.append("")
+                lines.append(f"Run: {run.get('instance_id', '-')}" + f" ({run.get('id', '-')})")
+                for key in ("path", "history_path", "template_version", "binding", "adopted", "meta"):
+                    if key in run:
+                        value_text = self._project_value_text(run.get(key)).replace("\n", "\n  ")
+                        lines.append(f"{key}: {value_text}")
+                pack = run.get("pack")
+                if pack:
+                    lines.append(f"pack: {self._project_value_text(pack)}")
+                self._plain_append_mapping(lines, "params", run.get("params"))
+                self._plain_append_mapping(lines, "outputs", run.get("outputs"))
+            self.plain_print("\n".join(lines))
+            return
+
+        summary = Table(box=box.SIMPLE_HEAVY, header_style="accent")
+        summary.add_column("Field", style="label", no_wrap=True)
+        summary.add_column("Value", style="value")
+        summary.add_row("Project", project_id)
+        summary.add_row("Path", self._project_value_text(str(project_path)))
+        summary.add_row("Active Pack", active_pack_text)
+        summary.add_row("Author", author_text)
+        summary.add_row("Runs", str(len(runs)))
+        self.console.print(
+            Panel(
+                summary,
+                title="[accent]Project View[/accent]",
+                border_style="accent",
+                box=box.ROUNDED,
+            )
+        )
+
+        if packs:
+            pack_table = Table(box=box.SIMPLE_HEAVY, header_style="accent")
+            pack_table.add_column("Active", no_wrap=True)
+            pack_table.add_column("Pack")
+            pack_table.add_column("Ref", style="value")
+            pack_table.add_column("Binding", style="value")
+            for pack in packs:
+                pack_id, pack_ref, binding, is_active = self._project_pack_fields(
+                    pack,
+                    active_pack=active_pack if isinstance(active_pack, str) else None,
+                    total_packs=len(packs),
+                )
+                pack_table.add_row(
+                    "yes" if is_active else "",
+                    pack_id or "-",
+                    self._project_value_text(pack_ref or "-"),
+                    binding or "-",
+                )
+            self.console.print(
+                Panel(
+                    pack_table,
+                    title="[accent]Packs[/accent]",
+                    border_style="accent",
+                    box=box.ROUNDED,
+                )
+            )
+
+        if not runs:
+            self.console.print(
+                Panel(
+                    Text("No runs recorded in project.yaml.", style="muted"),
+                    title="[warn]Runs[/warn]",
+                    border_style="warn",
+                    box=box.ROUNDED,
+                )
+            )
+            return
+
+        for run in runs:
+            meta_table = Table(box=box.SIMPLE_HEAVY, header_style="accent")
+            meta_table.add_column("Field", style="label", no_wrap=True)
+            meta_table.add_column("Value", style="value")
+            meta_table.add_row("Template", str(run.get("id") or "-"))
+            meta_table.add_row("Path", self._project_value_text(run.get("path") or "-"))
+            if run.get("history_path"):
+                meta_table.add_row("History", self._project_value_text(run.get("history_path")))
+            if "template_version" in run:
+                meta_table.add_row("Version", self._project_value_text(run.get("template_version")))
+            if "binding" in run:
+                meta_table.add_row("Binding", self._project_value_text(run.get("binding")))
+            if "adopted" in run:
+                meta_table.add_row("Adopted", self._project_value_text(run.get("adopted")))
+            if run.get("pack"):
+                meta_table.add_row("Pack", self._project_value_text(run.get("pack")))
+            if run.get("meta"):
+                meta_table.add_row("Meta", self._project_value_text(run.get("meta")))
+
+            params_table = Table(box=box.SIMPLE_HEAVY, header_style="accent")
+            params_table.add_column("Param", style="label", no_wrap=True)
+            params_table.add_column("Value", style="value")
+            params = run.get("params") or {}
+            if isinstance(params, dict) and params:
+                for key, value in params.items():
+                    params_table.add_row(str(key), self._project_value_text(value, max_list_items=5))
+            else:
+                params_table.add_row("-", "-")
+
+            outputs_table = Table(box=box.SIMPLE_HEAVY, header_style="accent")
+            outputs_table.add_column("Output", style="label", no_wrap=True)
+            outputs_table.add_column("Value", style="value")
+            outputs = run.get("outputs") or {}
+            if isinstance(outputs, dict) and outputs:
+                for key, value in outputs.items():
+                    outputs_table.add_row(str(key), self._project_value_text(value, max_list_items=5))
+            else:
+                outputs_table.add_row("-", "-")
+
+            self.console.print(
+                Panel(
+                    meta_table,
+                    title=f"[ok]{run.get('instance_id', '-') }[/ok]",
+                    border_style="ok",
+                    box=box.ROUNDED,
+                )
+            )
+            self._print_tabled_panel(params_table, title="[accent]Params[/accent]")
+            self._print_tabled_panel(outputs_table, title="[accent]Outputs[/accent]")
 
     def print_templates(self, templates: list[dict[str, Any]]) -> None:
         grouped: dict[str, list[dict[str, Any]]] = {}
@@ -282,7 +571,7 @@ class CliUI:
             if not first_group:
                 self.console.print()
             first_group = False
-            self.console.print(f"[label]Pack:[/label] [value]{pack_ref}[/value]")
+            self.console.print(f"[label]Pack:[/label] [value]{self._project_value_text(pack_ref)}[/value]")
             table = Table(box=box.SIMPLE_HEAVY, header_style="accent")
             table.add_column("Template")
             table.add_column("Description", style="value")
@@ -297,7 +586,7 @@ class CliUI:
                     ", ".join(template.get("expected_outputs") or []) or "-",
                     template.get("version") or "-",
                 )
-            self.console.print(table)
+            self._print_tabled_panel(table, title="[accent]Templates[/accent]")
 
     def print_packs(self, packs: list[dict[str, Any]]) -> None:
         if not self.rich_enabled:
@@ -312,8 +601,13 @@ class CliUI:
         table.add_column("Ref", style="value")
         table.add_column("Binding", style="value")
         for pack in packs:
-            table.add_row("yes" if pack.get("active") else "", pack["id"], pack["ref"], pack.get("binding") or "")
-        self.console.print(table)
+            table.add_row(
+                "yes" if pack.get("active") else "",
+                pack["id"],
+                self._project_value_text(pack["ref"]),
+                pack.get("binding") or "",
+            )
+        self._print_tabled_panel(table, title="[accent]Packs[/accent]")
 
     def _looks_like_run_metadata(self, metadata: dict[str, Any]) -> bool:
         required = {"template", "instance_id", "params", "outputs"}
@@ -326,7 +620,10 @@ class CliUI:
             return json.dumps(value, sort_keys=True)
         if value is None:
             return "-"
-        return str(value)
+        text = str(value)
+        if self.rich_enabled and self._looks_like_path_text(text):
+            return self._shorten_project_path(text)
+        return text
 
     def _provenance_text(self, provenance: dict[str, Any] | None) -> str:
         if not provenance:
@@ -393,14 +690,7 @@ class CliUI:
             if value in (None, "", []):
                 continue
             summary.add_row(label, self._metadata_value_text(value))
-        self.console.print(
-            Panel(
-                summary,
-                title="[accent]Run Inspection[/accent]",
-                border_style="accent",
-                box=box.ROUNDED,
-            )
-        )
+        self._print_tabled_panel(summary, title="[accent]Run Inspection[/accent]")
 
         params = metadata.get("params") or {}
         provenance = metadata.get("param_provenance") or {}
@@ -415,7 +705,7 @@ class CliUI:
                     self._metadata_value_text(value),
                     self._provenance_text(provenance.get(key)),
                 )
-            self.console.print(table)
+            self._print_tabled_panel(table, title="[accent]Params[/accent]")
 
         outputs = metadata.get("outputs") or {}
         if isinstance(outputs, dict):
@@ -427,7 +717,7 @@ class CliUI:
                     table.add_row(key, self._metadata_value_text(value))
             else:
                 table.add_row("outputs", "No outputs collected yet")
-            self.console.print(table)
+            self._print_tabled_panel(table, title="[accent]Outputs[/accent]")
 
         command = metadata.get("command")
         if command:
@@ -440,6 +730,31 @@ class CliUI:
                 )
             )
 
+    def _print_generic_metadata(self, metadata: dict[str, Any]) -> None:
+        title = "[accent]Metadata[/accent]"
+        rows: list[tuple[str, Any]] = []
+
+        if len(metadata) == 1:
+            key, value = next(iter(metadata.items()))
+            if isinstance(value, dict):
+                title = f"[accent]{str(key).replace('_', ' ').title()}[/accent]"
+                rows = [(str(inner_key).replace("_", " ").title(), inner_value) for inner_key, inner_value in value.items()]
+            else:
+                title = f"[accent]{str(key).replace('_', ' ').title()}[/accent]"
+                rows = [(str(key).replace("_", " ").title(), value)]
+        else:
+            rows = [(str(key).replace("_", " ").title(), value) for key, value in metadata.items()]
+
+        table = Table(box=box.SIMPLE_HEAVY, header_style="accent")
+        table.add_column("Field", style="label", no_wrap=True)
+        table.add_column("Value", style="value")
+        if rows:
+            for label, value in rows:
+                table.add_row(label, self._metadata_value_text(value))
+        else:
+            table.add_row("-", "-")
+        self._print_tabled_panel(table, title=title)
+
     def print_metadata(self, metadata: dict[str, Any]) -> None:
         if not self.rich_enabled:
             self.plain_print(json.dumps(metadata, indent=2, sort_keys=True))
@@ -447,7 +762,7 @@ class CliUI:
         if self._looks_like_run_metadata(metadata):
             self._print_run_metadata(metadata)
             return
-        self.console.print(JSON.from_data(metadata))
+        self._print_generic_metadata(metadata)
 
     def print_methods(self, text: str) -> None:
         if not self.rich_enabled:
@@ -520,3 +835,38 @@ class CliUI:
             )
         )
         self.error_console.print(help_text.rstrip())
+
+    def print_pack_summary(
+        self,
+        title: str,
+        *,
+        pack_id: str,
+        ref: str,
+        binding: str | None = None,
+        active: bool | None = None,
+        plain_text: str | None = None,
+    ) -> None:
+        fields: list[tuple[str, Any]] = [("Pack", pack_id), ("Ref", ref)]
+        if binding:
+            fields.append(("Binding", binding))
+        if active is not None:
+            fields.append(("Active", "yes" if active else "no"))
+        self.print_summary_panel(title, fields, plain_text=plain_text, border_style="accent")
+
+    def print_run_removal(
+        self,
+        *,
+        instance_id: str,
+        template_id: str,
+        path: str,
+        deleted: bool,
+        plain_text: str,
+    ) -> None:
+        title = "[warn]Run Deleted[/warn]" if deleted else "[accent]Run Detached[/accent]"
+        border_style = "warn" if deleted else "accent"
+        self.print_summary_panel(
+            title,
+            [("Instance", instance_id), ("Template", template_id), ("Path", path)],
+            plain_text=plain_text,
+            border_style=border_style,
+        )

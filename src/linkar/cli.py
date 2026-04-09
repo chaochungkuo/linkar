@@ -119,8 +119,15 @@ def config_pack_group() -> None:
 @click.option("--activate/--no-activate", default=True, show_default=True, help="Make this the active global pack after adding it.")
 @handle_linkar_errors
 def config_pack_add_command(ref: str, pack_id: str | None, activate: bool, ui: CliUI) -> None:
+    """Add a global pack to the user config."""
     result = add_global_pack(ref, pack_id=pack_id, activate=activate)
-    ui.print_text(f"{result['id']}\t{result['ref']}")
+    ui.print_pack_summary(
+        "[accent]Global Pack Added[/accent]",
+        pack_id=result["id"],
+        ref=result["ref"],
+        active=result.get("active"),
+        plain_text=f"{result['id']}\t{result['ref']}",
+    )
 
 
 @config_pack_group.command("list")
@@ -136,7 +143,13 @@ def config_pack_list_command(ui: CliUI) -> None:
 def config_pack_use_command(identifier: str, ui: CliUI) -> None:
     """Select the active global pack."""
     result = set_active_global_pack(identifier)
-    ui.print_text(f"{result['id']}\t{result['ref']}")
+    ui.print_pack_summary(
+        "[accent]Global Pack Selected[/accent]",
+        pack_id=result["id"],
+        ref=result["ref"],
+        active=result.get("active"),
+        plain_text=f"{result['id']}\t{result['ref']}",
+    )
 
 
 @config_pack_group.command("remove")
@@ -145,7 +158,12 @@ def config_pack_use_command(identifier: str, ui: CliUI) -> None:
 def config_pack_remove_command(identifier: str, ui: CliUI) -> None:
     """Remove a configured global pack."""
     result = remove_global_pack(identifier)
-    ui.print_text(f"{result['id']}\t{result['ref']}")
+    ui.print_pack_summary(
+        "[accent]Global Pack Removed[/accent]",
+        pack_id=result["id"],
+        ref=result["ref"],
+        plain_text=f"{result['id']}\t{result['ref']}",
+    )
 
 
 @config_pack_group.command("show")
@@ -157,7 +175,13 @@ def config_pack_show_command(ui: CliUI) -> None:
         raise ProjectValidationError(
             f"No active global pack configured. Add one with 'linkar config pack add REF'. Config file: {global_config_path()}"
         )
-    ui.print_text(f"{active_entry.id}\t{active_entry.asset.ref}")
+    ui.print_pack_summary(
+        "[accent]Active Global Pack[/accent]",
+        pack_id=active_entry.id,
+        ref=active_entry.asset.ref,
+        plain_text=f"{active_entry.id}\t{active_entry.asset.ref}",
+        active=True,
+    )
 
 
 @config_group.group("author")
@@ -200,7 +224,11 @@ def config_author_show_command(ui: CliUI) -> None:
 def config_author_clear_command(ui: CliUI) -> None:
     """Remove default author metadata from the global Linkar config."""
     clear_global_author()
-    ui.print_text("author defaults cleared")
+    ui.print_summary_panel(
+        "[accent]Author Defaults Cleared[/accent]",
+        [("Status", "author defaults cleared")],
+        plain_text="author defaults cleared",
+    )
 
 
 @pack_group.command("add")
@@ -223,8 +251,16 @@ def pack_add_command(
     project: str | None,
     ui: CliUI,
 ) -> None:
+    """Add a pack to the active project."""
     result = add_project_pack(ref, project=project, pack_id=pack_id, binding=binding, activate=activate)
-    ui.print_text(f"{result['id']}\t{result['ref']}")
+    ui.print_pack_summary(
+        "[accent]Project Pack Added[/accent]",
+        pack_id=result["id"],
+        ref=result["ref"],
+        binding=result.get("binding"),
+        active=result.get("active"),
+        plain_text=f"{result['id']}\t{result['ref']}",
+    )
 
 
 @pack_group.command("list")
@@ -252,7 +288,14 @@ def pack_list_command(project: str | None, ui: CliUI) -> None:
 def pack_use_command(identifier: str, project: str | None, ui: CliUI) -> None:
     """Select the active/default pack for the project."""
     result = set_active_pack(identifier, project=project)
-    ui.print_text(f"{result['id']}\t{result['ref']}")
+    ui.print_pack_summary(
+        "[accent]Project Pack Selected[/accent]",
+        pack_id=result["id"],
+        ref=result["ref"],
+        binding=result.get("binding"),
+        active=result.get("active"),
+        plain_text=f"{result['id']}\t{result['ref']}",
+    )
 
 
 @pack_group.command("remove")
@@ -267,7 +310,13 @@ def pack_use_command(identifier: str, project: str | None, ui: CliUI) -> None:
 def pack_remove_command(identifier: str, project: str | None, ui: CliUI) -> None:
     """Remove a configured pack from the project."""
     result = remove_project_pack(identifier, project=project)
-    ui.print_text(f"{result['id']}\t{result['ref']}")
+    ui.print_pack_summary(
+        "[accent]Project Pack Removed[/accent]",
+        pack_id=result["id"],
+        ref=result["ref"],
+        binding=result.get("binding"),
+        plain_text=f"{result['id']}\t{result['ref']}",
+    )
 
 
 @pack_group.command("show")
@@ -286,7 +335,14 @@ def pack_show_command(project: str | None, ui: CliUI) -> None:
     active_entry = get_active_pack_entry(project_obj)
     if active_entry is None:
         raise ProjectValidationError("No active pack configured")
-    ui.print_text(f"{active_entry.id}\t{active_entry.asset.ref}")
+    ui.print_pack_summary(
+        "[accent]Active Project Pack[/accent]",
+        pack_id=active_entry.id,
+        ref=active_entry.asset.ref,
+        binding=active_entry.binding,
+        active=True,
+        plain_text=f"{active_entry.id}\t{active_entry.asset.ref}",
+    )
 
 
 @app.group("project")
@@ -519,7 +575,13 @@ def project_remove_run_command(
     """Remove a run record from the active project, optionally deleting its files."""
     result = remove_project_run(run_ref, project=project, delete_files=delete_files)
     suffix = " deleted" if delete_files else " detached"
-    ui.print_text(f"{result['instance_id']}\t{result['id']}\t{result['path']}{suffix}")
+    ui.print_run_removal(
+        instance_id=result["instance_id"],
+        template_id=result["id"],
+        path=result["path"],
+        deleted=delete_files,
+        plain_text=f"{result['instance_id']}\t{result['id']}\t{result['path']}{suffix}",
+    )
 
 
 @project_group.command("runs")
@@ -532,6 +594,42 @@ def project_remove_run_command(
 def project_runs(project: str | None, ui: CliUI) -> None:
     """Show template instances recorded in project.yaml."""
     ui.print_runs(list_project_runs(project=project))
+
+
+def _select_project_runs(runs: list[dict[str, object]], run_ref: str | None) -> list[dict[str, object]]:
+    if not run_ref:
+        return runs
+
+    exact_instance_matches = [run for run in runs if str(run.get("instance_id") or "") == run_ref]
+    if exact_instance_matches:
+        return exact_instance_matches
+
+    template_matches = [run for run in runs if str(run.get("id") or "") == run_ref]
+    if template_matches:
+        return template_matches
+
+    path_matches = [run for run in runs if str(run.get("path") or "") == run_ref]
+    if path_matches:
+        return path_matches
+
+    raise ProjectValidationError(f"Run not found in project: {run_ref}")
+
+
+@project_group.command("view")
+@click.argument("run_ref", required=False)
+@click.option(
+    "--project",
+    type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+    help="Project directory or project.yaml path. Defaults to the current directory.",
+)
+@handle_linkar_errors
+def project_view_command(run_ref: str | None, project: str | None, ui: CliUI) -> None:
+    """Show project metadata and recorded runs in a human-friendly view."""
+    project_obj = load_project_or_discover(project)
+    if project_obj is None:
+        raise missing_project_error("Viewing project metadata")
+    runs = _select_project_runs(list_project_runs(project=project_obj), run_ref)
+    ui.print_project_view(project_obj.data, project_path=project_obj.root, runs=runs)
 
 
 @app.group(

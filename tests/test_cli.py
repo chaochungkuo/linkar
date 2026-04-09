@@ -256,6 +256,61 @@ def test_project_init_uses_global_author_defaults(tmp_path: Path) -> None:
     }
 
 
+def test_project_view_command_shows_project_details(tmp_path: Path) -> None:
+    project_dir = tmp_path / "study"
+    completed = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert completed.returncode == 0, completed.stderr
+
+    project_file = project_dir / "project.yaml"
+    project_data = yaml.safe_load(project_file.read_text())
+    project_data["active_pack"] = "izkf_pack"
+    project_data["packs"] = [
+        {
+            "id": "izkf_pack",
+            "ref": "/packs/izkf_pack",
+            "binding": "default",
+        }
+    ]
+    project_data["templates"] = [
+        {
+            "id": "demultiplex",
+            "instance_id": "demultiplex_001",
+            "path": "/data/fastq/run_001",
+            "binding": {"ref": "default"},
+            "params": {"threads": 8},
+            "outputs": {
+                "demux_fastq_files": [
+                    "/data/fastq/run_001/results/output/S1_R1.fastq.gz",
+                    "/data/fastq/run_001/results/output/S1_R2.fastq.gz",
+                ]
+            },
+            "adopted": True,
+        },
+        {
+            "id": "cellranger_atac",
+            "instance_id": "cellranger_atac_001",
+            "path": "cellranger_atac",
+            "pack": {"id": "izkf_pack", "ref": "/packs/izkf_pack"},
+            "params": {"fastq_dir": "/data/fastq/run_001/results/output/study"},
+            "outputs": {"results_dir": "cellranger_atac/results"},
+        },
+    ]
+    project_file.write_text(yaml.safe_dump(project_data, sort_keys=False))
+
+    view = run_cli("project", "view", cwd=project_dir)
+    assert view.returncode == 0, view.stderr
+    assert "Project: study" in view.stdout
+    assert "Active Pack: izkf_pack" in view.stdout
+    assert "Run: demultiplex_001 (demultiplex)" in view.stdout
+    assert "Run: cellranger_atac_001 (cellranger_atac)" in view.stdout
+    assert "demux_fastq_files:" in view.stdout
+
+    filtered = run_cli("project", "view", "cellranger_atac_001", cwd=project_dir)
+    assert filtered.returncode == 0, filtered.stderr
+    assert "Run: cellranger_atac_001 (cellranger_atac)" in filtered.stdout
+    assert "Run: demultiplex_001 (demultiplex)" not in filtered.stdout
+
+
 def test_project_init_author_options_override_global_defaults(tmp_path: Path) -> None:
     env = {"LINKAR_HOME": str(tmp_path / "home")}
     configured = run_cli(
@@ -379,6 +434,36 @@ def test_project_adopt_run_imports_existing_linkar_run(tmp_path: Path) -> None:
     assert entry["adopted"] is True
     assert entry["params"]["name"] == "Later"
     assert entry["meta"].endswith(".linkar/meta.json")
+
+
+def test_project_adopt_run_normalizes_relative_run_path_to_absolute(tmp_path: Path) -> None:
+    ad_hoc = run_cli(
+        "run",
+        "simple_echo",
+        "--pack",
+        str(ROOT / "examples" / "packs" / "basic"),
+        "--param",
+        "name=InsideProject",
+        cwd=tmp_path,
+    )
+    assert ad_hoc.returncode == 0, ad_hoc.stderr
+    source_run_dir = Path(ad_hoc.stdout.strip())
+
+    project_dir = tmp_path / "study"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    imported_run_dir = project_dir / "imported_run"
+    shutil.copytree(source_run_dir, imported_run_dir)
+
+    adopted = run_cli("project", "adopt-run", "imported_run", cwd=project_dir)
+    assert adopted.returncode == 0, adopted.stderr
+
+    data = yaml.safe_load((project_dir / "project.yaml").read_text())
+    entry = data["templates"][0]
+    assert entry["adopted"] is True
+    assert entry["path"] == str(imported_run_dir.resolve())
+    assert entry["history_path"] == str(imported_run_dir.resolve())
 
 
 def test_project_remove_run_detaches_without_deleting_files(tmp_path: Path) -> None:
@@ -2201,6 +2286,107 @@ def test_print_metadata_renders_rich_run_inspection_view(monkeypatch: pytest.Mon
     assert "binding:function:get_api_samplesheet" in rendered
     assert "No outputs collected yet" not in rendered
     assert "/tmp/demux/run.sh" in rendered
+
+
+def test_print_project_view_renders_rich_project_summary(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    ui = CliUI()
+    ui.console = Console(record=True, force_terminal=True, width=120, theme=THEME)
+    project_data = {
+        "id": "study",
+        "active_pack": "izkf_pack",
+        "author": {"name": "Casey Kuo", "organization": "IZKF"},
+        "packs": [{"id": "izkf_pack", "ref": "/packs/izkf_pack", "binding": "default"}],
+        "templates": [
+            {
+                "id": "cellranger_atac",
+                "instance_id": "cellranger_atac_001",
+                "path": "cellranger_atac",
+                "binding": {"ref": "default"},
+                "adopted": True,
+                "params": {
+                    "cellranger_atac_bin": "/data/shared/10xGenomics/bin/cellranger-atac-2.2.0/bin/cellranger-atac",
+                    "fastq_dir": "/data/fastq/260330_A01742_0623_AHL7YGDRX7/results/output/260330_Yildiz_ZimmerBensch_BioII_scATAcseq",
+                    "localcores": 64,
+                },
+                "outputs": {
+                    "count_web_summaries": [
+                        "/data/projects/260330_Yildiz_ZimmerBensch_BioII_scATAcseq/cellranger_atac/results/counts/Ctrl_f/outs/web_summary.html",
+                        "/data/projects/260330_Yildiz_ZimmerBensch_BioII_scATAcseq/cellranger_atac/results/counts/Ctrl_m/outs/web_summary.html",
+                        "/data/projects/260330_Yildiz_ZimmerBensch_BioII_scATAcseq/cellranger_atac/results/counts/KO_f/outs/web_summary.html",
+                        "/data/projects/260330_Yildiz_ZimmerBensch_BioII_scATAcseq/cellranger_atac/results/counts/KO_m/outs/web_summary.html",
+                        "/data/projects/260330_Yildiz_ZimmerBensch_BioII_scATAcseq/cellranger_atac/results/combined/outs/web_summary.html",
+                        "/data/projects/260330_Yildiz_ZimmerBensch_BioII_scATAcseq/cellranger_atac/results/combined/outs/summary.csv",
+                    ]
+                },
+            }
+        ],
+    }
+
+    ui.print_project_view(project_data, project_path=tmp_path / "study", runs=project_data["templates"])
+
+    rendered = ui.console.export_text()
+    assert "Project View" in rendered
+    assert "cellranger_atac_001" in rendered
+    assert "count_web_summaries" in rendered
+    assert "... (+1 more)" in rendered
+    assert ".../cellranger-atac-2.2.0/bin/cellranger-atac" in rendered
+    assert ".../results/output/260330_Yildiz_ZimmerBensch_BioII_scATAcseq" in rendered
+    assert ".../counts/Ctrl_f/outs/web_summary.html" in rendered
+
+
+def test_print_metadata_renders_generic_mapping_as_rich_panel(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    ui = CliUI()
+    ui.console = Console(record=True, force_terminal=True, width=120, theme=THEME)
+
+    ui.print_metadata(
+        {
+            "author": {
+                "name": "Casey Kuo",
+                "email": "casey@example.org",
+                "organization": "IZKF",
+            }
+        }
+    )
+
+    rendered = ui.console.export_text()
+    assert "Author" in rendered
+    assert "Casey Kuo" in rendered
+    assert "casey@example.org" in rendered
+    assert "IZKF" in rendered
+
+
+def test_print_runs_and_packs_render_rich_panels(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    ui = CliUI()
+    ui.console = Console(record=True, force_terminal=True, width=120, theme=THEME)
+
+    ui.print_runs(
+        [
+            {
+                "instance_id": "cellranger_atac_001",
+                "id": "cellranger_atac",
+                "path": "/data/projects/demo/cellranger_atac",
+            }
+        ]
+    )
+    ui.print_packs(
+        [
+            {
+                "id": "izkf_pack",
+                "ref": "/home/ckuo/github/izkf_pack",
+                "binding": "default",
+                "active": True,
+            }
+        ]
+    )
+
+    rendered = ui.console.export_text()
+    assert "Runs" in rendered
+    assert "Packs" in rendered
+    assert "cellranger_atac_001" in rendered
+    assert ".../github/izkf_pack" in rendered
 
 
 def test_methods_command_aggregates_runs_in_project_order(tmp_path: Path) -> None:
