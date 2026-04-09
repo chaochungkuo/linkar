@@ -110,6 +110,7 @@ def test_server_v1_root_and_aliases(tmp_path: Path) -> None:
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
+    assert payload["data"]["kind"] == "run_collection"
     assert payload["data"]["runs"] == []
     assert payload["data"]["items"] == []
     assert payload["data"]["count"] == 0
@@ -121,8 +122,10 @@ def test_server_v1_root_and_aliases(tmp_path: Path) -> None:
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
+    assert payload["data"]["kind"] == "asset_collection"
     assert payload["data"]["count"] == 1
     assert payload["data"]["items"] == payload["data"]["assets"]
+    assert payload["data"]["items"][0]["kind"] == "asset"
     assert payload["data"]["assets"][0]["pack_ref"] == str(ROOT / "examples" / "packs" / "basic")
 
     status, _, payload = call_app(
@@ -132,8 +135,10 @@ def test_server_v1_root_and_aliases(tmp_path: Path) -> None:
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
+    assert payload["data"]["kind"] == "template_collection"
     assert payload["data"]["count"] >= 1
     assert payload["data"]["items"] == payload["data"]["templates"]
+    assert all(item["kind"] == "template_summary" for item in payload["data"]["items"])
     assert any(item["id"] == "simple_echo" for item in payload["data"]["templates"])
 
     status, _, payload = call_app(
@@ -396,6 +401,16 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
     assert status == "200 OK"
     assert outputs_payload["data"]["instance_id"] == instance_id
     assert outputs_payload["data"]["outputs"] == inspect_payload["data"]["outputs"]
+
+    status, _, project_runs_payload = call_app(
+        app,
+        method="GET",
+        path="/v1/projects/current/runs",
+        query=f"project={project_dir}",
+    )
+    assert status == "200 OK"
+    assert project_runs_payload["data"]["items"][0]["kind"] == "run_summary"
+    assert project_runs_payload["data"]["items"][0]["template"] == "simple_echo"
 
     status, _, templates_payload = call_app(
         app,

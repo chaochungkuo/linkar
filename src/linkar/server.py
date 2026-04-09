@@ -410,8 +410,29 @@ def current_project_summary(project_ref: str | None = None) -> dict:
     }
 
 
-def collection_payload(items_key: str, items: list[dict]) -> dict:
+def normalize_run_summary(entry: dict) -> dict:
+    summary = dict(entry)
+    summary["kind"] = "run_summary"
+    if "template" not in summary and "id" in summary:
+        summary["template"] = summary["id"]
+    return summary
+
+
+def normalize_asset_summary(entry: dict) -> dict:
+    summary = dict(entry)
+    summary["kind"] = "asset"
+    return summary
+
+
+def normalize_template_summary(entry: dict) -> dict:
+    summary = dict(entry)
+    summary["kind"] = "template_summary"
+    return summary
+
+
+def collection_payload(kind: str, items_key: str, items: list[dict]) -> dict:
     return {
+        "kind": kind,
         "items": items,
         items_key: items,
         "count": len(items),
@@ -535,7 +556,11 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
                     pack_refs=query_values(query, "pack"),
                     project=query_value(query, "project"),
                 )
-                payload = collection_payload("templates", templates) if raw_path.startswith("/v1/") else {"templates": templates}
+                if raw_path.startswith("/v1/"):
+                    templates = [normalize_template_summary(item) for item in templates]
+                    payload = collection_payload("template_collection", "templates", templates)
+                else:
+                    payload = {"templates": templates}
                 return success_response(start_response, payload)
 
             if method == "GET" and raw_path == "/v1/projects/current":
@@ -543,11 +568,13 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
 
             if method == "GET" and raw_path == "/v1/projects/current/runs":
                 runs = list_project_runs(project=query_value(query, "project"))
-                return success_response(start_response, collection_payload("runs", runs))
+                runs = [normalize_run_summary(entry) for entry in runs]
+                return success_response(start_response, collection_payload("run_collection", "runs", runs))
 
             if method == "GET" and raw_path == "/v1/projects/current/assets":
                 assets = resolve_project_assets(project=query_value(query, "project"))
-                return success_response(start_response, collection_payload("assets", assets))
+                assets = [normalize_asset_summary(entry) for entry in assets]
+                return success_response(start_response, collection_payload("asset_collection", "assets", assets))
 
             if method == "GET" and path.startswith("/templates/"):
                 template_ref = unquote(path.removeprefix("/templates/"))
@@ -564,7 +591,11 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
 
             if method == "GET" and path == "/projects/runs":
                 runs = list_project_runs(project=query_value(query, "project"))
-                payload = collection_payload("runs", runs) if raw_path.startswith("/v1/") else {"runs": runs}
+                if raw_path.startswith("/v1/"):
+                    runs = [normalize_run_summary(entry) for entry in runs]
+                    payload = collection_payload("run_collection", "runs", runs)
+                else:
+                    payload = {"runs": runs}
                 return success_response(start_response, payload)
 
             if method == "GET" and path == "/projects/assets":
