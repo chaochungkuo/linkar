@@ -95,27 +95,53 @@ Use `linkar run TEMPLATE ...` when you want the generic path-or-pack execution i
 
 ## Local API
 
-Linkar also exposes a small local JSON API over the same core semantics:
+Linkar also exposes a local JSON API over the same core semantics as the CLI.
+
+Start it without auth for trusted local use:
 
 ```bash
 linkar serve --port 8000
 ```
 
-Current agent-oriented endpoints:
+Or start it with bearer-token auth:
 
-- `GET /templates`
-- `GET /templates/{template_id}`
-- `GET /projects/runs`
-- `GET /projects/assets`
-- `GET /runs/{run_ref}`
-- `GET /runs/{run_ref}/outputs`
-- `GET /runs/{run_ref}/runtime`
-- `GET /methods`
-- `POST /resolve`
-- `POST /run`
-- `POST /render`
-- `POST /collect`
-- `POST /test`
+```bash
+linkar serve --port 8000 --api-token local-dev:read,resolve,execute
+```
+
+The first call an agent or script should usually make is:
+
+```bash
+curl http://127.0.0.1:8000/v1
+curl http://127.0.0.1:8000/v1/schema
+```
+
+With auth enabled:
+
+```bash
+curl -H 'Authorization: Bearer local-dev' http://127.0.0.1:8000/v1
+```
+
+Recommended v1 routes:
+
+- `GET /v1`
+- `GET /v1/schema`
+- `GET /v1/health`
+- `GET /v1/projects/current`
+- `GET /v1/projects/current/runs`
+- `GET /v1/projects/current/assets`
+- `GET /v1/templates`
+- `GET /v1/templates/{template_id}`
+- `POST /v1/templates/{template_id}:resolve`
+- `POST /v1/templates/{template_id}:run`
+- `POST /v1/templates/{template_id}:render`
+- `POST /v1/templates/{template_id}:test`
+- `GET /v1/runs/{run_ref}`
+- `GET /v1/runs/{run_ref}/outputs`
+- `GET /v1/runs/{run_ref}/status`
+- `GET /v1/runs/{run_ref}/runtime`
+
+Legacy unversioned routes still exist for backward compatibility, but new clients should prefer `/v1/...`.
 
 Success responses use:
 
@@ -129,7 +155,33 @@ Error responses use:
 {"ok": false, "error": {"code": "param_resolution_error", "message": "..."}}
 ```
 
-`POST /resolve` also includes a `warnings` field for non-fatal parameter-resolution warnings so agent clients can surface fallbacks without treating them as hard failures.
+V1 conventions:
+
+- collection responses expose `items` and `count`, while keeping compatibility keys like `templates`, `runs`, or `assets`
+- major detail responses expose a `kind` field such as `service`, `project`, `template`, `run`, `run_outputs`, or `run_status`
+- `POST /v1/templates/{template_id}:resolve` returns `param_provenance`, `warnings`, `confirmation`, and a short-lived `resolve_token` when the plan is ready
+- `POST /v1/templates/{template_id}:run` accepts either direct params or a `resolve_token`; when using a `resolve_token`, pass `{"confirm": true}`
+
+Typical agent-friendly flow:
+
+```bash
+curl -H 'Authorization: Bearer local-dev' \
+  'http://127.0.0.1:8000/v1/projects/current?project=/data/projects/my_project'
+
+curl -H 'Authorization: Bearer local-dev' \
+  -H 'Content-Type: application/json' \
+  -d '{"project":"/data/projects/my_project","params":{"name":"Linkar"}}' \
+  http://127.0.0.1:8000/v1/templates/simple_echo:resolve
+```
+
+Then use the returned `resolve_token`:
+
+```bash
+curl -H 'Authorization: Bearer local-dev' \
+  -H 'Content-Type: application/json' \
+  -d '{"resolve_token":"TOKEN_FROM_RESOLVE","confirm":true}' \
+  http://127.0.0.1:8000/v1/templates/simple_echo:run
+```
 
 ## MCP for agent clients
 

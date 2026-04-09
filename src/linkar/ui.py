@@ -872,9 +872,10 @@ class CliUI:
             )
         )
 
-    def print_server_banner(self, host: str, port: int) -> None:
+    def print_server_banner(self, host: str, port: int, *, auth_enabled: bool = False) -> None:
         if not self.rich_enabled:
-            self.plain_print(f"Serving Linkar API on http://{host}:{port}")
+            auth_text = " (auth enabled)" if auth_enabled else ""
+            self.plain_print(f"Serving Linkar API on http://{host}:{port}{auth_text}")
             return
         body = Text()
         body.append("Endpoint", style="label")
@@ -884,6 +885,14 @@ class CliUI:
         body.append("Mode", style="label")
         body.append(": ", style="muted")
         body.append("local API server", style="value")
+        body.append("\n")
+        body.append("Auth", style="label")
+        body.append(": ", style="muted")
+        body.append("bearer token required" if auth_enabled else "open/local only", style="value")
+        body.append("\n")
+        body.append("Try", style="label")
+        body.append(": ", style="muted")
+        body.append(f"GET http://{host}:{port}/v1", style="accent")
         self.console.print(
             Panel(
                 body,

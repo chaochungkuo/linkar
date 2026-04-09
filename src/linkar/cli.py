@@ -79,7 +79,7 @@ if hasattr(click, "rich_click"):
         "  linkar run simple_echo --pack ./examples/packs/basic --param name=Linkar\n"
         "  linkar collect ./demux_bundle\n"
         "  linkar test fastqc\n"
-        "  linkar serve --port 8000\n\n"
+        "  linkar serve --port 8000 --api-token local-dev:read,resolve,execute\n\n"
         "  linkar mcp serve\n\n"
         "Linkar keeps the CLI thin over the same core semantics used by the local API."
     )
@@ -879,8 +879,9 @@ def methods_command(project: str | None, ui: CliUI) -> None:
 def serve_command(host: str, port: int, api_tokens: tuple[str, ...]) -> None:
     """Expose the local project/runtime API over HTTP for automation and agents."""
     ui = CliUI()
-    ui.print_server_banner(host, port)
-    serve(host=host, port=port, api_tokens=parse_api_token_specs(list(api_tokens)) or None)
+    parsed_api_tokens = parse_api_token_specs(list(api_tokens)) or None
+    ui.print_server_banner(host, port, auth_enabled=parsed_api_tokens is not None)
+    serve(host=host, port=port, api_tokens=parsed_api_tokens)
 
 
 def main() -> int:
