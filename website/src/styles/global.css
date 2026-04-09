@@ -380,12 +380,24 @@ h3 {
 
 .terminal-window pre code,
 .terminal-window pre code span,
+.terminal-window pre.astro-code,
+.terminal-window pre.astro-code code,
+.terminal-window pre.astro-code span,
 .content-card pre code,
 .content-card pre code span,
+.content-card pre.astro-code,
+.content-card pre.astro-code code,
+.content-card pre.astro-code span,
 .interface-card pre code,
 .interface-card pre code span,
+.interface-card pre.astro-code,
+.interface-card pre.astro-code code,
+.interface-card pre.astro-code span,
 .prose pre code,
-.prose pre code span {
+.prose pre code span,
+.prose pre.astro-code,
+.prose pre.astro-code code,
+.prose pre.astro-code span {
   color: var(--code-ink) !important;
   background: transparent !important;
 }
@@ -638,8 +650,18 @@ h3 {
   overflow: auto;
   padding: 1rem 1.1rem;
   border-radius: 18px;
-  background: var(--code-bg);
-  color: var(--code-ink);
+  background: var(--code-bg) !important;
+  color: var(--code-ink) !important;
+  border: 1px solid var(--line);
+}
+
+.content-card pre,
+.interface-card pre,
+.prose pre.astro-code,
+.content-card pre.astro-code,
+.interface-card pre.astro-code {
+  background: var(--code-bg) !important;
+  color: var(--code-ink) !important;
   border: 1px solid var(--line);
 }
 
