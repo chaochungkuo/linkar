@@ -59,24 +59,42 @@ The local HTTP server is not a separate orchestration layer. It is a thin JSON w
 same core semantics:
 
 ```bash
-linkar serve --port 8000
+linkar serve --port 8000 --api-token local-dev:read,resolve,execute
 ```
 
-High-value endpoints include:
+Start discovery with:
 
-- `GET /templates`
-- `GET /templates/{template_id}`
-- `GET /projects/runs`
-- `GET /projects/assets`
-- `GET /runs/{run_ref}`
-- `GET /runs/{run_ref}/outputs`
-- `GET /runs/{run_ref}/runtime`
-- `GET /methods`
-- `POST /resolve`
-- `POST /run`
-- `POST /render`
-- `POST /collect`
-- `POST /test`
+```bash
+curl -H 'Authorization: Bearer local-dev' http://127.0.0.1:8000/v1
+curl -H 'Authorization: Bearer local-dev' http://127.0.0.1:8000/v1/schema
+```
+
+Recommended v1 routes:
+
+- `GET /v1`
+- `GET /v1/schema`
+- `GET /v1/projects/current`
+- `GET /v1/projects/current/runs`
+- `GET /v1/projects/current/assets`
+- `GET /v1/templates`
+- `GET /v1/templates/{template_id}`
+- `POST /v1/templates/{template_id}:resolve`
+- `POST /v1/templates/{template_id}:run`
+- `POST /v1/templates/{template_id}:render`
+- `POST /v1/templates/{template_id}:test`
+- `GET /v1/runs/{run_ref}`
+- `GET /v1/runs/{run_ref}/outputs`
+- `GET /v1/runs/{run_ref}/status`
+- `GET /v1/runs/{run_ref}/runtime`
+
+Important conventions:
+
+- collection responses expose `items` and `count`
+- detail responses expose a `kind` field
+- `:resolve` returns provenance, warnings, confirmation metadata, and a short-lived `resolve_token` when the plan is ready
+- `:run` can still accept direct params, but the preferred v1 pattern is `resolve -> confirm -> run`
+
+Legacy unversioned routes still exist for backward compatibility, but new clients should prefer `/v1/...`.
 
 ## MCP
 

@@ -51,51 +51,78 @@ This avoids terminal parsing and keeps the semantics aligned with the CLI.
 If the agent is outside Python or needs process isolation, start the local API:
 
 ```bash
-linkar serve --port 8000
+linkar serve --port 8000 --api-token local-dev:read,resolve,execute
 ```
 
-Then inspect and run through JSON:
+Start with discovery:
 
 ```bash
-curl -s "http://127.0.0.1:8000/templates?pack=./examples/packs/basic"
-curl -s "http://127.0.0.1:8000/templates/simple_echo?pack=./examples/packs/basic"
-curl -s -X POST "http://127.0.0.1:8000/resolve" \
-  -H "Content-Type: application/json" \
-  -d '{"template":"simple_echo","pack_refs":["./examples/packs/basic"],"params":{"name":"Agent"}}'
-curl -s -X POST "http://127.0.0.1:8000/run" \
-  -H "Content-Type: application/json" \
-  -d '{"template":"simple_echo","pack_refs":["./examples/packs/basic"],"params":{"name":"Agent"}}'
-curl -s -X POST "http://127.0.0.1:8000/render" \
-  -H "Content-Type: application/json" \
-  -d '{"template":"simple_echo","pack_refs":["./examples/packs/basic"],"params":{"name":"Agent"},"outdir":"./simple_echo_bundle"}'
-curl -s -X POST "http://127.0.0.1:8000/collect" \
-  -H "Content-Type: application/json" \
-  -d '{"run_ref":"./simple_echo_bundle"}'
+curl -s -H 'Authorization: Bearer local-dev' \
+  "http://127.0.0.1:8000/v1"
+curl -s -H 'Authorization: Bearer local-dev' \
+  "http://127.0.0.1:8000/v1/schema"
+curl -s -H 'Authorization: Bearer local-dev' \
+  "http://127.0.0.1:8000/v1/templates?pack=./examples/packs/basic"
+curl -s -H 'Authorization: Bearer local-dev' \
+  "http://127.0.0.1:8000/v1/templates/simple_echo?pack=./examples/packs/basic"
 ```
 
-If you run inside a real project instead of using only `pack_refs`, then inspect the recorded run
-through:
+Then resolve before running:
 
 ```bash
-curl -s "http://127.0.0.1:8000/runs/simple_echo_001/outputs?project=./study"
-curl -s "http://127.0.0.1:8000/runs/simple_echo_001/runtime?project=./study"
+curl -s -X POST "http://127.0.0.1:8000/v1/templates/simple_echo:resolve" \
+  -H 'Authorization: Bearer local-dev' \
+  -H "Content-Type: application/json" \
+  -d '{"pack_refs":["./examples/packs/basic"],"params":{"name":"Agent"}}'
 ```
 
-Current local API surface:
+When the response is `ready: true`, take the returned `resolve_token` and confirm the run:
 
-- `GET /templates`
-- `GET /templates/{template_id}`
-- `GET /projects/runs`
-- `GET /projects/assets`
-- `GET /runs/{run_ref}`
-- `GET /runs/{run_ref}/outputs`
-- `GET /runs/{run_ref}/runtime`
-- `GET /methods`
-- `POST /resolve`
-- `POST /run`
-- `POST /render`
-- `POST /collect`
-- `POST /test`
+```bash
+curl -s -X POST "http://127.0.0.1:8000/v1/templates/simple_echo:run" \
+  -H 'Authorization: Bearer local-dev' \
+  -H "Content-Type: application/json" \
+  -d '{"resolve_token":"TOKEN_FROM_RESOLVE","confirm":true}'
+```
+
+If you want a staged bundle without execution:
+
+```bash
+curl -s -X POST "http://127.0.0.1:8000/v1/templates/simple_echo:render" \
+  -H 'Authorization: Bearer local-dev' \
+  -H "Content-Type: application/json" \
+  -d '{"pack_refs":["./examples/packs/basic"],"params":{"name":"Agent"},"outdir":"./simple_echo_bundle"}'
+```
+
+If you run inside a real project instead of using only `pack_refs`, inspect the project and the recorded run through:
+
+```bash
+curl -s -H 'Authorization: Bearer local-dev' \
+  "http://127.0.0.1:8000/v1/projects/current?project=./study"
+curl -s -H 'Authorization: Bearer local-dev' \
+  "http://127.0.0.1:8000/v1/projects/current/runs?project=./study"
+curl -s -H 'Authorization: Bearer local-dev' \
+  "http://127.0.0.1:8000/v1/runs/simple_echo_001/outputs?project=./study"
+curl -s -H 'Authorization: Bearer local-dev' \
+  "http://127.0.0.1:8000/v1/runs/simple_echo_001/status?project=./study"
+```
+
+Recommended local API surface:
+
+- `GET /v1`
+- `GET /v1/schema`
+- `GET /v1/projects/current`
+- `GET /v1/projects/current/runs`
+- `GET /v1/templates`
+- `GET /v1/templates/{template_id}`
+- `POST /v1/templates/{template_id}:resolve`
+- `POST /v1/templates/{template_id}:run`
+- `POST /v1/templates/{template_id}:render`
+- `POST /v1/templates/{template_id}:test`
+- `GET /v1/runs/{run_ref}`
+- `GET /v1/runs/{run_ref}/outputs`
+- `GET /v1/runs/{run_ref}/status`
+- `GET /v1/runs/{run_ref}/runtime`
 
 Success responses use:
 
@@ -108,6 +135,13 @@ Errors use:
 ```json
 {"ok": false, "error": {"code": "param_resolution_error", "message": "..."}}
 ```
+
+The v1 additions that matter most for agents are:
+
+- `kind` on major detail responses
+- `items` and `count` on collection responses
+- `param_provenance`, `warnings`, and `confirmation` on `:resolve`
+- short-lived `resolve_token` support for `:run`
 
 ## Why this is better than shell scraping
 
