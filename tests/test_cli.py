@@ -2491,6 +2491,21 @@ def test_print_runs_and_packs_render_rich_panels(monkeypatch: pytest.MonkeyPatch
     assert ".../github/izkf_pack" in rendered
 
 
+def test_empty_states_render_clear_messages(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    ui = CliUI()
+    ui.console = Console(record=True, force_terminal=True, width=120, theme=THEME)
+
+    ui.print_runs([])
+    ui.print_packs([])
+    ui.print_templates([])
+
+    rendered = ui.console.export_text()
+    assert "No runs recorded." in rendered
+    assert "No packs configured." in rendered
+    assert "No templates found." in rendered
+
+
 def test_methods_command_aggregates_runs_in_project_order(tmp_path: Path) -> None:
     project_dir = tmp_path / "study"
     init = run_cli("project", "init", str(project_dir), cwd=tmp_path)

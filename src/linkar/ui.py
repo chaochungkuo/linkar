@@ -134,6 +134,19 @@ class CliUI:
             )
         )
 
+    def _print_empty_state(self, title: str, message: str, *, border_style: str = "warn") -> None:
+        if not self.rich_enabled:
+            self.plain_print(message)
+            return
+        self.console.print(
+            Panel(
+                Text(message, style="muted"),
+                title=title,
+                border_style=border_style,
+                box=box.ROUNDED,
+            )
+        )
+
     def status(self, message: str):
         if not self.rich_enabled:
             return nullcontext()
@@ -300,6 +313,9 @@ class CliUI:
         )
 
     def print_runs(self, runs: list[dict[str, Any]]) -> None:
+        if not runs:
+            self._print_empty_state("[warn]Runs[/warn]", "No runs recorded.")
+            return
         if not self.rich_enabled:
             for run in runs:
                 self.plain_print(f"{run['instance_id']}\t{run['id']}\t{run['path']}")
@@ -563,6 +579,9 @@ class CliUI:
             self._print_tabled_panel(outputs_table, title="[accent]Outputs[/accent]")
 
     def print_templates(self, templates: list[dict[str, Any]]) -> None:
+        if not templates:
+            self._print_empty_state("[warn]Templates[/warn]", "No templates found.")
+            return
         grouped: dict[str, list[dict[str, Any]]] = {}
         for template in templates:
             grouped.setdefault(template["pack_ref"], []).append(template)
@@ -605,6 +624,9 @@ class CliUI:
             self._print_tabled_panel(table, title="[accent]Templates[/accent]")
 
     def print_packs(self, packs: list[dict[str, Any]]) -> None:
+        if not packs:
+            self._print_empty_state("[warn]Packs[/warn]", "No packs configured.")
+            return
         if not self.rich_enabled:
             for pack in packs:
                 active = "*" if pack.get("active") else "-"
