@@ -3,7 +3,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import SiteNav from "../../components/SiteNav.astro";
 ---
 
-<BaseLayout title="Examples | Linkar" description="Explore the bundled Linkar example packs, from minimal shell templates to chaining, binding overrides, pack selection, and remote assets.">
+<BaseLayout title="Examples | Linkar" description="Choose the right bundled Linkar example pack based on what you want to learn: basic template authoring, chaining, binding overrides, pack selection, or remote packs.">
   <div class="page-shell">
     <SiteNav />
     <main class="section-page">
@@ -11,8 +11,8 @@ import SiteNav from "../../components/SiteNav.astro";
         <p class="eyebrow">Examples</p>
         <h1 class="page-title">Bundled packs you can read and run.</h1>
         <p class="lede page-lede">
-          The example packs are meant to teach the product model in a sequence, not just provide
-          random sample files.
+          Use this page to pick the smallest example that answers your question. The bundled packs
+          are not filler data. Each one exists to clarify one part of the runtime model.
         </p>
       </section>
 
@@ -26,10 +26,11 @@ linkar test produce_message --pack ./examples/packs/chaining</code></pre>
           </article>
 
           <article class="content-card">
-            <h3>How to use these examples</h3>
+            <h3>How to choose</h3>
             <p>
-              Read them in order. Each pack is meant to teach one new part of the runtime model
-              without introducing unnecessary complexity too early.
+              Start with `basic` if you are learning template shape. Move to `chaining` when you
+              want one template to feed another. Use `binding_overrides` when you want to compare
+              pack defaults with explicit caller control.
             </p>
           </article>
         </div>
@@ -40,8 +41,8 @@ linkar test produce_message --pack ./examples/packs/chaining</code></pre>
           <article class="feature-card">
             <h3>Basic</h3>
             <p>
-              Minimal templates that show the runtime contract clearly: shell entrypoints,
-              explicit defaults, local test entrypoints, and small Pixi-backed examples.
+              Start here for the current template contract. This pack shows `run.command`,
+              `run.sh`, `run.py`, declared outputs, file inputs, boolean flags, and local tests.
             </p>
             <pre><code>examples/packs/basic
   simple_echo
@@ -56,8 +57,8 @@ linkar test produce_message --pack ./examples/packs/chaining</code></pre>
           <article class="feature-card">
             <h3>Chaining</h3>
             <p>
-              Shows how one template can consume another template’s outputs through pack-level
-              binding defaults.
+              Open this when you want to see pack-level default binding in action. The key lesson is
+              that template-to-template connection lives in the pack, not in manual operator steps.
             </p>
             <pre><code>examples/packs/chaining
   linkar_pack.yaml
@@ -69,12 +70,12 @@ linkar test produce_message --pack ./examples/packs/chaining</code></pre>
           <article class="feature-card">
             <h3>Binding overrides</h3>
             <p>
-              Demonstrates default binding behavior and explicit override binding so the same
-              template can consume different sources predictably.
+              Use this when you want to compare three things directly: project history, a pack's
+              default binding, and an explicit override binding passed by the caller.
             </p>
             <pre><code>examples/packs/binding_overrides
   linkar_pack.yaml
-  override_binding.yaml
+  override_binding/
   templates/
     produce_data
     consume_data</code></pre>
@@ -83,8 +84,9 @@ linkar test produce_message --pack ./examples/packs/chaining</code></pre>
           <article class="feature-card">
             <h3>Pack management and remote</h3>
             <p>
-              Covers duplicate template ids, active-pack selection, and Git-backed pack assets
-              without turning Linkar into a registry-first product.
+              Use `pack_management` for duplicate template ids and active-pack selection. Use
+              `remote` once local packs are clear and you want to see `git+` references and
+              revision-aware provenance.
             </p>
             <pre><code>examples/packs/pack_management
 examples/packs/remote</code></pre>
