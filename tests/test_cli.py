@@ -310,6 +310,20 @@ def test_project_view_command_shows_project_details(tmp_path: Path) -> None:
     assert "Run: cellranger_atac_001 (cellranger_atac)" in filtered.stdout
     assert "Run: demultiplex_001 (demultiplex)" not in filtered.stdout
 
+    view_json = run_cli("project", "view", "--format", "json", cwd=project_dir)
+    assert view_json.returncode == 0, view_json.stderr
+    payload = json.loads(view_json.stdout)
+    assert payload["id"] == "study"
+    assert payload["project_path"] == str(project_dir.resolve())
+    assert len(payload["templates"]) == 2
+
+    view_yaml = run_cli("project", "view", "cellranger_atac_001", "--format", "yaml", cwd=project_dir)
+    assert view_yaml.returncode == 0, view_yaml.stderr
+    payload_yaml = yaml.safe_load(view_yaml.stdout)
+    assert payload_yaml["project_path"] == str(project_dir.resolve())
+    assert len(payload_yaml["templates"]) == 1
+    assert payload_yaml["templates"][0]["instance_id"] == "cellranger_atac_001"
+
 
 def test_project_init_author_options_override_global_defaults(tmp_path: Path) -> None:
     env = {"LINKAR_HOME": str(tmp_path / "home")}
@@ -2211,6 +2225,36 @@ def test_inspect_run_command_returns_metadata_json(tmp_path: Path) -> None:
     metadata = json.loads(inspected.stdout)
     assert metadata["template"] == "simple_echo"
     assert metadata["params"]["name"] == "Inspect"
+
+    inspected_yaml = run_cli("inspect", "run", "simple_echo_001", "--format", "yaml", cwd=project_dir)
+    assert inspected_yaml.returncode == 0, inspected_yaml.stderr
+    metadata_yaml = yaml.safe_load(inspected_yaml.stdout)
+    assert metadata_yaml["template"] == "simple_echo"
+    assert metadata_yaml["params"]["name"] == "Inspect"
+
+
+def test_project_runs_command_supports_json_and_yaml_formats(tmp_path: Path) -> None:
+    project_dir = tmp_path / "study"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    project_file = project_dir / "project.yaml"
+    project_data = yaml.safe_load(project_file.read_text())
+    project_data["templates"] = [
+        {"id": "demultiplex", "instance_id": "demultiplex_001", "path": "/tmp/demux"},
+        {"id": "cellranger_atac", "instance_id": "cellranger_atac_001", "path": "/tmp/atac"},
+    ]
+    project_file.write_text(yaml.safe_dump(project_data, sort_keys=False))
+
+    runs_json = run_cli("project", "runs", "--format", "json", cwd=project_dir)
+    assert runs_json.returncode == 0, runs_json.stderr
+    payload_json = json.loads(runs_json.stdout)
+    assert [item["instance_id"] for item in payload_json] == ["demultiplex_001", "cellranger_atac_001"]
+
+    runs_yaml = run_cli("project", "runs", "--format", "yaml", cwd=project_dir)
+    assert runs_yaml.returncode == 0, runs_yaml.stderr
+    payload_yaml = yaml.safe_load(runs_yaml.stdout)
+    assert [item["id"] for item in payload_yaml] == ["demultiplex", "cellranger_atac"]
 
 
 def test_run_verbose_streams_template_stdout_and_stderr(tmp_path: Path) -> None:

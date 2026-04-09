@@ -590,10 +590,22 @@ def project_remove_run_command(
     type=click.Path(path_type=str, dir_okay=True, file_okay=True),
     help="Project directory or project.yaml path. Defaults to the current directory.",
 )
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["rich", "json", "yaml"]),
+    default="rich",
+    show_default=True,
+    help="Output format.",
+)
 @handle_linkar_errors
-def project_runs(project: str | None, ui: CliUI) -> None:
+def project_runs(project: str | None, output_format: str, ui: CliUI) -> None:
     """Show template instances recorded in project.yaml."""
-    ui.print_runs(list_project_runs(project=project))
+    runs = list_project_runs(project=project)
+    if output_format == "rich":
+        ui.print_runs(runs)
+        return
+    ui.print_data(runs, format=output_format)
 
 
 def _select_project_runs(runs: list[dict[str, object]], run_ref: str | None) -> list[dict[str, object]]:
@@ -622,14 +634,28 @@ def _select_project_runs(runs: list[dict[str, object]], run_ref: str | None) -> 
     type=click.Path(path_type=str, dir_okay=True, file_okay=True),
     help="Project directory or project.yaml path. Defaults to the current directory.",
 )
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["rich", "json", "yaml"]),
+    default="rich",
+    show_default=True,
+    help="Output format.",
+)
 @handle_linkar_errors
-def project_view_command(run_ref: str | None, project: str | None, ui: CliUI) -> None:
+def project_view_command(run_ref: str | None, project: str | None, output_format: str, ui: CliUI) -> None:
     """Show project metadata and recorded runs in a human-friendly view."""
     project_obj = load_project_or_discover(project)
     if project_obj is None:
         raise missing_project_error("Viewing project metadata")
     runs = _select_project_runs(list_project_runs(project=project_obj), run_ref)
-    ui.print_project_view(project_obj.data, project_path=project_obj.root, runs=runs)
+    if output_format == "rich":
+        ui.print_project_view(project_obj.data, project_path=project_obj.root, runs=runs)
+        return
+    payload = dict(project_obj.data)
+    payload["project_path"] = str(project_obj.root)
+    payload["templates"] = runs
+    ui.print_data(payload, format=output_format)
 
 
 @app.group(
@@ -773,10 +799,22 @@ def inspect_group() -> None:
     help="Project directory or project.yaml path. Defaults to the current directory.",
     show_default=False,
 )
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["rich", "json", "yaml"]),
+    default="rich",
+    show_default=True,
+    help="Output format.",
+)
 @handle_linkar_errors
-def inspect_run_command(run_ref: str, project: str | None, ui: CliUI) -> None:
+def inspect_run_command(run_ref: str, project: str | None, output_format: str, ui: CliUI) -> None:
     """Inspect run metadata by instance id or run directory path."""
-    ui.print_metadata(inspect_run(run_ref, project=project))
+    metadata = inspect_run(run_ref, project=project)
+    if output_format == "rich":
+        ui.print_metadata(metadata)
+        return
+    ui.print_data(metadata, format=output_format)
 
 
 @app.command("methods")

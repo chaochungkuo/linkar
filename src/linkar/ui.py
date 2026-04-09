@@ -7,6 +7,7 @@ import sys
 from contextlib import nullcontext
 from pathlib import Path
 from typing import Any
+import yaml
 
 try:
     from rich import box
@@ -72,6 +73,21 @@ class CliUI:
 
     def print_text(self, value: str) -> None:
         self.plain_print(value)
+
+    def print_data(self, data: Any, *, format: str = "rich") -> None:
+        if format == "json":
+            self.plain_print(json.dumps(data, indent=2, sort_keys=True))
+            return
+        if format == "yaml":
+            self.plain_print(yaml.safe_dump(data, sort_keys=False, allow_unicode=False).rstrip())
+            return
+        if isinstance(data, dict):
+            self.print_metadata(data)
+            return
+        if isinstance(data, list):
+            self.plain_print(json.dumps(data, indent=2, sort_keys=True))
+            return
+        self.plain_print(str(data))
 
     def print_summary_panel(
         self,
