@@ -165,6 +165,18 @@ def not_found(start_response: StartResponse) -> list[bytes]:
 
 
 def preview_resolution(payload: dict) -> dict:
+    details = resolve_preview_details(payload)
+    return {
+        "template": details["template"].id,
+        "params": details["params"],
+        "param_provenance": details["param_provenance"],
+        "missing_required": details["missing_required"],
+        "warnings": details["warnings"],
+        "ready": not details["missing_required"],
+    }
+
+
+def resolve_preview_details(payload: dict) -> dict:
     template_ref = payload.get("template")
     if not isinstance(template_ref, str) or not template_ref:
         raise ProjectValidationError("Request field 'template' is required")
@@ -199,11 +211,71 @@ def preview_resolution(payload: dict) -> dict:
         binding_ref=selected_binding_ref,
     )
     return {
-        "template": template.id,
+        "project": project_obj,
+        "template": template,
         "params": params,
         "param_provenance": provenance,
         "missing_required": missing_required,
         "warnings": warnings,
+        "binding_ref": selected_binding_ref,
+    }
+
+
+def preview_resolution_v1(payload: dict) -> dict:
+    details = resolve_preview_details(payload)
+    template = details["template"]
+    project_obj = details["project"]
+    missing_required = details["missing_required"]
+
+    unresolved_params = []
+    for key in missing_required:
+        param_spec = template.params.get(key) or {}
+        unresolved_params.append(
+            {
+                "name": key,
+                "required": True,
+                "type": param_spec.get("type", "any"),
+                "description": param_spec.get("description"),
+            }
+        )
+
+    return {
+        "template": {
+            "id": template.id,
+            "version": template.version,
+            "description": template.description,
+            "path": str(template.root),
+            "pack": {
+                "ref": template.pack_ref,
+                "revision": template.pack_revision,
+            },
+            "run": {
+                "entry": template.run_entry,
+                "command": template.run_command,
+                "mode": template.run_mode,
+                "verbose_by_default": template.run_verbose_by_default,
+            },
+            "params": template.params,
+            "outputs": template.outputs,
+        },
+        "project": (
+            {
+                "id": project_obj.data.get("id"),
+                "path": str(project_obj.root),
+            }
+            if project_obj is not None
+            else None
+        ),
+        "resolved_params": details["params"],
+        "param_provenance": details["param_provenance"],
+        "unresolved_params": unresolved_params,
+        "warnings": details["warnings"],
+        "expected_outputs": template.outputs,
+        "confirmation": {
+            "required": not missing_required,
+            "reason": "Execution changes project state and may consume compute resources." if not missing_required else None,
+            "level": "execute" if not missing_required else None,
+        },
         "ready": not missing_required,
     }
 
@@ -320,7 +392,7 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
                     return not_found(start_response)
                 payload = load_json_body(environ)
                 payload["template"] = template_ref
-                return success_response(start_response, preview_resolution(payload))
+                return success_response(start_response, preview_resolution_v1(payload))
 
             if method == "POST" and path == "/run":
                 payload = load_json_body(environ)

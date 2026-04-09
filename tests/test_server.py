@@ -110,8 +110,10 @@ def test_server_v1_root_and_aliases(tmp_path: Path) -> None:
         ).encode("utf-8"),
     )
     assert status == "200 OK"
-    assert payload["data"]["template"] == "simple_echo"
-    assert payload["data"]["params"]["name"] == "Versioned"
+    assert payload["data"]["template"]["id"] == "simple_echo"
+    assert payload["data"]["resolved_params"]["name"] == "Versioned"
+    assert payload["data"]["expected_outputs"]["greeting_file"]["path"] == "greeting.txt"
+    assert payload["data"]["confirmation"]["required"] is True
 
 
 def test_server_optional_bearer_auth_enforces_roles() -> None:
@@ -149,7 +151,9 @@ def test_server_optional_bearer_auth_enforces_roles() -> None:
         headers={"HTTP_AUTHORIZATION": "Bearer resolver-token"},
     )
     assert status == "200 OK"
-    assert payload["data"]["template"] == "simple_echo"
+    assert payload["data"]["template"]["id"] == "simple_echo"
+    assert payload["data"]["ready"] is False
+    assert payload["data"]["unresolved_params"][0]["name"] == "name"
 
 
 def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
