@@ -12,6 +12,7 @@ Linkar resolves packs in this order:
 3. Global packs from `linkar config pack ...`
 
 That order is important because it keeps convenience available without weakening reproducibility.
+A new project with no project-local packs can still use your global configured packs.
 
 ## Use `--pack` for one-off runs
 
@@ -27,9 +28,9 @@ It is useful when:
 - you do not want to modify project state
 - you want the command itself to say exactly where the template came from
 
-## Use project packs for real study work
+## Use project packs when the project needs its own pack setup
 
-Once a project should be reproducible on its own, add the pack to the project:
+Add the pack to the project when that project should carry its own pack selection or binding:
 
 ```bash
 linkar project init --name study
@@ -39,36 +40,49 @@ linkar templates
 linkar run simple_echo --name Linkar
 ```
 
-Now the project remembers the pack, so later runs are shorter and the project remains readable.
+Now the project remembers the pack, so later runs are shorter and the pack choice is saved with the
+project.
 
-This is the recommended path for normal work.
+Use this when:
 
-## Use global packs for personal convenience
+- the project should stay portable without relying on your personal config
+- the project needs a project-specific binding such as `--binding default`
+- this project should use a different pack selection than your usual default
 
-Global packs are personal defaults:
+## Use global packs as the normal personal default
+
+Global packs are personal defaults and are often enough on their own:
 
 ```bash
 linkar config pack add ./examples/packs/basic --id basic
 linkar templates
 ```
 
-They are useful when you repeatedly use the same pack across many directories.
+They are useful when you repeatedly use the same pack across many directories and do not need each
+project to repeat that setup.
 
-But global configuration should not be your only reproducibility story. A project should still be
-able to stand on its own.
+This is a good default for most day-to-day work.
+
+Move a pack into project config only when the project needs to be explicit about it.
 
 ## What this means in practice
 
 - `--pack` wins when you want full explicitness
-- project packs are the best default for real work
-- global packs are convenience, not project definition
+- global packs are the normal personal default
+- project packs override global ones for project-specific behavior and reproducibility
 
 If a template id exists in multiple packs, use `--pack` or select the active project pack
 explicitly. That keeps resolution deterministic and readable.
 
 ## Recommended habit
 
-For a real project:
+For most personal work:
+
+1. configure your common pack once with `linkar config pack add`
+2. initialize projects without repeating pack setup
+3. add a project pack only when that project needs a different pack or binding
+
+For a project that should carry its own pack definition:
 
 1. initialize the project
 2. add the pack to the project

@@ -66,7 +66,7 @@ linkar run simple_echo \
   --param name=Linkar
 ```
 
-Pack scope is intentionally project-first:
+Pack scope is intentionally layered:
 
 - `linkar run TEMPLATE --pack ...` is ad hoc and does not require a project
 - `linkar pack ...` manages packs saved in the current project's `project.yaml`
@@ -77,6 +77,10 @@ Pack lookup precedence is:
 1. explicit `--pack`
 2. project-configured packs
 3. global/user-configured packs
+
+That means a new project without its own `packs:` entries can still use your global configured
+packs. You only need `linkar pack add ...` when this project should use a different pack set, save a
+project-specific binding, or carry its pack configuration with the project itself.
 
 Example global setup:
 
