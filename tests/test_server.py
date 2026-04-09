@@ -245,6 +245,48 @@ def test_server_v1_template_run_and_render_routes() -> None:
     assert Path(payload["data"]["runtime"]).exists()
 
 
+def test_server_v1_resolve_token_can_be_confirmed_for_run() -> None:
+    app = make_app(api_tokens={"agent-token": {"read", "resolve", "execute"}})
+
+    status, _, payload = call_app(
+        app,
+        method="POST",
+        path="/v1/templates/simple_echo:resolve",
+        body=json.dumps(
+            {
+                "pack_refs": [str(ROOT / "examples" / "packs" / "basic")],
+                "params": {"name": "TokenRunner"},
+            }
+        ).encode("utf-8"),
+        headers={"HTTP_AUTHORIZATION": "Bearer agent-token"},
+    )
+    assert status == "200 OK"
+    resolve_token = payload["data"]["resolve_token"]
+    assert isinstance(resolve_token, str) and resolve_token
+
+    status, _, payload = call_app(
+        app,
+        method="POST",
+        path="/v1/templates/simple_echo:run",
+        body=json.dumps({"resolve_token": resolve_token}).encode("utf-8"),
+        headers={"HTTP_AUTHORIZATION": "Bearer agent-token"},
+    )
+    assert status == "400 Bad Request"
+    assert payload["error"]["code"] == "invalid_project"
+    assert "confirm" in payload["error"]["message"]
+
+    status, _, payload = call_app(
+        app,
+        method="POST",
+        path="/v1/templates/simple_echo:run",
+        body=json.dumps({"resolve_token": resolve_token, "confirm": True}).encode("utf-8"),
+        headers={"HTTP_AUTHORIZATION": "Bearer agent-token"},
+    )
+    assert status == "200 OK"
+    outdir = Path(payload["data"]["outdir"])
+    assert (outdir / "results" / "greeting.txt").read_text().strip() == "Hello, TokenRunner"
+
+
 def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
     init_project(project_dir)

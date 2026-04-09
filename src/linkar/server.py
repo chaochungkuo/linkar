@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
+import time
 from collections.abc import Callable, Iterable
 from urllib.parse import parse_qs, unquote
 
@@ -40,6 +42,7 @@ from linkar.runtime.templates import combined_configured_pack_entries
 StartResponse = Callable[[str, list[tuple[str, str]]], object]
 WSGIApp = Callable[[dict, StartResponse], Iterable[bytes]]
 ALL_API_ROLES = ("read", "resolve", "execute")
+RESOLVE_TOKEN_TTL_SECONDS = 15 * 60
 
 
 def json_response(
@@ -226,6 +229,15 @@ def resolve_preview_details(payload: dict) -> dict:
 
 
 def preview_resolution_v1(payload: dict) -> dict:
+    return preview_resolution_v1_with_tokens(payload, resolve_tokens=None, subject="anonymous")
+
+
+def preview_resolution_v1_with_tokens(
+    payload: dict,
+    *,
+    resolve_tokens: dict[str, dict] | None,
+    subject: str,
+) -> dict:
     details = resolve_preview_details(payload)
     template = details["template"]
     project_obj = details["project"]
@@ -241,6 +253,19 @@ def preview_resolution_v1(payload: dict) -> dict:
                 "type": param_spec.get("type", "any"),
                 "description": param_spec.get("description"),
             }
+        )
+
+    resolve_token = None
+    if not missing_required and resolve_tokens is not None:
+        resolve_token = issue_resolve_token(
+            resolve_tokens,
+            subject=subject,
+            template_ref=template.id,
+            project_ref=str(project_obj.root) if project_obj is not None else None,
+            params=details["params"],
+            outdir=payload.get("outdir"),
+            pack_refs=payload.get("pack_refs") or ([template.pack_ref] if project_obj is None and template.pack_ref else None),
+            binding_ref=details["binding_ref"],
         )
 
     return {
@@ -280,8 +305,61 @@ def preview_resolution_v1(payload: dict) -> dict:
             "reason": "Execution changes project state and may consume compute resources." if not missing_required else None,
             "level": "execute" if not missing_required else None,
         },
+        "resolve_token": resolve_token,
         "ready": not missing_required,
     }
+
+
+def prune_expired_resolve_tokens(resolve_tokens: dict[str, dict]) -> None:
+    now = time.time()
+    expired = [token for token, record in resolve_tokens.items() if record.get("expires_at", 0) <= now]
+    for token in expired:
+        resolve_tokens.pop(token, None)
+
+
+def issue_resolve_token(
+    resolve_tokens: dict[str, dict],
+    *,
+    subject: str,
+    template_ref: str,
+    project_ref: str | None,
+    params: dict,
+    outdir: str | None,
+    pack_refs: list[str] | None,
+    binding_ref: str | None,
+) -> str:
+    prune_expired_resolve_tokens(resolve_tokens)
+    token = secrets.token_urlsafe(24)
+    resolve_tokens[token] = {
+        "subject": subject,
+        "template": template_ref,
+        "project": project_ref,
+        "params": params,
+        "outdir": outdir,
+        "pack_refs": pack_refs,
+        "binding_ref": binding_ref,
+        "expires_at": time.time() + RESOLVE_TOKEN_TTL_SECONDS,
+    }
+    return token
+
+
+def consume_resolve_token(
+    resolve_tokens: dict[str, dict],
+    *,
+    token: str,
+    subject: str,
+    template_ref: str,
+) -> dict:
+    prune_expired_resolve_tokens(resolve_tokens)
+    record = resolve_tokens.get(token)
+    if record is None:
+        raise ProjectValidationError("Resolve token is invalid or expired")
+    if record.get("subject") != subject:
+        raise ProjectValidationError("Resolve token does not belong to this authenticated subject")
+    if record.get("template") != template_ref:
+        raise ProjectValidationError("Resolve token does not match the requested template")
+    resolve_tokens.pop(token, None)
+    return record
 
 
 def runtime_status_payload(run_ref: str, project: str | None = None) -> dict:
@@ -340,6 +418,7 @@ def normalized_path(path: str) -> str:
 
 def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
     configured_tokens = api_tokens if api_tokens is not None else load_api_tokens_from_env()
+    resolve_tokens: dict[str, dict] = {}
 
     def app(environ: dict, start_response: StartResponse) -> Iterable[bytes]:
         method = environ.get("REQUEST_METHOD", "GET")
@@ -362,6 +441,7 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
             )
             if auth_error_factory is not None:
                 return auth_error_factory(start_response)
+            auth_subject = parse_bearer_token(environ) if configured_tokens else "anonymous"
 
             if method == "GET" and raw_path == "/v1":
                 return success_response(
@@ -459,13 +539,37 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
                     return not_found(start_response)
                 payload = load_json_body(environ)
                 payload["template"] = template_ref
-                return success_response(start_response, preview_resolution_v1(payload))
+                return success_response(
+                    start_response,
+                    preview_resolution_v1_with_tokens(payload, resolve_tokens=resolve_tokens, subject=auth_subject),
+                )
 
             if method == "POST" and raw_path.startswith("/v1/templates/") and raw_path.endswith(":run"):
                 template_ref = unquote(raw_path.removeprefix("/v1/templates/").removesuffix(":run"))
                 if not template_ref:
                     return not_found(start_response)
                 payload = load_json_body(environ)
+                resolve_token = payload.get("resolve_token")
+                if resolve_token is not None:
+                    if not isinstance(resolve_token, str) or not resolve_token:
+                        raise ProjectValidationError("Request field 'resolve_token' must be a non-empty string")
+                    if payload.get("confirm") is not True:
+                        raise ProjectValidationError("Request field 'confirm' must be true when using a resolve token")
+                    record = consume_resolve_token(
+                        resolve_tokens,
+                        token=resolve_token,
+                        subject=auth_subject,
+                        template_ref=template_ref,
+                    )
+                    result = run_template(
+                        template_ref,
+                        params=record.get("params"),
+                        project=record.get("project"),
+                        outdir=record.get("outdir"),
+                        pack_refs=record.get("pack_refs"),
+                        binding_ref=record.get("binding_ref"),
+                    )
+                    return success_response(start_response, result)
                 result = run_template(
                     template_ref,
                     params=payload.get("params"),
