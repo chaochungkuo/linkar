@@ -22,13 +22,40 @@ function isActive(href: string) {
     <span class="brand-mark">lk</span>
     <span class="brand-word">linkar</span>
   </a>
-  <div class="nav-links">
-    {
-      navItems.map((item) => (
-        <a href={item.href} aria-current={isActive(item.href) ? "page" : undefined}>
-          {item.label}
-        </a>
-      ))
-    }
+  <div class="topbar-actions">
+    <div class="nav-links">
+      {
+        navItems.map((item) => (
+          <a href={item.href} aria-current={isActive(item.href) ? "page" : undefined}>
+            {item.label}
+          </a>
+        ))
+      }
+    </div>
+    <button class="theme-toggle" type="button" aria-label="Toggle color theme" data-theme-toggle>
+      Theme
+    </button>
   </div>
+  <script is:inline>
+    (() => {
+      const storageKey = "linkar-theme";
+      const root = document.documentElement;
+      const button = document.querySelector("[data-theme-toggle]");
+      if (!button) return;
+
+      const applyLabel = () => {
+        const theme = root.dataset.theme === "dark" ? "dark" : "light";
+        button.textContent = theme === "dark" ? "Light" : "Dark";
+        button.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
+      };
+
+      applyLabel();
+      button.addEventListener("click", () => {
+        const nextTheme = root.dataset.theme === "dark" ? "light" : "dark";
+        root.dataset.theme = nextTheme;
+        localStorage.setItem(storageKey, nextTheme);
+        applyLabel();
+      });
+    })();
+  </script>
 </nav>
