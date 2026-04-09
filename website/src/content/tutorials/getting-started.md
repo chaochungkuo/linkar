@@ -15,13 +15,13 @@ Install Linkar as a CLI tool first.
 Recommended:
 
 ```bash
-pipx install git+https://github.com/jovesus/linkar.git
+pipx install git+https://github.com/chaochungkuo/linkar.git
 ```
 
 Alternative for `uv` users:
 
 ```bash
-uv tool install git+https://github.com/jovesus/linkar.git
+uv tool install git+https://github.com/chaochungkuo/linkar.git
 ```
 
 These are user-facing install paths. Template-local Pixi environments and editable installs belong
