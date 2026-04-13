@@ -402,13 +402,55 @@ def test_render_template_stages_bundle_and_writes_launcher_without_executing(tmp
     assert rendered_dir.is_dir()
     assert (rendered_dir / "run.sh").is_file()
     assert launcher.is_file()
+    assert not (rendered_dir / ".linkar" / "template-entry-run.sh").exists()
     assert not (rendered_dir / "linkar_template.yaml").exists()
     assert not (rendered_dir / "results" / "executed.txt").exists()
     text = launcher.read_text(encoding="utf-8")
     assert 'Run ./run.sh from inside ${expected_dir}' in text
     assert 'cd "${script_dir}"' not in text
     assert 'export NAME=demo' in text
-    assert 'template-entry-run.sh' in text
+    assert 'template-entry-run.sh' not in text
+    assert "printf 'executed\\n'" in text
+
+    completed = subprocess.run(
+        ["bash", str(launcher.resolve())],
+        cwd=rendered_dir,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert (rendered_dir / "results" / "executed.txt").read_text(encoding="utf-8") == "executed\n"
+
+
+def test_render_and_run_expose_linkar_pack_root_for_pack_templates(tmp_path: Path) -> None:
+    template_dir = make_template(
+        tmp_path / "pack" / "templates",
+        "pack_root_demo",
+        "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\\n' \"${LINKAR_PACK_ROOT:-}\" > \"${LINKAR_RESULTS_DIR}/pack_root.txt\"\n",
+    )
+    template = load_template(template_dir)
+    assert template.pack_root == (tmp_path / "pack").resolve()
+
+    render_result = render_template(template_dir, params={"name": "demo"}, outdir=tmp_path / "rendered")
+    rendered_dir = Path(render_result["history_outdir"])
+    completed = subprocess.run(
+        ["bash", str((rendered_dir / "run.sh").resolve())],
+        cwd=rendered_dir,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert (rendered_dir / "results" / "pack_root.txt").read_text(encoding="utf-8").strip() == str(
+        (tmp_path / "pack").resolve()
+    )
+
+    run_result = run_template(template_dir, params={"name": "demo"}, outdir=tmp_path / "run")
+    run_dir = Path(run_result["history_outdir"])
+    assert (run_dir / "results" / "pack_root.txt").read_text(encoding="utf-8").strip() == str(
+        (tmp_path / "pack").resolve()
+    )
 
 
 def test_render_template_can_execute_optional_render_command(tmp_path: Path) -> None:

@@ -130,6 +130,9 @@ run:
 The rendered directory then contains one launcher, not a template-local wrapper plus a second outer
 wrapper.
 
+If your template entry is already `run.sh`, Linkar renders that same script in place and injects
+the resolved runtime environment there. It does not hide the real entrypoint under `.linkar/`.
+
 ## Keep testing local and simple
 
 Use one local test entrypoint:

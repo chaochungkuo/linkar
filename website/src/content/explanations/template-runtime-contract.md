@@ -127,6 +127,7 @@ prefer `${param:...}`.
 Render behavior:
 
 - writes one final `run.sh`
+- for `run.entry: run.sh`, renders that script in place as the runnable artifact
 - resolves parameters into the rendered script
 - localizes bound file parameters into the rendered directory when needed
 - writes metadata under `.linkar/`

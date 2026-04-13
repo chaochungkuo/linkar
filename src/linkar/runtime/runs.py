@@ -289,6 +289,8 @@ def render_launcher(
         'export LINKAR_RESULTS_DIR="${script_dir}/results"',
         f"export LINKAR_INSTANCE_ID={shlex.quote(instance_id)}",
     ]
+    if template.pack_root is not None:
+        lines.append(f"export LINKAR_PACK_ROOT={shlex.quote(str(template.pack_root))}")
     if project_obj is not None:
         lines.append(f"export LINKAR_PROJECT_DIR={shlex.quote(str(project_obj.root))}")
     for key, value in sorted(resolved_params.items()):
@@ -304,6 +306,45 @@ def render_launcher(
     launcher_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     launcher_path.chmod(0o755)
     return launcher_path
+
+
+def render_entry_script(
+    script_path: Path,
+    template: TemplateSpec,
+    resolved_params: dict[str, Any],
+    instance_id: str,
+    project_obj: Project | None,
+) -> Path:
+    original_text = script_path.read_text(encoding="utf-8")
+    original_lines = original_text.splitlines()
+    shebang = "#!/usr/bin/env bash"
+    body_start = 0
+    if original_lines and original_lines[0].startswith("#!"):
+        shebang = original_lines[0]
+        body_start = 1
+
+    lines = [
+        shebang,
+        'expected_dir="$(cd "$(dirname "$0")" && pwd)"',
+        'if [[ "$PWD" != "$expected_dir" ]]; then',
+        '  echo "Run ./run.sh from inside ${expected_dir}" >&2',
+        "  exit 1",
+        "fi",
+        'export LINKAR_OUTPUT_DIR="${expected_dir}"',
+        'export LINKAR_RESULTS_DIR="${expected_dir}/results"',
+        f"export LINKAR_INSTANCE_ID={shlex.quote(instance_id)}",
+    ]
+    if template.pack_root is not None:
+        lines.append(f"export LINKAR_PACK_ROOT={shlex.quote(str(template.pack_root))}")
+    if project_obj is not None:
+        lines.append(f"export LINKAR_PROJECT_DIR={shlex.quote(str(project_obj.root))}")
+    for key, value in sorted(resolved_params.items()):
+        lines.append(f"export {env_key(key)}={shlex.quote(format_env_value(value))}")
+    lines.append("")
+    lines.extend(original_lines[body_start:])
+    script_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    script_path.chmod(0o755)
+    return script_path
 
 
 def resolve_render_command(
@@ -426,10 +467,14 @@ def write_render_script(
     else:
         entry_name = template.run_entry or "run.sh"
         if entry_name == "run.sh":
-            internal_entry = output_dir / ".linkar" / "template-entry-run.sh"
             staged_entry = output_dir / "run.sh"
-            shutil.move(str(staged_entry), str(internal_entry))
-            entry_name = ".linkar/template-entry-run.sh"
+            return render_entry_script(
+                staged_entry,
+                template,
+                resolved_params,
+                instance_id,
+                project_obj,
+            )
         lines.extend(
             [
                 'export LINKAR_OUTPUT_DIR="."',
@@ -437,6 +482,8 @@ def write_render_script(
                 f"export LINKAR_INSTANCE_ID={shlex.quote(instance_id)}",
             ]
         )
+        if template.pack_root is not None:
+            lines.append(f"export LINKAR_PACK_ROOT={shlex.quote(str(template.pack_root))}")
         if project_obj is not None:
             lines.append(f"export LINKAR_PROJECT_DIR={shlex.quote(str(project_obj.root))}")
         for key, value in sorted(resolved_params.items()):
@@ -595,6 +642,8 @@ def prepare_template_execution(
     env["LINKAR_OUTPUT_DIR"] = str(output_dir)
     env["LINKAR_RESULTS_DIR"] = str(output_dir / "results")
     env["LINKAR_INSTANCE_ID"] = instance_id
+    if template.pack_root is not None:
+        env["LINKAR_PACK_ROOT"] = str(template.pack_root)
     if project_obj is not None:
         env["LINKAR_PROJECT_DIR"] = str(project_obj.root)
 
