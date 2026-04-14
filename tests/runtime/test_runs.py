@@ -515,9 +515,72 @@ def test_render_template_does_not_update_project_history_or_alias(tmp_path: Path
     result = render_template(template_dir, params={"name": "demo"}, project=project)
 
     project_after = load_project(project.root)
-    assert project_after.data["templates"] == []
+    assert len(project_after.data["templates"]) == 1
+    entry = project_after.data["templates"][0]
+    assert entry["id"] == "render_project_demo"
+    assert entry["state"] == "rendered"
+    assert "adopted" not in entry
+    assert entry["path"] == "render_project_demo"
+    assert entry["history_path"] == "render_project_demo"
     assert (project.root / "render_project_demo").is_dir()
     assert Path(result["history_outdir"]) == (project.root / "render_project_demo").resolve()
+
+
+def test_render_template_rerender_replaces_existing_rendered_project_entry(tmp_path: Path) -> None:
+    template_dir = make_template(
+        tmp_path / "templates",
+        "render_replace_demo",
+        "#!/usr/bin/env bash\nset -euo pipefail\n",
+    )
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: render_replace_demo",
+                "params:",
+                "  name:",
+                "    type: str",
+                "    required: true",
+                "run:",
+                "  entry: run.sh",
+                "  mode: render",
+                "",
+            ]
+        )
+    )
+    project_path = init_project(tmp_path / "project")
+    project = load_project(project_path.parent)
+
+    first = render_template(template_dir, params={"name": "first"}, project=project)
+    second = render_template(template_dir, params={"name": "second"}, project=project)
+
+    project_after = load_project(project.root)
+    assert len(project_after.data["templates"]) == 1
+    entry = project_after.data["templates"][0]
+    assert entry["state"] == "rendered"
+    assert entry["params"]["name"] == "second"
+    assert entry["instance_id"] == second["instance_id"]
+    assert entry["instance_id"] != first["instance_id"]
+
+
+def test_run_template_records_failed_project_run_state(tmp_path: Path) -> None:
+    template_dir = make_template(
+        tmp_path / "templates",
+        "run_fail_demo",
+        "#!/usr/bin/env bash\nset -euo pipefail\nexit 9\n",
+    )
+    project_path = init_project(tmp_path / "project")
+    project = load_project(project_path.parent)
+
+    with pytest.raises(ExecutionError, match="Template execution failed with exit code 9"):
+        run_template(template_dir, params={"name": "demo"}, project=project)
+
+    project_after = load_project(project.root)
+    assert len(project_after.data["templates"]) == 1
+    entry = project_after.data["templates"][0]
+    assert entry["id"] == "run_fail_demo"
+    assert entry["state"] == "failed"
+    runtime = json.loads((project.root / entry["meta"]).with_name("runtime.json").read_text(encoding="utf-8"))
+    assert runtime["success"] is False
 
 
 def test_render_template_uses_default_binding_for_active_global_pack(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

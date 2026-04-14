@@ -319,10 +319,12 @@ class CliUI:
             return
         if not self.rich_enabled:
             for run in runs:
-                self.plain_print(f"{run['instance_id']}\t{run['id']}\t{run['path']}")
+                state = run.get("state")
+                suffix = f"\t{state}" if state else ""
+                self.plain_print(f"{run['instance_id']}\t{run['id']}\t{run['path']}{suffix}")
             return
 
-        has_state = any("adopted" in run for run in runs)
+        has_state = any(run.get("state") not in (None, "") or "adopted" in run for run in runs)
         has_binding = any(isinstance(run.get("binding"), dict) and run["binding"].get("ref") for run in runs)
         has_version = any(run.get("template_version") not in (None, "") for run in runs)
 
@@ -343,8 +345,7 @@ class CliUI:
                 self._project_value_text(run["path"]),
             ]
             if has_state:
-                adopted = run.get("adopted")
-                row.append("adopted" if adopted else "managed")
+                row.append(self._run_state_text(run))
             if has_binding:
                 binding = run.get("binding")
                 row.append(str(binding.get("ref")) if isinstance(binding, dict) and binding.get("ref") else "-")
@@ -376,6 +377,16 @@ class CliUI:
             is_active = active_pack == pack_id or active_pack == pack_ref or (active_pack is None and total_packs == 1)
             return (pack_id, pack_ref, binding, is_active)
         return ("", str(pack), "", False)
+
+    def _run_state_text(self, run: dict[str, Any]) -> str:
+        state = str(run.get("state") or "").strip()
+        if state:
+            if run.get("adopted"):
+                return f"{state} (adopted)"
+            return state
+        if "adopted" in run:
+            return "adopted" if run.get("adopted") else "managed"
+        return "-"
 
     def _looks_like_path_text(self, value: str) -> bool:
         return "/" in value or "\\" in value
@@ -557,14 +568,14 @@ class CliUI:
         summary_runs.add_column("Instance", style="label", no_wrap=True)
         summary_runs.add_column("Template", style="value", no_wrap=True)
         summary_runs.add_column("Path", style="value")
-        if any("adopted" in run for run in runs):
+        if any(run.get("state") not in (None, "") or "adopted" in run for run in runs):
             summary_runs.add_column("State", style="value", no_wrap=True)
         if any(isinstance(run.get("binding"), dict) and run["binding"].get("ref") for run in runs):
             summary_runs.add_column("Binding", style="value", no_wrap=True)
         if any(run.get("template_version") not in (None, "") for run in runs):
             summary_runs.add_column("Version", style="value", no_wrap=True)
 
-        show_state = any("adopted" in run for run in runs)
+        show_state = any(run.get("state") not in (None, "") or "adopted" in run for run in runs)
         show_binding = any(isinstance(run.get("binding"), dict) and run["binding"].get("ref") for run in runs)
         show_version = any(run.get("template_version") not in (None, "") for run in runs)
 
@@ -575,7 +586,7 @@ class CliUI:
                 self._project_value_text(run.get("path") or "-"),
             ]
             if show_state:
-                row.append("adopted" if run.get("adopted") else "managed")
+                row.append(self._run_state_text(run))
             if show_binding:
                 binding = run.get("binding")
                 row.append(str(binding.get("ref")) if isinstance(binding, dict) and binding.get("ref") else "-")
@@ -599,6 +610,8 @@ class CliUI:
                 meta_table.add_row("Binding", self._project_value_text(run.get("binding")))
             if "adopted" in run:
                 meta_table.add_row("Adopted", self._project_value_text(run.get("adopted")))
+            if run.get("state") not in (None, ""):
+                meta_table.add_row("State", self._project_value_text(run.get("state")))
             if run.get("pack"):
                 meta_table.add_row("Pack", self._project_value_text(run.get("pack")))
             if run.get("meta"):

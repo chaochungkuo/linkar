@@ -834,6 +834,10 @@ def update_project(
     params: dict[str, Any],
     outputs: dict[str, Any],
     meta_path: Path,
+    *,
+    state: str,
+    adopted: bool = False,
+    replace_existing: bool = False,
 ) -> None:
     from linkar.runtime.shared import save_yaml
 
@@ -849,7 +853,10 @@ def update_project(
         "params": params,
         "outputs": outputs,
         "meta": relative_meta,
+        "state": state,
     }
+    if adopted:
+        entry["adopted"] = True
     if template.pack_ref is not None:
         pack_entry = find_project_pack_entry(project, template.pack_ref)
         entry["pack"] = {
@@ -857,7 +864,14 @@ def update_project(
             "ref": template.pack_ref,
             "revision": template.pack_revision,
         }
-    project.data.setdefault("templates", []).append(entry)
+    templates = project.data.setdefault("templates", [])
+    if replace_existing:
+        for index, existing in enumerate(templates):
+            if existing.get("meta") == relative_meta:
+                templates[index] = entry
+                save_yaml(project.root / "project.yaml", project.data)
+                return
+    templates.append(entry)
     save_yaml(project.root / "project.yaml", project.data)
 
 
@@ -899,6 +913,7 @@ def build_adopted_project_entry(
         "params": params,
         "outputs": outputs,
         "meta": project_path_reference(meta_path, project.root),
+        "state": infer_metadata_state(metadata, meta_path),
         "adopted": True,
     }
     pack = metadata.get("pack")
@@ -912,6 +927,26 @@ def build_adopted_project_entry(
     if isinstance(binding, dict) and binding.get("ref"):
         entry["binding"] = {"ref": binding["ref"]}
     return entry
+
+
+def infer_metadata_state(metadata: dict[str, Any], meta_path: Path) -> str:
+    runtime_path = meta_path.with_name("runtime.json")
+    if runtime_path.exists():
+        try:
+            runtime = json.loads(runtime_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            runtime = {}
+        success = runtime.get("success")
+        if success is True:
+            run_mode = metadata.get("run_mode")
+            if run_mode == "render":
+                return "rendered"
+            return "completed"
+        if success is False:
+            return "failed"
+    if metadata.get("run_mode") == "render":
+        return "rendered"
+    return "completed"
 
 
 def adopt_run_into_project(
@@ -1398,14 +1433,9 @@ def run_template(
         },
     )
 
-    if completed.returncode != 0:
-        raise ExecutionError(
-            f"Template execution failed with exit code {completed.returncode}. "
-            f"See {runtime_path}"
-        )
-
     outputs = collect_outputs(template, output_dir)
     meta_path = linkar_dir / "meta.json"
+    state = "completed" if completed.returncode == 0 else "failed"
     write_json(
         meta_path,
         {
@@ -1433,6 +1463,7 @@ def run_template(
             "timestamp": finished_at.isoformat(),
             "run_mode": "run",
             "template_run_mode": template.run_mode,
+            "state": state,
         },
     )
 
@@ -1447,6 +1478,13 @@ def run_template(
             params=resolved_params,
             outputs=outputs,
             meta_path=meta_path,
+            state=state,
+        )
+
+    if completed.returncode != 0:
+        raise ExecutionError(
+            f"Template execution failed with exit code {completed.returncode}. "
+            f"See {runtime_path}"
         )
 
     return {
@@ -1597,8 +1635,23 @@ def render_template(
             "timestamp": finished_at.isoformat(),
             "run_mode": "render",
             "template_run_mode": template.run_mode,
+            "state": "rendered",
         },
     )
+
+    if project_obj is not None:
+        update_project(
+            project_obj,
+            template=template,
+            instance_id=instance_id,
+            outdir=output_dir,
+            display_outdir=display_dir,
+            params=resolved_params,
+            outputs=outputs,
+            meta_path=meta_path,
+            state="rendered",
+            replace_existing=True,
+        )
 
     return {
         "template": template.id,

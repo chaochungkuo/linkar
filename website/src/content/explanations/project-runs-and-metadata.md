@@ -25,8 +25,10 @@ A recorded run entry usually contains:
 - `params`
 - `outputs`
 - `meta`
+- `state`
 - optional `pack`
 - optional `binding`
+- optional `adopted`
 
 ## Stable path versus immutable history
 
@@ -53,7 +55,17 @@ study/
 ```
 
 That artifact is intentionally editable and runnable on its own.
-It is not recorded as a project run until you decide to run it through Linkar or adopt/collect it.
+When render happens inside a project, Linkar also records that artifact in `project.yaml` with
+`state: rendered`.
+
+That means the project ledger can now track:
+
+- prepared but not yet executed rendered bundles
+- managed executed runs
+- adopted historical runs imported from elsewhere
+
+The `adopted` flag is provenance, not lifecycle. Use `state` for lifecycle and `adopted: true`
+only when the run was imported into the project index after the fact.
 
 ## `.linkar/` inside a run artifact
 
@@ -75,6 +87,7 @@ Important files:
 - pack and binding info
 - warnings
 - command
+- lifecycle state
 
 `runtime.json` stores:
 
@@ -103,6 +116,9 @@ Adoption requires real Linkar metadata. It is not a generic import of arbitrary 
 Before adoption, Linkar refreshes outputs through the declared output contract so imported metadata
 matches the declared output contract.
 
+Adopted runs keep `adopted: true` and also receive a lifecycle `state`, usually `completed`,
+`failed`, or `rendered`, inferred from their recorded metadata.
+
 ## Collecting outputs after manual execution
 
 If you run a rendered `run.sh` directly, use:
@@ -114,7 +130,10 @@ linkar collect /path/to/rendered_dir
 This updates:
 
 - `.linkar/meta.json`
-- `project.yaml` when the artifact belongs to a project
+- `project.yaml` outputs when the artifact belongs to a project
+
+`collect` refreshes declared outputs for a registered run. It does not create an unrelated project
+entry from scratch; registration happens during `render`, `run`, or explicit adoption.
 
 ## Removing runs from a project
 

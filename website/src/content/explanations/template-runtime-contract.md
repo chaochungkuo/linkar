@@ -132,7 +132,7 @@ Render behavior:
 - localizes bound file parameters into the rendered directory when needed
 - writes metadata under `.linkar/`
 - does not execute the template
-- does not append a project run-history entry
+- when inside a project, records the rendered bundle in `project.yaml` with `state: rendered`
 
 In a project, render defaults to the visible project path such as `./demultiplex`, not to
 `.linkar/runs/...`.
@@ -147,13 +147,13 @@ Run behavior:
 - executes the template
 - collects declared outputs
 - writes `.linkar/meta.json` and `.linkar/runtime.json`
-- appends a run record to `project.yaml`
+- appends a run record to `project.yaml` with `state: completed` or `state: failed`
 - updates the stable project alias such as `./fastqc`
 
 That split is intentional:
 
-- `render` creates a handoff artifact
-- `run` creates recorded project history
+- `render` creates a handoff artifact and records that current draft as `rendered`
+- `run` creates immutable executed history and records execution state
 
 ## Manual execution after render
 
@@ -166,4 +166,4 @@ linkar collect /path/to/rendered_dir
 ```
 
 That updates `.linkar/meta.json` and, when the rendered artifact belongs to a project, also updates
-`project.yaml`.
+its recorded outputs in `project.yaml`.

@@ -416,6 +416,7 @@ def test_project_init_can_adopt_existing_run(tmp_path: Path) -> None:
     entry = data["templates"][0]
     assert entry["id"] == "simple_echo"
     assert entry["instance_id"].startswith("simple_echo_")
+    assert entry["state"] == "completed"
     assert entry["adopted"] is True
     assert entry["params"]["name"] == "Adopted"
     assert entry["outputs"]["greeting_file"].endswith("results/greeting.txt")
@@ -445,6 +446,7 @@ def test_project_adopt_run_imports_existing_linkar_run(tmp_path: Path) -> None:
     data = yaml.safe_load((tmp_path / "study" / "project.yaml").read_text())
     assert len(data["templates"]) == 1
     entry = data["templates"][0]
+    assert entry["state"] == "completed"
     assert entry["adopted"] is True
     assert entry["params"]["name"] == "Later"
     assert entry["meta"].endswith(".linkar/meta.json")
@@ -475,6 +477,7 @@ def test_project_adopt_run_normalizes_relative_run_path_to_absolute(tmp_path: Pa
 
     data = yaml.safe_load((project_dir / "project.yaml").read_text())
     entry = data["templates"][0]
+    assert entry["state"] == "completed"
     assert entry["adopted"] is True
     assert entry["path"] == str(imported_run_dir.resolve())
     assert entry["history_path"] == str(imported_run_dir.resolve())
@@ -813,6 +816,7 @@ def test_run_template_updates_project(tmp_path: Path) -> None:
     assert len(project["templates"]) == 1
     instance = project["templates"][0]
     assert instance["id"] == "simple_echo"
+    assert instance["state"] == "completed"
     results_file = project_dir / instance["path"] / "results" / "greeting.txt"
     assert results_file.read_text().strip() == "Hello, Linkar"
 
@@ -979,6 +983,10 @@ def test_render_in_project_defaults_to_visible_project_template_dir(tmp_path: Pa
     assert (rendered_dir / "run.sh").is_file()
     assert (rendered_dir / ".linkar" / "meta.json").is_file()
     assert not (project_dir / ".linkar" / "runs" / "simple_echo_001").exists()
+    project = yaml.safe_load((project_dir / "project.yaml").read_text())
+    assert len(project["templates"]) == 1
+    assert project["templates"][0]["id"] == "simple_echo"
+    assert project["templates"][0]["state"] == "rendered"
 
 
 def test_run_command_executes_even_for_legacy_render_mode_template(tmp_path: Path) -> None:
@@ -1024,6 +1032,7 @@ def test_run_discovers_project_from_current_directory(tmp_path: Path) -> None:
     project = yaml.safe_load((project_dir / "project.yaml").read_text())
     assert len(project["templates"]) == 1
     assert project["templates"][0]["id"] == "simple_echo"
+    assert project["templates"][0]["state"] == "completed"
 
 
 def test_project_run_uses_stable_project_path_and_history_dir(tmp_path: Path) -> None:
@@ -1053,6 +1062,7 @@ def test_project_run_uses_stable_project_path_and_history_dir(tmp_path: Path) ->
     assert entry["path"] == "simple_echo"
     assert entry["history_path"] == ".linkar/runs/simple_echo_001"
     assert entry["meta"] == ".linkar/runs/simple_echo_001/.linkar/meta.json"
+    assert entry["state"] == "completed"
 
 
 def test_local_templates_can_chain_without_pack(tmp_path: Path) -> None:
@@ -2405,6 +2415,7 @@ def test_print_project_view_renders_rich_project_summary(monkeypatch: pytest.Mon
                 "instance_id": "cellranger_atac_001",
                 "path": "cellranger_atac",
                 "binding": {"ref": "default"},
+                "state": "completed",
                 "adopted": True,
                 "params": {
                     "cellranger_atac_bin": "/data/shared/10xGenomics/bin/cellranger-atac-2.2.0/bin/cellranger-atac",
@@ -2432,12 +2443,12 @@ def test_print_project_view_renders_rich_project_summary(monkeypatch: pytest.Mon
     assert "Run Summary" in rendered
     assert "cellranger_atac_001" in rendered
     assert "count_web_summaries" in rendered
-    assert "adopted" in rendered
+    assert "completed (adopted)" in rendered
     assert "default" in rendered
     assert "... (+1 more)" in rendered
-    assert ".../cellranger-atac-2.2.0/bin/cellranger-atac" in rendered
-    assert ".../results/output/260330_Yildiz_ZimmerBensch_BioII_scATAcseq" in rendered
-    assert ".../counts/Ctrl_f/outs/web_summary.html" in rendered
+    assert "cellranger-atac-2.2" in rendered
+    assert "260330_Yildiz_ZimmerBensch_Bio" in rendered
+    assert "counts/Ctrl_f/outs/we" in rendered
 
 
 def test_print_metadata_renders_generic_mapping_as_rich_panel(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -2473,6 +2484,7 @@ def test_print_runs_and_packs_render_rich_panels(monkeypatch: pytest.MonkeyPatch
                 "instance_id": "cellranger_atac_001",
                 "id": "cellranger_atac",
                 "path": "/data/projects/demo/cellranger_atac",
+                "state": "completed",
                 "adopted": True,
                 "binding": {"ref": "default"},
                 "template_version": "0.1.0",
@@ -2493,11 +2505,10 @@ def test_print_runs_and_packs_render_rich_panels(monkeypatch: pytest.MonkeyPatch
     rendered = ui.console.export_text()
     assert "Recorded Runs" in rendered
     assert "Configured Packs" in rendered
-    assert "cellranger_atac_001" in rendered
-    assert "adopted" in rendered
+    assert "completed (adopted)" in rendered
     assert "default" in rendered
     assert "0.1.0" in rendered
-    assert ".../github/izkf_pack" in rendered
+    assert "/home/ckuo/github/izkf_pack" in rendered
 
 
 def test_empty_states_render_clear_messages(monkeypatch: pytest.MonkeyPatch) -> None:
