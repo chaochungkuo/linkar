@@ -1065,6 +1065,76 @@ def test_project_run_uses_stable_project_path_and_history_dir(tmp_path: Path) ->
     assert entry["state"] == "completed"
 
 
+def test_project_run_uses_visible_project_dir_for_render_mode_template(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    template = make_template(
+        tmp_path / "templates",
+        "render_style_export",
+        "",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'done\n' > "${LINKAR_RESULTS_DIR}/done.txt"
+""",
+    )
+    spec_path = template / "linkar_template.yaml"
+    spec_path.write_text(spec_path.read_text().replace("mode: direct", "mode: render"))
+
+    completed = run_cli(
+        "run",
+        str(template),
+        cwd=project_dir,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+    outdir = Path(completed.stdout.strip())
+    assert outdir == (project_dir / "render_style_export")
+    assert outdir.is_dir()
+    assert not outdir.is_symlink()
+    assert (outdir / "results" / "done.txt").read_text().strip() == "done"
+
+    project = yaml.safe_load((project_dir / "project.yaml").read_text())
+    entry = project["templates"][0]
+    assert entry["id"] == "render_style_export"
+    assert entry["path"] == "render_style_export"
+    assert entry["history_path"] == "render_style_export"
+    assert entry["meta"] == "render_style_export/.linkar/meta.json"
+    assert entry["state"] == "completed"
+
+
+def test_project_run_replaces_existing_rendered_entry_for_render_mode_template(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    template = make_template(
+        tmp_path / "templates",
+        "render_then_run",
+        "",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'done\n' > "${LINKAR_RESULTS_DIR}/done.txt"
+""",
+    )
+    spec_path = template / "linkar_template.yaml"
+    spec_path.write_text(spec_path.read_text().replace("mode: direct", "mode: render"))
+
+    rendered = run_cli("render", str(template), cwd=project_dir)
+    assert rendered.returncode == 0, rendered.stderr
+
+    executed = run_cli("run", str(template), cwd=project_dir)
+    assert executed.returncode == 0, executed.stderr
+
+    project = yaml.safe_load((project_dir / "project.yaml").read_text())
+    assert len(project["templates"]) == 1
+    entry = project["templates"][0]
+    assert entry["id"] == "render_then_run"
+    assert entry["state"] == "completed"
+    assert (project_dir / entry["path"] / "results" / "done.txt").read_text().strip() == "done"
+
+
 def test_local_templates_can_chain_without_pack(tmp_path: Path) -> None:
     project_dir = tmp_path / "study"
     init = run_cli("project", "init", str(project_dir), cwd=tmp_path)

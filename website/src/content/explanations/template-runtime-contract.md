@@ -143,17 +143,18 @@ In a project, render defaults to the visible project path such as `./demultiplex
 
 Run behavior:
 
-- stages the run under `.linkar/runs/<instance_id>/`
+- for `run.mode: direct`, stages the run under `.linkar/runs/<instance_id>/`
+- for `run.mode: render` inside a project, executes directly in the visible project directory such as `./export`
 - executes the template
 - collects declared outputs
 - writes `.linkar/meta.json` and `.linkar/runtime.json`
 - appends a run record to `project.yaml` with `state: completed` or `state: failed`
-- updates the stable project alias such as `./fastqc`
+- updates the stable project alias such as `./fastqc` when a separate history run directory exists
 
 That split is intentional:
 
 - `render` creates a handoff artifact and records that current draft as `rendered`
-- `run` creates immutable executed history and records execution state
+- `run` creates immutable executed history for direct-run templates and records execution state for both direct and render-mode templates
 
 ## Manual execution after render
 

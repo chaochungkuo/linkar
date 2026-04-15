@@ -617,13 +617,19 @@ def prepare_template_execution(
             selected_outdir = bound_outdir
             outdir_provenance = bound_outdir_provenance
     instance_id = next_instance_id(template.id, project_obj)
-    if action == "render":
+    run_uses_visible_project_dir = (
+        action == "run"
+        and project_obj is not None
+        and template.run_mode == "render"
+        and selected_outdir is None
+    )
+    if action == "render" or run_uses_visible_project_dir:
         output_dir = determine_render_outdir(template, project_obj, selected_outdir, instance_id)
     else:
         output_dir = determine_outdir(template, project_obj, selected_outdir, instance_id)
     display_dir = (
         determine_project_alias_dir(template, project_obj)
-        if action != "render" and selected_outdir is None
+        if action != "render" and not run_uses_visible_project_dir and selected_outdir is None
         else output_dir
     )
     if display_dir is None:
@@ -1468,7 +1474,8 @@ def run_template(
     )
 
     if project_obj is not None:
-        sync_project_alias(output_dir, display_dir)
+        if output_dir != display_dir:
+            sync_project_alias(output_dir, display_dir)
         update_project(
             project_obj,
             template=template,
@@ -1479,6 +1486,7 @@ def run_template(
             outputs=outputs,
             meta_path=meta_path,
             state=state,
+            replace_existing=(output_dir == display_dir),
         )
 
     if completed.returncode != 0:

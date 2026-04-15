@@ -40,6 +40,10 @@ For `linkar run ...` inside a project, Linkar separates:
 The stable path is for humans and downstream local usage.
 The history path is for provenance and reproducibility.
 
+Render-mode templates are the exception. When a template declares `run.mode: render` and you execute
+it with `linkar run` inside a project, Linkar runs it directly in the visible project directory such
+as `./export`. In that case `path` and `history_path` are the same project-facing location.
+
 ## Rendered artifacts
 
 Rendered artifacts behave differently.
