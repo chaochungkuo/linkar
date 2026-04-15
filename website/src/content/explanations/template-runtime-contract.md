@@ -124,6 +124,10 @@ prefer `${param:...}`.
 
 `linkar render ...` stages a standalone runnable artifact and stops there.
 
+Bare template names such as `export` or `nfcore_methylseq` resolve through configured packs first.
+If you want to execute a template from the current filesystem path explicitly, pass `./template_dir`
+or an absolute path instead of a bare name.
+
 Render behavior:
 
 - writes one final `run.sh`
@@ -150,6 +154,13 @@ Run behavior:
 - writes `.linkar/meta.json` and `.linkar/runtime.json`
 - appends a run record to `project.yaml` with `state: completed` or `state: failed`
 - updates the stable project alias such as `./fastqc` when a separate history run directory exists
+
+For render-mode templates in a project:
+
+- `linkar render TEMPLATE` refreshes the visible bundle
+- `linkar run TEMPLATE` runs the current visible bundle if it already exists
+- `linkar run TEMPLATE --refresh` rerenders first, then runs
+- if no visible bundle exists yet, `linkar run TEMPLATE` materializes it once and then executes it
 
 That split is intentional:
 

@@ -39,17 +39,23 @@ def load_template(
     preferred_pack_ref: str | None = None,
 ) -> TemplateSpec:
     ref_path = Path(template_ref)
-    if ref_path.exists():
+    is_bare_name = (
+        isinstance(template_ref, str)
+        and not ref_path.is_absolute()
+        and ref_path.parent == Path(".")
+    )
+    candidates: list[Path] = []
+    candidate_assets: list[ResolvedAsset] = []
+    for pack_asset in pack_assets or []:
+        candidate = pack_asset.root / "templates" / str(template_ref)
+        if find_template_spec_path(candidate) is not None:
+            candidates.append(candidate)
+            candidate_assets.append(pack_asset)
+
+    if ref_path.exists() and not (is_bare_name and candidates):
         root = ref_path.resolve()
         pack_asset: ResolvedAsset | None = None
     else:
-        candidates: list[Path] = []
-        candidate_assets: list[ResolvedAsset] = []
-        for pack_asset in pack_assets or []:
-            candidate = pack_asset.root / "templates" / str(template_ref)
-            if find_template_spec_path(candidate) is not None:
-                candidates.append(candidate)
-                candidate_assets.append(pack_asset)
         if not candidates:
             raise AssetResolutionError(
                 f"Template not found: {template_ref}. Pass an explicit template path, use --pack REF for ad hoc lookup, or add/select a pack with 'linkar pack add REF' and 'linkar pack use PACK_ID'."

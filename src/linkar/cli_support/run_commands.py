@@ -46,6 +46,7 @@ def template_command_callback(
         *,
         param: tuple[tuple[str, str], ...],
         verbose: bool = False,
+        refresh: bool = False,
         ui: CliUI,
         **template_values: Any,
     ) -> None:
@@ -65,6 +66,7 @@ def template_command_callback(
                 prompt_missing=prompt_missing,
                 action=action,
                 verbose=True,
+                refresh=refresh,
             )
         else:
             with ui.status(status_message):
@@ -77,6 +79,7 @@ def template_command_callback(
                     binding_ref=binding,
                     prompt_missing=prompt_missing,
                     action=action,
+                    refresh=refresh,
                 )
         if action == "render":
             ui.print_render_completed(result)
@@ -134,6 +137,14 @@ def template_command_callback(
                 show_default=False,
             )
         )
+        params.append(
+            click.Option(
+                ["--refresh"],
+                is_flag=True,
+                help="For render-mode templates in projects, rerender the visible bundle before execution.",
+                show_default=False,
+            )
+        )
     params.append(
         click.Option(
             ["--param"],
@@ -167,6 +178,7 @@ def generic_run_callback(bound_template: str | None = None, *, action: str = "ru
         *,
         param: tuple[tuple[str, str], ...],
         verbose: bool = False,
+        refresh: bool = False,
         ui: CliUI,
         template: str | None = None,
     ) -> None:
@@ -192,6 +204,7 @@ def generic_run_callback(bound_template: str | None = None, *, action: str = "ru
                 prompt_missing=prompt_missing,
                 action=action,
                 verbose=True,
+                refresh=refresh,
             )
         else:
             with ui.status(status_message):
@@ -204,6 +217,7 @@ def generic_run_callback(bound_template: str | None = None, *, action: str = "ru
                     binding_ref=binding,
                     prompt_missing=prompt_missing,
                     action=action,
+                    refresh=refresh,
                 )
         if action == "render":
             ui.print_render_completed(result)
@@ -273,6 +287,14 @@ def make_generic_run_command(
                 ["--verbose"],
                 is_flag=True,
                 help="Stream the template command stdout and stderr while it runs.",
+                show_default=False,
+            )
+        )
+        params.append(
+            click.Option(
+                ["--refresh"],
+                is_flag=True,
+                help="For render-mode templates in projects, rerender the visible bundle before execution.",
                 show_default=False,
             )
         )

@@ -105,6 +105,7 @@ def execute_with_optional_prompts(
     prompt_missing: bool,
     action: str = "run",
     verbose: bool = False,
+    refresh: bool = False,
 ):
     template, _ = load_template_for_cli(template_ref, project=project, pack_refs=pack_refs)
     effective_verbose = verbose or template.run_verbose_by_default
@@ -123,6 +124,7 @@ def execute_with_optional_prompts(
             }
             if action == "run":
                 execute_kwargs["verbose"] = effective_verbose
+                execute_kwargs["refresh"] = refresh
             return execute(
                 template_ref,
                 **execute_kwargs,
@@ -148,6 +150,7 @@ def run_with_optional_prompts(
     binding_ref: str | None,
     prompt_missing: bool,
     verbose: bool = False,
+    refresh: bool = False,
 ):
     return execute_with_optional_prompts(
         template_ref,
@@ -159,6 +162,7 @@ def run_with_optional_prompts(
         prompt_missing=prompt_missing,
         action="run",
         verbose=verbose,
+        refresh=refresh,
     )
 
 

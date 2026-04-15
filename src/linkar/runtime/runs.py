@@ -547,6 +547,24 @@ def localize_render_params(
     return localized
 
 
+def can_reuse_render_bundle(output_dir: Path) -> bool:
+    return (output_dir / "run.sh").exists() and (output_dir / ".linkar" / "meta.json").exists()
+
+
+def load_existing_render_bundle_context(output_dir: Path) -> tuple[str, dict[str, Any], dict[str, Any], list[dict[str, Any]], str | Path | None]:
+    meta_path = output_dir / ".linkar" / "meta.json"
+    metadata = json.loads(meta_path.read_text(encoding="utf-8"))
+    instance_id = metadata.get("instance_id")
+    if not isinstance(instance_id, str) or not instance_id:
+        raise ProjectValidationError(f"Run metadata missing required field 'instance_id': {meta_path}")
+    params = metadata.get("params") if isinstance(metadata.get("params"), dict) else {}
+    provenance = metadata.get("param_provenance") if isinstance(metadata.get("param_provenance"), dict) else {}
+    warnings = metadata.get("warnings") if isinstance(metadata.get("warnings"), list) else []
+    binding = metadata.get("binding")
+    binding_ref = binding.get("ref") if isinstance(binding, dict) else None
+    return instance_id, params, provenance, warnings, binding_ref
+
+
 def prepare_template_execution(
     template_ref: str | Path,
     params: dict[str, Any] | None,
@@ -557,6 +575,7 @@ def prepare_template_execution(
     *,
     include_template_spec: bool = True,
     action: str = "run",
+    refresh: bool = False,
 ) -> tuple[
     Project | None,
     TemplateSpec,
@@ -595,6 +614,71 @@ def prepare_template_execution(
                 selected_binding_ref = normalize_binding_ref(entry.binding)
                 break
     selected_binding_ref = infer_default_binding_ref(template, selected_binding_ref, project_obj)
+    reuse_existing_render_bundle = False
+    existing_output_dir: Path | None = None
+    if (
+        action == "run"
+        and project_obj is not None
+        and template.run_mode == "render"
+        and outdir is None
+    ):
+        candidate_output_dir = determine_render_outdir(template, project_obj, None, "preview")
+        if (
+            can_reuse_render_bundle(candidate_output_dir)
+            and not refresh
+            and not params
+            and binding_ref is None
+        ):
+            reuse_existing_render_bundle = True
+            existing_output_dir = candidate_output_dir
+
+    if reuse_existing_render_bundle and existing_output_dir is not None:
+        resolved_params: dict[str, Any]
+        param_provenance: dict[str, Any]
+        warnings: list[dict[str, Any]]
+        instance_id: str
+        (
+            instance_id,
+            resolved_params,
+            param_provenance,
+            warnings,
+            existing_binding_ref,
+        ) = load_existing_render_bundle_context(existing_output_dir)
+        if selected_binding_ref is None and existing_binding_ref is not None:
+            selected_binding_ref = existing_binding_ref
+        outdir_provenance: dict[str, Any] | None = None
+        output_dir = existing_output_dir
+        display_dir = output_dir
+        linkar_dir = output_dir / ".linkar"
+
+        ensure_required_tools_available(template)
+
+        env = os.environ.copy()
+        for key, value in resolved_params.items():
+            env[env_key(key)] = format_env_value(value)
+        env["LINKAR_OUTPUT_DIR"] = str(output_dir)
+        env["LINKAR_RESULTS_DIR"] = str(output_dir / "results")
+        env["LINKAR_INSTANCE_ID"] = instance_id
+        if template.pack_root is not None:
+            env["LINKAR_PACK_ROOT"] = str(template.pack_root)
+        if project_obj is not None:
+            env["LINKAR_PROJECT_DIR"] = str(project_obj.root)
+
+        return (
+            project_obj,
+            template,
+            resolved_params,
+            param_provenance,
+            warnings,
+            selected_binding_ref,
+            instance_id,
+            output_dir,
+            display_dir,
+            linkar_dir,
+            outdir_provenance,
+            env,
+        )
+
     resolved_params, param_provenance, warnings = resolve_params_detailed_with_warnings(
         template,
         cli_params=params,
@@ -1391,6 +1475,7 @@ def run_template(
     pack_refs: str | Path | list[str | Path] | None = None,
     binding_ref: str | Path | None = None,
     verbose: bool = False,
+    refresh: bool = False,
 ) -> dict[str, Any]:
     (
         project_obj,
@@ -1412,6 +1497,7 @@ def run_template(
         outdir,
         pack_refs,
         binding_ref,
+        refresh=refresh,
     )
 
     command = build_run_command(template, output_dir, resolved_params, instance_id, project_obj)

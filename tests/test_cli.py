@@ -1135,6 +1135,136 @@ printf 'done\n' > "${LINKAR_RESULTS_DIR}/done.txt"
     assert (project_dir / entry["path"] / "results" / "done.txt").read_text().strip() == "done"
 
 
+def test_project_run_reuses_existing_rendered_bundle_without_refresh(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    template = make_template(
+        tmp_path / "templates",
+        "render_bundle_reuse",
+        "",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'original\n' > "${LINKAR_RESULTS_DIR}/mode.txt"
+""",
+    )
+    spec_path = template / "linkar_template.yaml"
+    spec_path.write_text(spec_path.read_text().replace("mode: direct", "mode: render"))
+
+    rendered = run_cli("render", str(template), cwd=project_dir)
+    assert rendered.returncode == 0, rendered.stderr
+
+    rendered_run_sh = project_dir / "render_bundle_reuse" / "run.sh"
+    rendered_run_sh.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "printf 'modified\\n' > \"${LINKAR_RESULTS_DIR}/mode.txt\"\n",
+        encoding="utf-8",
+    )
+    rendered_run_sh.chmod(0o755)
+
+    executed = run_cli("run", str(template), cwd=project_dir)
+    assert executed.returncode == 0, executed.stderr
+    assert (project_dir / "render_bundle_reuse" / "results" / "mode.txt").read_text().strip() == "modified"
+
+
+def test_project_run_refresh_rerenders_rendered_bundle(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    template = make_template(
+        tmp_path / "templates",
+        "render_bundle_refresh",
+        "",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'original\n' > "${LINKAR_RESULTS_DIR}/mode.txt"
+""",
+    )
+    spec_path = template / "linkar_template.yaml"
+    spec_path.write_text(spec_path.read_text().replace("mode: direct", "mode: render"))
+
+    rendered = run_cli("render", str(template), cwd=project_dir)
+    assert rendered.returncode == 0, rendered.stderr
+
+    rendered_run_sh = project_dir / "render_bundle_refresh" / "run.sh"
+    rendered_run_sh.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "printf 'modified\\n' > \"${LINKAR_RESULTS_DIR}/mode.txt\"\n",
+        encoding="utf-8",
+    )
+    rendered_run_sh.chmod(0o755)
+
+    executed = run_cli("run", str(template), "--refresh", cwd=project_dir)
+    assert executed.returncode == 0, executed.stderr
+    assert (project_dir / "render_bundle_refresh" / "results" / "mode.txt").read_text().strip() == "original"
+
+
+def test_bare_template_name_prefers_pack_template_over_visible_project_dir(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    pack_root = tmp_path / "pack"
+    template_dir = pack_root / "templates" / "export"
+    template_dir.mkdir(parents=True)
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: export",
+                "run:",
+                "  entry: run.sh",
+                "  mode: render",
+                "outputs:",
+                "  results_dir: {}",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (template_dir / "run.sh").write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "printf 'pack-template\\n' > \"${LINKAR_RESULTS_DIR}/origin.txt\"\n",
+        encoding="utf-8",
+    )
+    (template_dir / "run.sh").chmod(0o755)
+
+    add_pack = run_cli("pack", "add", str(pack_root), "--id", "pack", cwd=project_dir)
+    assert add_pack.returncode == 0, add_pack.stderr
+
+    visible_dir = project_dir / "export"
+    visible_dir.mkdir()
+    (visible_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: export",
+                "run:",
+                "  entry: run.sh",
+                "  mode: render",
+                "outputs:",
+                "  results_dir: {}",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (visible_dir / "run.sh").write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "printf 'visible-dir-template\\n' > \"${LINKAR_RESULTS_DIR}/origin.txt\"\n",
+        encoding="utf-8",
+    )
+    (visible_dir / "run.sh").chmod(0o755)
+
+    completed = run_cli("run", "export", cwd=project_dir)
+    assert completed.returncode == 0, completed.stderr
+    assert (project_dir / "export" / "results" / "origin.txt").read_text().strip() == "pack-template"
+
+
 def test_local_templates_can_chain_without_pack(tmp_path: Path) -> None:
     project_dir = tmp_path / "study"
     init = run_cli("project", "init", str(project_dir), cwd=tmp_path)

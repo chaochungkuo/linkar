@@ -44,6 +44,9 @@ Render-mode templates are the exception. When a template declares `run.mode: ren
 it with `linkar run` inside a project, Linkar runs it directly in the visible project directory such
 as `./export`. In that case `path` and `history_path` are the same project-facing location.
 
+By default, `linkar run` reuses the current visible bundle for these templates. Use
+`linkar run TEMPLATE --refresh` when you want Linkar to regenerate that bundle before execution.
+
 ## Rendered artifacts
 
 Rendered artifacts behave differently.
