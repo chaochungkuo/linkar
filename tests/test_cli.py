@@ -164,6 +164,13 @@ def test_completion_zsh_prints_completion_script(tmp_path: Path) -> None:
     assert "compdef" in completed.stdout
 
 
+def test_completion_fish_prints_completion_script(tmp_path: Path) -> None:
+    completed = run_cli("completion", "fish", cwd=tmp_path)
+    assert completed.returncode == 0, completed.stderr
+    assert "_LINKAR_COMPLETE" in completed.stdout
+    assert "complete --no-files --command linkar" in completed.stdout
+
+
 def test_completion_install_bash_writes_user_completion_file(tmp_path: Path) -> None:
     env = {"HOME": str(tmp_path / "home")}
     completed = run_cli("completion", "install", "bash", "--yes", cwd=tmp_path, env_extra=env)
@@ -180,6 +187,15 @@ def test_completion_install_zsh_writes_user_completion_file(tmp_path: Path) -> N
     target = Path(completed.stdout.strip())
     assert target == (tmp_path / "home" / ".zsh" / "completions" / "_linkar")
     assert target.read_text() == "$(linkar completion zsh)\n"
+
+
+def test_completion_install_fish_writes_user_completion_file(tmp_path: Path) -> None:
+    env = {"HOME": str(tmp_path / "home")}
+    completed = run_cli("completion", "install", "fish", "--yes", cwd=tmp_path, env_extra=env)
+    assert completed.returncode == 0, completed.stderr
+    target = Path(completed.stdout.strip())
+    assert target == (tmp_path / "home" / ".config" / "fish" / "completions" / "linkar.fish")
+    assert target.read_text() == "linkar completion fish | source\n"
 
 
 def test_completion_install_bash_rc_file_appends_eval_line(tmp_path: Path) -> None:
@@ -213,6 +229,23 @@ def test_completion_install_bash_rc_file_is_idempotent(tmp_path: Path) -> None:
     )
     assert completed.returncode == 0, completed.stderr
     assert rc_file.read_text(encoding="utf-8") == 'eval "$(linkar completion bash)"\n'
+
+
+def test_completion_install_fish_rc_file_appends_source_line(tmp_path: Path) -> None:
+    rc_file = tmp_path / "config.fish"
+    rc_file.write_text("# existing\n", encoding="utf-8")
+    completed = run_cli(
+        "completion",
+        "install",
+        "fish",
+        "--yes",
+        "--rc-file",
+        str(rc_file),
+        cwd=tmp_path,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == str(rc_file)
+    assert rc_file.read_text(encoding="utf-8") == "# existing\nlinkar completion fish | source\n"
 
 
 def test_project_init_with_name_creates_directory(tmp_path: Path) -> None:
@@ -362,6 +395,50 @@ def test_project_init_author_options_override_global_defaults(tmp_path: Path) ->
         "email": "alex@example.org",
         "organization": "IZKF",
     }
+
+
+def test_project_author_commands_manage_existing_project_metadata(tmp_path: Path) -> None:
+    project_dir = tmp_path / "study"
+    completed = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert completed.returncode == 0, completed.stderr
+
+    set_result = run_cli(
+        "project",
+        "author",
+        "set",
+        "--project",
+        str(project_dir),
+        "--name",
+        "Juliane Bremer",
+        "--email",
+        "juliane@example.org",
+        "--organization",
+        "UKA",
+        cwd=tmp_path,
+    )
+    assert set_result.returncode == 0, set_result.stderr
+
+    shown = run_cli("project", "author", "show", "--project", str(project_dir), cwd=tmp_path)
+    assert shown.returncode == 0, shown.stderr
+    shown_payload = yaml.safe_load(shown.stdout)
+    assert shown_payload["author"] == {
+        "name": "Juliane Bremer",
+        "email": "juliane@example.org",
+        "organization": "UKA",
+    }
+
+    project_data = yaml.safe_load((project_dir / "project.yaml").read_text())
+    assert project_data["author"] == {
+        "name": "Juliane Bremer",
+        "email": "juliane@example.org",
+        "organization": "UKA",
+    }
+
+    cleared = run_cli("project", "author", "clear", "--project", str(project_dir), cwd=tmp_path)
+    assert cleared.returncode == 0, cleared.stderr
+
+    project_data = yaml.safe_load((project_dir / "project.yaml").read_text())
+    assert "author" not in project_data
 
 
 def test_run_streams_output_when_template_requests_verbose_by_default(tmp_path: Path) -> None:

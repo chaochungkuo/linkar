@@ -150,6 +150,68 @@ def list_configured_packs(project: str | Path | Project | None = None) -> list[d
     ]
 
 
+def get_project_author(project: str | Path | Project | None = None) -> dict[str, str] | None:
+    if isinstance(project, (str, Path)):
+        project_obj = load_project(project)
+    elif project is None:
+        project_obj = discover_project()
+    else:
+        project_obj = project
+    if project_obj is None:
+        raise missing_project_error("Showing project author metadata")
+    author = project_obj.data.get("author")
+    if not isinstance(author, dict):
+        return None
+    result = {
+        key: value
+        for key in ("name", "email", "organization")
+        if isinstance((value := author.get(key)), str) and value
+    }
+    return result or None
+
+
+def set_project_author(
+    *,
+    name: str | None = None,
+    email: str | None = None,
+    organization: str | None = None,
+    project: str | Path | Project | None = None,
+) -> dict[str, str]:
+    if not any(value is not None for value in (name, email, organization)):
+        raise ProjectValidationError("Provide at least one author field to set")
+    if isinstance(project, (str, Path)):
+        project_obj = load_project(project)
+    elif project is None:
+        project_obj = discover_project()
+    else:
+        project_obj = project
+    if project_obj is None:
+        raise missing_project_error("Updating project author metadata")
+    author = dict(get_project_author(project_obj) or {})
+    if name is not None:
+        author["name"] = name
+    if email is not None:
+        author["email"] = email
+    if organization is not None:
+        author["organization"] = organization
+    project_obj.data["author"] = author
+    save_yaml(project_obj.root / "project.yaml", project_obj.data)
+    return author
+
+
+def clear_project_author(project: str | Path | Project | None = None) -> None:
+    if isinstance(project, (str, Path)):
+        project_obj = load_project(project)
+    elif project is None:
+        project_obj = discover_project()
+    else:
+        project_obj = project
+    if project_obj is None:
+        raise missing_project_error("Clearing project author metadata")
+    project_obj.data.pop("author", None)
+    save_yaml(project_obj.root / "project.yaml", project_obj.data)
+
+
 def add_project_pack(
     ref: str,
     *,

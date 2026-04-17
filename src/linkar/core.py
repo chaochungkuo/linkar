@@ -25,15 +25,18 @@ from linkar.runtime.bindings import (
 from linkar.runtime.models import BindingContext, PackEntry, Project, TemplateSpec
 from linkar.runtime.projects import (
     add_project_pack,
+    clear_project_author,
     discover_project,
     find_project_pack_entry,
     get_active_pack_entry,
+    get_project_author,
     init_project,
     latest_project_output,
     list_configured_packs,
     load_project,
     project_pack_entries,
     remove_project_pack,
+    set_project_author,
     set_active_pack,
 )
 from linkar.runtime.runs import (
@@ -81,6 +84,7 @@ __all__ = [
     "adopt_run_into_project",
     "binding_asset_root",
     "clear_global_author",
+    "clear_project_author",
     "collect_run_outputs",
     "collect_outputs",
     "describe_template",
@@ -95,6 +99,7 @@ __all__ = [
     "get_active_global_pack_entry",
     "get_active_pack_entry",
     "get_global_author",
+    "get_project_author",
     "global_config_path",
     "global_pack_entries",
     "init_project",
@@ -131,6 +136,7 @@ __all__ = [
     "save_yaml",
     "set_active_pack",
     "set_global_author",
+    "set_project_author",
     "set_active_global_pack",
     "test_template",
     "unique_assets",

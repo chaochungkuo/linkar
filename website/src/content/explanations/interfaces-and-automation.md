@@ -46,12 +46,22 @@ Shell completion supports:
 ```bash
 linkar completion bash
 linkar completion zsh
+linkar completion fish
 linkar completion install bash
 linkar completion install zsh
+linkar completion install fish
 ```
 
 `completion install` is the side-effecting path. The plain shell commands only print completion
 code.
+
+Existing projects can also manage their own stored author metadata without reinitializing:
+
+```bash
+linkar project author show
+linkar project author set --name "Project Owner" --email "owner@example.org"
+linkar project author clear
+```
 
 ## Local API
 

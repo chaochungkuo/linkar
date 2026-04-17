@@ -27,12 +27,14 @@ from linkar.core import (
     add_project_pack,
     adopt_run_into_project,
     clear_global_author,
+    clear_project_author,
     collect_run_outputs,
     discover_project,
     generate_methods,
     get_active_global_pack_entry,
     get_active_pack_entry,
     get_global_author,
+    get_project_author,
     global_config_path,
     init_project,
     inspect_run,
@@ -45,6 +47,7 @@ from linkar.core import (
     remove_project_pack,
     remove_project_run,
     set_global_author,
+    set_project_author,
     set_active_global_pack,
     set_active_pack,
     test_template,
@@ -416,6 +419,13 @@ def _default_completion_install_target(shell: str, rc_file: str | None = None) -
             return target, line
         completion_dir = home / ".zsh" / "completions"
         return completion_dir / "_linkar", "$(linkar completion zsh)"
+    if shell == "fish":
+        line = "linkar completion fish | source"
+        if rc_file is not None:
+            target = Path(rc_file).expanduser().resolve()
+            return target, line
+        completion_dir = home / ".config" / "fish" / "completions"
+        return completion_dir / "linkar.fish", line
     raise click.ClickException(f"Unsupported shell for completion install: {shell}")
 
 
@@ -459,6 +469,12 @@ def completion_zsh_command() -> None:
     _print_completion_script("zsh")
 
 
+@completion_group.command("fish")
+def completion_fish_command() -> None:
+    """Print the fish completion script."""
+    _print_completion_script("fish")
+
+
 @completion_group.group("install")
 def completion_install_group() -> None:
     """Install shell completion for supported shells."""
@@ -488,6 +504,19 @@ def completion_install_bash_command(yes: bool, rc_file: str | None) -> None:
 def completion_install_zsh_command(yes: bool, rc_file: str | None) -> None:
     """Install zsh completion in a user-level location."""
     _install_completion("zsh", rc_file=rc_file, assume_yes=yes)
+
+
+@completion_install_group.command("fish")
+@click.option("--yes", is_flag=True, help="Install without interactive confirmation.")
+@click.option(
+    "--rc-file",
+    type=click.Path(path_type=str, dir_okay=False),
+    help="Append source-based setup to this shell rc file instead of writing a user completion file.",
+    show_default=False,
+)
+def completion_install_fish_command(yes: bool, rc_file: str | None) -> None:
+    """Install fish completion in a user-level location."""
+    _install_completion("fish", rc_file=rc_file, assume_yes=yes)
 
 
 @project_group.command("init")
@@ -572,6 +601,73 @@ def project_adopt_run_command(run_ref: tuple[str, ...], project: str | None, ui:
             {"instance_id": item["instance_id"], "id": "adopted", "path": item["path"]}
             for item in adopted
         ]
+    )
+
+
+@project_group.group("author")
+def project_author_group() -> None:
+    """Manage author metadata stored in an existing project's project.yaml."""
+
+
+@project_author_group.command("set")
+@click.option("--name", "author_name", metavar="NAME", help="Project author name.")
+@click.option("--email", "author_email", metavar="EMAIL", help="Project author email.")
+@click.option("--organization", metavar="ORG", help="Project author organization.")
+@click.option(
+    "--project",
+    type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+    help="Project directory or project.yaml path. Defaults to the current directory.",
+    show_default=False,
+)
+@handle_linkar_errors
+def project_author_set_command(
+    author_name: str | None,
+    author_email: str | None,
+    organization: str | None,
+    project: str | None,
+    ui: CliUI,
+) -> None:
+    """Update the top-level author metadata in project.yaml for an existing project."""
+    ui.print_metadata(
+        {
+            "author": set_project_author(
+                name=author_name,
+                email=author_email,
+                organization=organization,
+                project=project,
+            )
+        }
+    )
+
+
+@project_author_group.command("show")
+@click.option(
+    "--project",
+    type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+    help="Project directory or project.yaml path. Defaults to the current directory.",
+    show_default=False,
+)
+@handle_linkar_errors
+def project_author_show_command(project: str | None, ui: CliUI) -> None:
+    """Show author metadata stored in an existing project's project.yaml."""
+    ui.print_metadata({"author": get_project_author(project=project)})
+
+
+@project_author_group.command("clear")
+@click.option(
+    "--project",
+    type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+    help="Project directory or project.yaml path. Defaults to the current directory.",
+    show_default=False,
+)
+@handle_linkar_errors
+def project_author_clear_command(project: str | None, ui: CliUI) -> None:
+    """Remove author metadata from an existing project's project.yaml."""
+    clear_project_author(project=project)
+    ui.print_summary_panel(
+        "[accent]Project Author Cleared[/accent]",
+        [("Status", "project author cleared")],
+        plain_text="project author cleared",
     )
 
 

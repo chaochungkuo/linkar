@@ -50,6 +50,14 @@ linkar run simple_echo --name Linkar
 linkar inspect run simple_echo_001
 ```
 
+If you need to override or inspect author metadata on an existing project after initialization:
+
+```bash
+linkar project author show
+linkar project author set --name "Project Owner" --email "owner@example.org"
+linkar project author clear
+```
+
 If you already have an ad hoc Linkar run and want to start a project around it:
 
 ```bash
@@ -92,6 +100,13 @@ linkar run fastqc --input sample.fastq.gz
 ```
 
 Use `linkar run TEMPLATE ...` when you want the generic path-or-pack execution interface.
+
+Shell completion can be printed or installed for `bash`, `zsh`, and `fish`:
+
+```bash
+linkar completion fish
+linkar completion install fish
+```
 
 ## Local API
 

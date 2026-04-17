@@ -50,6 +50,14 @@ This gives you:
 - `.linkar/runs/<instance_id>/.linkar/meta.json` for provenance
 - the option to render a standalone artifact with `linkar render ...`
 
+If the project-level author metadata should differ from your global defaults, update it directly in
+the existing project:
+
+```bash
+linkar project author show
+linkar project author set --name "Project Owner" --email "owner@example.org"
+```
+
 ## What happens after `linkar run`
 
 In project mode, Linkar now separates:
