@@ -46,6 +46,7 @@ from linkar.core import (
     remove_project_pack,
     prune_project_runs,
     remove_project_run,
+    select_project_runs,
     set_global_author,
     set_project_author,
     set_active_global_pack,
@@ -797,25 +798,6 @@ def project_runs(project: str | None, output_format: str, ui: CliUI) -> None:
     ui.print_data(runs, format=output_format)
 
 
-def _select_project_runs(runs: list[dict[str, object]], run_ref: str | None) -> list[dict[str, object]]:
-    if not run_ref:
-        return runs
-
-    exact_instance_matches = [run for run in runs if str(run.get("instance_id") or "") == run_ref]
-    if exact_instance_matches:
-        return exact_instance_matches
-
-    template_matches = [run for run in runs if str(run.get("id") or "") == run_ref]
-    if template_matches:
-        return template_matches
-
-    path_matches = [run for run in runs if str(run.get("path") or "") == run_ref]
-    if path_matches:
-        return path_matches
-
-    raise ProjectValidationError(f"Run not found in project: {run_ref}")
-
-
 @project_group.command("view")
 @click.argument("run_ref", required=False)
 @click.option(
@@ -837,7 +819,7 @@ def project_view_command(run_ref: str | None, project: str | None, output_format
     project_obj = load_project_or_discover(project)
     if project_obj is None:
         raise missing_project_error("Viewing project metadata")
-    runs = _select_project_runs(list_project_runs(project=project_obj), run_ref)
+    runs = list_project_runs(project=project_obj) if not run_ref else select_project_runs(run_ref, project=project_obj)
     if output_format == "rich":
         ui.print_project_view(project_obj.data, project_path=project_obj.root, runs=runs)
         return
@@ -855,7 +837,7 @@ def project_view_command(run_ref: str | None, project: str | None, output_format
 )
 @click.pass_context
 def run_group(ctx: click.Context) -> None:
-    """Run templates with template-aware options or the generic TEMPLATE interface."""
+    """Run templates. Render-mode templates reuse the visible project bundle unless you pass --refresh."""
     if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())
         ctx.exit(0)
@@ -872,7 +854,7 @@ run_group.add_command(raw_run_command)
 )
 @click.pass_context
 def render_group(ctx: click.Context) -> None:
-    """Render template bundles with template-aware options or the generic TEMPLATE interface."""
+    """Render template bundles without executing them. Use collect after manual execution if outputs changed."""
     if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())
         ctx.exit(0)
@@ -924,7 +906,7 @@ def templates_command(pack: tuple[str, ...], project: str | None, output_format:
 )
 @handle_linkar_errors
 def collect_command(run_ref: str, project: str | None, ui: CliUI) -> None:
-    """Collect declared outputs for a previously rendered or manually executed run directory."""
+    """Collect declared outputs by instance id, unique template id, run path, or meta path."""
     with ui.status("Collecting outputs"):
         result = collect_run_outputs(run_ref, project=project)
     ui.print_collect_completed(result)
@@ -1010,7 +992,7 @@ def inspect_group() -> None:
 )
 @handle_linkar_errors
 def inspect_run_command(run_ref: str, project: str | None, output_format: str, ui: CliUI) -> None:
-    """Inspect run metadata by instance id or run directory path."""
+    """Inspect run metadata by instance id, unique template id, run path, or meta path."""
     metadata = inspect_run(run_ref, project=project)
     if output_format == "rich":
         ui.print_metadata(metadata)

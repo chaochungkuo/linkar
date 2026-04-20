@@ -160,7 +160,14 @@ def template_command_callback(
         name=template_id,
         callback=callback,
         params=params,
-        help=f"{'Render' if action == 'render' else 'Run'} template '{template_id}'.",
+        help=(
+            f"{'Render' if action == 'render' else 'Run'} template '{template_id}'. "
+            + (
+                "This template uses run.mode=render, so project runs reuse the visible bundle unless --refresh is passed."
+                if action == "run" and template_spec.run_mode == "render"
+                else ""
+            )
+        ).strip(),
         short_help=f"{'Render' if action == 'render' else 'Run'} template '{template_id}'.",
     )
 

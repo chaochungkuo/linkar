@@ -358,6 +358,31 @@ def test_project_view_command_shows_project_details(tmp_path: Path) -> None:
     assert payload_yaml["templates"][0]["instance_id"] == "cellranger_atac_001"
 
 
+def test_project_view_command_accepts_visible_run_path(tmp_path: Path) -> None:
+    project_dir = tmp_path / "study"
+    completed = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert completed.returncode == 0, completed.stderr
+
+    (project_dir / "methods").mkdir()
+    project_file = project_dir / "project.yaml"
+    project_data = yaml.safe_load(project_file.read_text())
+    project_data["templates"] = [
+        {
+            "id": "methods",
+            "instance_id": "methods_001",
+            "path": "methods",
+            "history_path": "methods",
+            "meta": "methods/.linkar/meta.json",
+        }
+    ]
+    project_file.write_text(yaml.safe_dump(project_data, sort_keys=False), encoding="utf-8")
+
+    viewed = run_cli("project", "view", str(project_dir / "methods"), "--format", "json", cwd=project_dir)
+    assert viewed.returncode == 0, viewed.stderr
+    payload = json.loads(viewed.stdout)
+    assert [item["instance_id"] for item in payload["templates"]] == ["methods_001"]
+
+
 def test_project_init_author_options_override_global_defaults(tmp_path: Path) -> None:
     env = {"LINKAR_HOME": str(tmp_path / "home")}
     configured = run_cli(
@@ -1186,6 +1211,37 @@ def test_collect_command_updates_outputs_after_manual_run(tmp_path: Path) -> Non
     assert meta["outputs"]["greeting_file"] == str((rendered_dir / "results" / "greeting.txt").resolve())
 
 
+def test_collect_command_accepts_unique_template_id(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    rendered = run_cli(
+        "render",
+        "simple_echo",
+        "--pack",
+        str(ROOT / "examples" / "packs" / "basic"),
+        "--param",
+        "name=Collect",
+        cwd=project_dir,
+    )
+    assert rendered.returncode == 0, rendered.stderr
+
+    outdir = Path(rendered.stdout.strip())
+    manual = subprocess.run(
+        [str(outdir / "run.sh")],
+        cwd=outdir,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert manual.returncode == 0, manual.stderr
+
+    collected = run_cli("collect", "simple_echo", cwd=project_dir)
+    assert collected.returncode == 0, collected.stderr
+    assert str(outdir) in collected.stdout
+
+
 def test_render_in_project_defaults_to_visible_project_template_dir(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
     init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
@@ -1425,6 +1481,48 @@ printf 'original\n' > "${LINKAR_RESULTS_DIR}/mode.txt"
     executed = run_cli("run", str(template), "--refresh", cwd=project_dir)
     assert executed.returncode == 0, executed.stderr
     assert (project_dir / "render_bundle_refresh" / "results" / "mode.txt").read_text().strip() == "original"
+
+
+def test_project_run_warns_about_stale_duplicate_render_entries(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    template = make_template(
+        tmp_path / "templates",
+        "render_bundle_warn",
+        "",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'done\n' > "${LINKAR_RESULTS_DIR}/mode.txt"
+""",
+    )
+    spec_path = template / "linkar_template.yaml"
+    spec_path.write_text(spec_path.read_text().replace("mode: direct", "mode: render"))
+
+    rendered = run_cli("render", str(template), cwd=project_dir)
+    assert rendered.returncode == 0, rendered.stderr
+
+    project_file = project_dir / "project.yaml"
+    project_data = yaml.safe_load(project_file.read_text())
+    project_data["templates"].insert(
+        0,
+        {
+            "id": "render_bundle_warn",
+            "instance_id": "render_bundle_warn_000",
+            "path": "render_bundle_warn",
+            "history_path": ".linkar/runs/render_bundle_warn_000",
+            "meta": ".linkar/runs/render_bundle_warn_000/.linkar/meta.json",
+            "state": "completed",
+        },
+    )
+    project_file.write_text(yaml.safe_dump(project_data, sort_keys=False), encoding="utf-8")
+    (project_dir / ".linkar" / "runs" / "render_bundle_warn_000" / ".linkar").mkdir(parents=True)
+
+    executed = run_cli("run", str(template), cwd=project_dir)
+    assert executed.returncode == 0, executed.stderr
+    assert "Older project entries still reference the same visible path" in executed.stderr
+    assert "linkar project prune --template render_bundle_warn" in executed.stderr
 
 
 def test_bare_template_name_prefers_pack_template_over_visible_project_dir(tmp_path: Path) -> None:
@@ -2723,6 +2821,29 @@ def test_inspect_run_command_returns_metadata_json(tmp_path: Path) -> None:
     metadata_yaml = yaml.safe_load(inspected_yaml.stdout)
     assert metadata_yaml["template"] == "simple_echo"
     assert metadata_yaml["params"]["name"] == "Inspect"
+
+
+def test_inspect_run_command_accepts_unique_template_id(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    completed = run_cli(
+        "run",
+        "simple_echo",
+        "--pack",
+        str(ROOT / "examples" / "packs" / "basic"),
+        "--param",
+        "name=InspectTemplate",
+        cwd=project_dir,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+    inspected = run_cli("inspect", "run", "simple_echo", cwd=project_dir)
+    assert inspected.returncode == 0, inspected.stderr
+    metadata = json.loads(inspected.stdout)
+    assert metadata["instance_id"] == "simple_echo_001"
+    assert metadata["params"]["name"] == "InspectTemplate"
 
 
 def test_project_runs_command_supports_json_and_yaml_formats(tmp_path: Path) -> None:

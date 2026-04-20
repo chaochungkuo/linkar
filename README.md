@@ -66,6 +66,16 @@ linkar project init --name study --adopt /path/to/existing_run
 
 In project mode, Linkar exposes a stable directory such as `./simple_echo`, writes results under `results/`, and keeps immutable run history plus metadata under `.linkar/runs/<instance_id>/`. Rendered bundles created inside a project are also recorded in `project.yaml` with `state: rendered`, while executed runs are recorded with execution state such as `completed` or `failed`. For templates whose declared `run.mode` is `render`, `linkar run` inside a project executes directly in the visible project directory instead of creating a `.linkar/runs/...` history path. By default it runs the current rendered bundle if one already exists; use `linkar run TEMPLATE --refresh` to rerender first.
 
+Command model:
+
+- `linkar run ...` executes a template
+- `linkar render ...` stages a bundle without executing it
+- `linkar collect RUN_REF` refreshes declared outputs after manual execution
+- `linkar inspect run RUN_REF` reads recorded metadata
+- `linkar project prune` removes stale duplicate-path history
+
+`RUN_REF` accepts an instance id such as `fastqc_001`, a unique template id within the project such as `fastqc`, a run directory path, or a `.linkar/meta.json` path.
+
 If you accumulate older duplicate run entries for the same visible project path, use:
 
 ```bash

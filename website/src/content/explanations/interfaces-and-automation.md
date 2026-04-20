@@ -33,10 +33,18 @@ Key behavior:
 
 - `run` always executes
 - `render` always stages only
+- render-mode templates reuse the visible project bundle on `run`; pass `--refresh` to rerender first
 - `collect` records outputs after manual execution
 - `project remove-run` can detach or delete recorded runs
 - `project prune` can collapse older duplicate-path history while keeping the newest visible run
 - `config author` stores reusable author defaults for new projects
+
+Run references accepted across `collect`, `inspect run`, `project view`, and `project remove-run` are:
+
+- instance ids such as `fastqc_001`
+- unique template ids within a project such as `fastqc`
+- run directory paths
+- `.linkar/meta.json` paths
 
 ## Help and shell completion
 

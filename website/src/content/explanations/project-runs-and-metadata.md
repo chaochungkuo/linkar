@@ -142,6 +142,14 @@ This updates:
 `collect` refreshes declared outputs for a registered run. It does not create an unrelated project
 entry from scratch; registration happens during `render`, `run`, or explicit adoption.
 
+Shared run references across `collect`, `inspect run`, `project view`, and `project remove-run`
+accept:
+
+- instance ids such as `fastqc_001`
+- unique template ids when they are unambiguous in the project
+- run directory paths
+- `.linkar/meta.json` paths
+
 ## Removing runs from a project
 
 Project run removal is first-class:
@@ -162,6 +170,9 @@ Behavior:
 - `project prune` keeps the newest run per visible path and, by default, deletes orphaned historical run directories for the pruned entries
 - `project prune --keep-files` cleans `project.yaml` without deleting directories
 - `project prune --dry-run` previews the cleanup before applying it
+
+When you rerun a render-mode template in place and older duplicate-path history still exists,
+Linkar keeps the current visible run active and prints a warning suggesting `linkar project prune`.
 
 If a template id matches multiple recorded runs, Linkar returns an ambiguity error instead of
 guessing.

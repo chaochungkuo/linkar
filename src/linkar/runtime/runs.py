@@ -1085,14 +1085,7 @@ def sync_project_alias(output_dir: Path, alias_dir: Path) -> None:
 
 
 def list_project_runs(project: str | Path | Project | None = None) -> list[dict[str, Any]]:
-    if isinstance(project, (str, Path)):
-        project_obj = load_project(project)
-    elif project is None:
-        project_obj = discover_project()
-    else:
-        project_obj = project
-    if project_obj is None:
-        raise ProjectValidationError("No active project found")
+    project_obj = _load_project_for_runs(project, action="Listing project runs")
     return list(project_obj.data.get("templates", []))
 
 
@@ -1111,6 +1104,104 @@ def _entry_history_path(project_root: Path, entry: dict[str, Any]) -> Path | Non
 
 def _entry_visible_path(project_root: Path, entry: dict[str, Any]) -> Path | None:
     return _resolve_project_entry_path(project_root, entry.get("path"))
+
+
+def _entry_meta_path(project_root: Path, entry: dict[str, Any]) -> Path | None:
+    return _resolve_project_entry_path(project_root, entry.get("meta"))
+
+
+def _load_project_for_runs(project: str | Path | Project | None, *, action: str) -> Project:
+    if isinstance(project, (str, Path)):
+        project_obj = load_project(project)
+    elif project is None:
+        project_obj = discover_project()
+    else:
+        project_obj = project
+    if project_obj is None:
+        raise ProjectValidationError(
+            f"{action} requires an active project. Run it inside a directory containing project.yaml or pass --project PATH."
+        )
+    return project_obj
+
+
+def select_project_runs(
+    run_ref: str | Path,
+    *,
+    project: str | Path | Project | None = None,
+) -> list[dict[str, Any]]:
+    project_obj = _load_project_for_runs(project, action="Resolving a run")
+    templates = project_obj.data.setdefault("templates", [])
+    run_ref_str = str(run_ref)
+
+    exact_instance_matches = [entry for entry in templates if entry.get("instance_id") == run_ref_str]
+    if exact_instance_matches:
+        return exact_instance_matches
+
+    template_matches = [entry for entry in templates if entry.get("id") == run_ref_str]
+    is_bare_name = isinstance(run_ref, str) and not Path(run_ref).is_absolute() and os.sep not in run_ref
+    ref_path = Path(run_ref).expanduser()
+    resolved_ref = None if is_bare_name and template_matches else (ref_path.resolve() if ref_path.exists() else None)
+    if template_matches:
+        if len(template_matches) > 1:
+            matching_instances = ", ".join(
+                str(entry.get("instance_id")) for entry in template_matches if entry.get("instance_id")
+            )
+            raise ProjectValidationError(
+                f"Run reference '{run_ref}' is ambiguous in this project. Matching instances: {matching_instances}"
+            )
+        return template_matches
+
+    if resolved_ref is not None:
+        path_matches: list[dict[str, Any]] = []
+        for entry in templates:
+            candidates = {
+                candidate
+                for candidate in (
+                    _entry_meta_path(project_obj.root, entry),
+                    _entry_history_path(project_obj.root, entry),
+                    _entry_visible_path(project_obj.root, entry),
+                )
+                if candidate is not None
+            }
+            history_path = _entry_history_path(project_obj.root, entry)
+            if history_path is not None:
+                candidates.add((history_path / ".linkar" / "meta.json").resolve())
+            if resolved_ref in candidates:
+                path_matches.append(entry)
+        if path_matches:
+            if len(path_matches) > 1:
+                matching_instances = ", ".join(
+                    str(entry.get("instance_id")) for entry in path_matches if entry.get("instance_id")
+                )
+                raise ProjectValidationError(
+                    f"Run reference '{run_ref}' is ambiguous in this project. Matching instances: {matching_instances}"
+                )
+            return path_matches
+
+    raise ProjectValidationError(f"Run not found in project: {run_ref}")
+
+
+def resolve_project_run(run_ref: str | Path, *, project: str | Path | Project | None = None) -> dict[str, Any]:
+    matches = select_project_runs(run_ref, project=project)
+    return matches[0]
+
+
+def _stale_duplicate_path_runs(
+    project: Project,
+    *,
+    display_outdir: Path,
+    current_meta_path: Path,
+) -> list[dict[str, Any]]:
+    relative_path = os.path.relpath(display_outdir, project.root)
+    relative_meta = os.path.relpath(current_meta_path, project.root)
+    duplicates: list[dict[str, Any]] = []
+    for entry in project.data.get("templates", []):
+        if entry.get("path") != relative_path:
+            continue
+        if entry.get("meta") == relative_meta:
+            continue
+        duplicates.append(entry)
+    return duplicates
 
 
 def prune_project_runs(
@@ -1238,59 +1329,18 @@ def remove_project_run(
     project: str | Path | Project | None = None,
     delete_files: bool = False,
 ) -> dict[str, Any]:
-    if isinstance(project, (str, Path)):
-        project_obj = load_project(project)
-    elif project is None:
-        project_obj = discover_project()
-    else:
-        project_obj = project
-    if project_obj is None:
-        raise ProjectValidationError(
-            "Removing a run requires an active project. Run it inside a directory containing project.yaml or pass --project PATH."
-        )
+    project_obj = _load_project_for_runs(project, action="Removing a run")
 
     templates = project_obj.data.setdefault("templates", [])
-    template_id_matches = [
-        entry for entry in templates if entry.get("id") == str(run_ref)
-    ]
-    is_bare_name = isinstance(run_ref, str) and not Path(run_ref).is_absolute() and os.sep not in run_ref
-    ref_path = Path(run_ref).expanduser()
-    resolved_ref = None if is_bare_name and template_id_matches else (ref_path.resolve() if ref_path.exists() else None)
-    matched_instance_id: str | None = None
-    if resolved_ref is None and template_id_matches:
-        if len(template_id_matches) > 1:
-            matching_instances = ", ".join(
-                str(entry.get("instance_id")) for entry in template_id_matches if entry.get("instance_id")
-            )
-            raise ProjectValidationError(
-                f"Run reference '{run_ref}' is ambiguous in this project. Matching instances: {matching_instances}"
-            )
-        matched_instance_id = str(template_id_matches[0].get("instance_id"))
+    target_entry = resolve_project_run(run_ref, project=project_obj)
     kept: list[dict[str, Any]] = []
     removed: dict[str, Any] | None = None
 
     for entry in templates:
-        entry_instance_id = entry.get("instance_id")
-        entry_meta = entry.get("meta")
-        entry_meta_path = (project_obj.root / entry_meta).resolve() if isinstance(entry_meta, str) else None
-        entry_history = entry.get("history_path") or entry.get("path")
-        entry_history_path = (
-            (project_obj.root / entry_history).resolve()
-            if isinstance(entry_history, str) and not Path(entry_history).is_absolute()
-            else Path(entry_history).resolve() if isinstance(entry_history, str) else None
-        )
-
-        matches = entry_instance_id == str(run_ref)
-        if matched_instance_id is not None and entry_instance_id == matched_instance_id:
-            matches = True
-        if resolved_ref is not None:
-            if entry_meta_path is not None and resolved_ref == entry_meta_path:
-                matches = True
-            elif entry_history_path is not None and resolved_ref in {entry_history_path, entry_history_path / ".linkar" / "meta.json"}:
-                matches = True
-
-        if matches and removed is None:
+        if entry is target_entry and removed is None:
             removed = dict(entry)
+            entry_history_path = _entry_history_path(project_obj.root, entry)
+            entry_meta_path = _entry_meta_path(project_obj.root, entry)
             removed["_history_path_resolved"] = str(entry_history_path) if entry_history_path is not None else None
             removed["_meta_path_resolved"] = str(entry_meta_path) if entry_meta_path is not None else None
             continue
@@ -1323,14 +1373,7 @@ def remove_project_run(
 
 
 def resolve_project_assets(project: str | Path | Project | None = None) -> list[dict[str, Any]]:
-    if isinstance(project, (str, Path)):
-        project_obj = load_project(project)
-    elif project is None:
-        project_obj = discover_project()
-    else:
-        project_obj = project
-    if project_obj is None:
-        raise ProjectValidationError("No active project found")
+    project_obj = _load_project_for_runs(project, action="Listing project assets")
     assets: list[dict[str, Any]] = []
     for entry in project_pack_entries(project_obj):
         assets.append(
@@ -1358,23 +1401,13 @@ def inspect_run(run_ref: str | Path, project: str | Path | Project | None = None
         with meta_path.open("r", encoding="utf-8") as handle:
             return json.load(handle)
 
-    runs = list_project_runs(project=project)
-    for entry in runs:
-        if entry.get("instance_id") != str(run_ref):
-            continue
-        if isinstance(project, Project):
-            project_root = project.root
-        elif isinstance(project, (str, Path)):
-            project_root = load_project(project).root
-        else:
-            project_obj = discover_project()
-            if project_obj is None:
-                break
-            project_root = project_obj.root
-        meta_path = (project_root / entry["meta"]).resolve()
-        with meta_path.open("r", encoding="utf-8") as handle:
-            return json.load(handle)
-    raise ProjectValidationError(f"Run not found: {run_ref}")
+    project_obj = _load_project_for_runs(project, action="Inspecting a run")
+    entry = resolve_project_run(run_ref, project=project_obj)
+    meta_path = _entry_meta_path(project_obj.root, entry)
+    if meta_path is None or not meta_path.exists():
+        raise ProjectValidationError(f"Run metadata not found: {run_ref}")
+    with meta_path.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
 
 
 def inspect_runtime(run_ref: str | Path, project: str | Path | Project | None = None) -> dict[str, Any]:
@@ -1387,26 +1420,16 @@ def inspect_runtime(run_ref: str | Path, project: str | Path | Project | None = 
         with runtime_path.open("r", encoding="utf-8") as handle:
             return json.load(handle)
 
-    runs = list_project_runs(project=project)
-    for entry in runs:
-        if entry.get("instance_id") != str(run_ref):
-            continue
-        if isinstance(project, Project):
-            project_root = project.root
-        elif isinstance(project, (str, Path)):
-            project_root = load_project(project).root
-        else:
-            project_obj = discover_project()
-            if project_obj is None:
-                break
-            project_root = project_obj.root
-        meta_path = (project_root / entry["meta"]).resolve()
-        runtime_path = meta_path.with_name("runtime.json")
-        if not runtime_path.exists():
-            raise ProjectValidationError(f"Run runtime not found: {runtime_path}")
-        with runtime_path.open("r", encoding="utf-8") as handle:
-            return json.load(handle)
-    raise ProjectValidationError(f"Run not found: {run_ref}")
+    project_obj = _load_project_for_runs(project, action="Inspecting run runtime")
+    entry = resolve_project_run(run_ref, project=project_obj)
+    meta_path = _entry_meta_path(project_obj.root, entry)
+    if meta_path is None:
+        raise ProjectValidationError(f"Run runtime not found: {run_ref}")
+    runtime_path = meta_path.with_name("runtime.json")
+    if not runtime_path.exists():
+        raise ProjectValidationError(f"Run runtime not found: {runtime_path}")
+    with runtime_path.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
 
 
 def resolve_run_meta_path(run_ref: str | Path, project: str | Path | Project | None = None) -> Path:
@@ -1418,23 +1441,11 @@ def resolve_run_meta_path(run_ref: str | Path, project: str | Path | Project | N
             raise ProjectValidationError(f"Run metadata not found: {meta_path}")
         return meta_path
 
-    runs = list_project_runs(project=project)
-    for entry in runs:
-        if entry.get("instance_id") != str(run_ref):
-            continue
-        if isinstance(project, Project):
-            project_root = project.root
-        elif isinstance(project, (str, Path)):
-            project_root = load_project(project).root
-        else:
-            project_obj = discover_project()
-            if project_obj is None:
-                break
-            project_root = project_obj.root
-        meta_path = (project_root / entry["meta"]).resolve()
-        if meta_path.exists():
-            return meta_path
-        break
+    project_obj = _load_project_for_runs(project, action="Resolving run metadata")
+    entry = resolve_project_run(run_ref, project=project_obj)
+    meta_path = _entry_meta_path(project_obj.root, entry)
+    if meta_path is not None and meta_path.exists():
+        return meta_path
     raise ProjectValidationError(f"Run not found: {run_ref}")
 
 
@@ -1608,6 +1619,31 @@ def run_template(
         refresh=refresh,
     )
 
+    meta_path = linkar_dir / "meta.json"
+    if project_obj is not None and template.run_mode == "render" and output_dir == display_dir:
+        stale_runs = _stale_duplicate_path_runs(
+            project_obj,
+            display_outdir=display_dir,
+            current_meta_path=meta_path,
+        )
+        if stale_runs:
+            stale_instances = ", ".join(
+                str(entry.get("instance_id"))
+                for entry in stale_runs
+                if entry.get("instance_id")
+            )
+            warnings.append(
+                {
+                    "template": template.id,
+                    "message": "Older project entries still reference the same visible path.",
+                    "fallback": f"Current run remains active at {display_dir}",
+                    "action": (
+                        f"Run 'linkar project prune --template {template.id}' to remove stale history"
+                        + (f" ({stale_instances})" if stale_instances else "")
+                    ),
+                }
+            )
+
     command = build_run_command(template, output_dir, resolved_params, instance_id, project_obj)
     completed, started_at, finished_at = execute_subprocess(
         command,
@@ -1634,7 +1670,6 @@ def run_template(
     )
 
     outputs = collect_outputs(template, output_dir)
-    meta_path = linkar_dir / "meta.json"
     state = "completed" if completed.returncode == 0 else "failed"
     write_json(
         meta_path,
