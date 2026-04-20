@@ -149,6 +149,8 @@ Project run removal is first-class:
 ```bash
 linkar project remove-run fastqc_001
 linkar project remove-run fastqc --delete-files
+linkar project prune --dry-run
+linkar project prune
 ```
 
 Behavior:
@@ -157,6 +159,9 @@ Behavior:
 - accepts a unique template id if it is unambiguous in the project
 - accepts a run path or meta path
 - `--delete-files` also removes the recorded run directory from disk
+- `project prune` keeps the newest run per visible path and, by default, deletes orphaned historical run directories for the pruned entries
+- `project prune --keep-files` cleans `project.yaml` without deleting directories
+- `project prune --dry-run` previews the cleanup before applying it
 
 If a template id matches multiple recorded runs, Linkar returns an ambiguity error instead of
 guessing.

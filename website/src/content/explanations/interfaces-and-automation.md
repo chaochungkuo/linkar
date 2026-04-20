@@ -35,6 +35,7 @@ Key behavior:
 - `render` always stages only
 - `collect` records outputs after manual execution
 - `project remove-run` can detach or delete recorded runs
+- `project prune` can collapse older duplicate-path history while keeping the newest visible run
 - `config author` stores reusable author defaults for new projects
 
 ## Help and shell completion

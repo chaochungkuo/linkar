@@ -45,6 +45,7 @@ from linkar.core import (
     load_project,
     remove_global_pack,
     remove_project_pack,
+    prune_project_runs,
     remove_project_run,
     set_global_author,
     set_project_author,
@@ -701,6 +702,75 @@ def project_remove_run_command(
         path=result["path"],
         deleted=delete_files,
         plain_text=f"{result['instance_id']}\t{result['id']}\t{result['path']}{suffix}",
+    )
+
+
+@project_group.command("prune")
+@click.option(
+    "--delete-files/--keep-files",
+    default=True,
+    show_default=True,
+    help="Delete orphaned recorded run directories for pruned entries.",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Show what would be pruned without changing project.yaml or deleting files.",
+)
+@click.option(
+    "--template",
+    "template_id",
+    help="Only prune duplicate-path history for the selected template id.",
+)
+@click.option(
+    "--project",
+    type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+    help="Project directory or project.yaml path. Defaults to the current directory.",
+    show_default=False,
+)
+@handle_linkar_errors
+def project_prune_command(
+    delete_files: bool,
+    dry_run: bool,
+    template_id: str | None,
+    project: str | None,
+    ui: CliUI,
+) -> None:
+    """Prune older duplicate run records, keeping the newest entry per visible path."""
+    result = prune_project_runs(
+        project=project,
+        delete_files=delete_files,
+        dry_run=dry_run,
+        template_id=template_id,
+    )
+    removed_runs = result.get("removed_runs") if isinstance(result.get("removed_runs"), list) else []
+    deleted_paths = result.get("deleted_paths") if isinstance(result.get("deleted_paths"), list) else []
+    skipped_paths = result.get("skipped_paths") if isinstance(result.get("skipped_paths"), list) else []
+    missing_paths = result.get("missing_paths") if isinstance(result.get("missing_paths"), list) else []
+    removed_ids = ", ".join(
+        str(item.get("instance_id"))
+        for item in removed_runs
+        if isinstance(item, dict) and item.get("instance_id")
+    )
+    mode_label = "dry-run" if dry_run else "applied"
+    title = "[accent]Project Prune Preview[/accent]" if dry_run else "[accent]Project Pruned[/accent]"
+    ui.print_summary_panel(
+        title,
+        [
+            ("Mode", mode_label),
+            ("Template", template_id or "all"),
+            ("Removed runs", str(len(removed_runs))),
+            ("Deleted dirs", str(len(deleted_paths))),
+            ("Skipped dirs", str(len(skipped_paths))),
+            ("Missing dirs", str(len(missing_paths))),
+            ("Runs", removed_ids or "-"),
+        ],
+        plain_text=(
+            f"{mode_label}\tremoved={len(removed_runs)}\tdeleted={len(deleted_paths)}"
+            f"\tskipped={len(skipped_paths)}\tmissing={len(missing_paths)}\t"
+            f"template={template_id or 'all'}\t"
+            f"runs={removed_ids or '-'}"
+        ),
     )
 
 

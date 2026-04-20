@@ -1096,6 +1096,142 @@ def list_project_runs(project: str | Path | Project | None = None) -> list[dict[
     return list(project_obj.data.get("templates", []))
 
 
+def _resolve_project_entry_path(project_root: Path, value: Any) -> Path | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    candidate = Path(value).expanduser()
+    if not candidate.is_absolute():
+        candidate = project_root / candidate
+    return candidate.resolve()
+
+
+def _entry_history_path(project_root: Path, entry: dict[str, Any]) -> Path | None:
+    return _resolve_project_entry_path(project_root, entry.get("history_path") or entry.get("path"))
+
+
+def _entry_visible_path(project_root: Path, entry: dict[str, Any]) -> Path | None:
+    return _resolve_project_entry_path(project_root, entry.get("path"))
+
+
+def prune_project_runs(
+    *,
+    project: str | Path | Project | None = None,
+    delete_files: bool = True,
+    dry_run: bool = False,
+    template_id: str | None = None,
+) -> dict[str, Any]:
+    if isinstance(project, (str, Path)):
+        project_obj = load_project(project)
+    elif project is None:
+        project_obj = discover_project()
+    else:
+        project_obj = project
+    if project_obj is None:
+        raise ProjectValidationError(
+            "Pruning runs requires an active project. Run it inside a directory containing project.yaml or pass --project PATH."
+        )
+
+    templates = list(project_obj.data.setdefault("templates", []))
+    visible_key_last_index: dict[str, int] = {}
+    visible_key_counts: dict[str, int] = {}
+
+    for index, entry in enumerate(templates):
+        if template_id and str(entry.get("id") or "") != template_id:
+            continue
+        visible_path = _entry_visible_path(project_obj.root, entry)
+        if visible_path is None:
+            continue
+        key = str(visible_path)
+        visible_key_last_index[key] = index
+        visible_key_counts[key] = visible_key_counts.get(key, 0) + 1
+
+    prune_indices: set[int] = set()
+    for index, entry in enumerate(templates):
+        if template_id and str(entry.get("id") or "") != template_id:
+            continue
+        visible_path = _entry_visible_path(project_obj.root, entry)
+        if visible_path is None:
+            continue
+        key = str(visible_path)
+        if visible_key_counts.get(key, 0) > 1 and visible_key_last_index.get(key) != index:
+            prune_indices.add(index)
+
+    if not prune_indices:
+        return {
+            "removed_runs": [],
+            "deleted_paths": [],
+            "skipped_paths": [],
+            "missing_paths": [],
+            "delete_files": delete_files,
+            "dry_run": dry_run,
+            "template_id": template_id or "",
+        }
+
+    kept_templates = [entry for index, entry in enumerate(templates) if index not in prune_indices]
+    removed_entries = [dict(templates[index]) for index in sorted(prune_indices)]
+
+    protected_paths: set[str] = set()
+    for entry in kept_templates:
+        for resolved in (
+            _entry_history_path(project_obj.root, entry),
+            _entry_visible_path(project_obj.root, entry),
+        ):
+            if resolved is not None:
+                protected_paths.add(str(resolved))
+
+    deleted_paths: list[str] = []
+    skipped_paths: list[str] = []
+    missing_paths: list[str] = []
+    seen_history_paths: set[str] = set()
+
+    for entry in removed_entries:
+        history_path = _entry_history_path(project_obj.root, entry)
+        if history_path is None:
+            continue
+        history_path_str = str(history_path)
+        if history_path_str in seen_history_paths:
+            continue
+        seen_history_paths.add(history_path_str)
+        if history_path_str in protected_paths:
+            skipped_paths.append(history_path_str)
+            continue
+        if not delete_files:
+            continue
+        if dry_run:
+            deleted_paths.append(history_path_str)
+            continue
+        if history_path.exists():
+            if history_path.is_symlink() or history_path.is_file():
+                history_path.unlink()
+            else:
+                shutil.rmtree(history_path)
+            deleted_paths.append(history_path_str)
+        else:
+            missing_paths.append(history_path_str)
+
+    if not dry_run:
+        project_obj.data["templates"] = kept_templates
+        save_yaml(project_obj.root / "project.yaml", project_obj.data)
+
+    return {
+        "removed_runs": [
+            {
+                "id": entry.get("id"),
+                "instance_id": entry.get("instance_id"),
+                "path": entry.get("path"),
+                "history_path": entry.get("history_path"),
+            }
+            for entry in removed_entries
+        ],
+        "deleted_paths": deleted_paths,
+        "skipped_paths": skipped_paths,
+        "missing_paths": missing_paths,
+        "delete_files": delete_files,
+        "dry_run": dry_run,
+        "template_id": template_id or "",
+    }
+
+
 def remove_project_run(
     run_ref: str | Path,
     *,

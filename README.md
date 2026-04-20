@@ -66,6 +66,15 @@ linkar project init --name study --adopt /path/to/existing_run
 
 In project mode, Linkar exposes a stable directory such as `./simple_echo`, writes results under `results/`, and keeps immutable run history plus metadata under `.linkar/runs/<instance_id>/`. Rendered bundles created inside a project are also recorded in `project.yaml` with `state: rendered`, while executed runs are recorded with execution state such as `completed` or `failed`. For templates whose declared `run.mode` is `render`, `linkar run` inside a project executes directly in the visible project directory instead of creating a `.linkar/runs/...` history path. By default it runs the current rendered bundle if one already exists; use `linkar run TEMPLATE --refresh` to rerender first.
 
+If you accumulate older duplicate run entries for the same visible project path, use:
+
+```bash
+linkar project prune --dry-run
+linkar project prune
+```
+
+By default, `project prune` keeps the newest run per visible path and removes orphaned historical run directories for the pruned entries. Use `--keep-files` if you only want to clean `project.yaml`.
+
 For ad hoc runs without a project:
 
 ```bash
