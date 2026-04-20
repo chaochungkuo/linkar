@@ -5,7 +5,6 @@ from typing import Any
 from linkar.mcp_tools import (
     collect_run_outputs_tool,
     describe_template_tool,
-    generate_methods_tool,
     get_run_outputs_tool,
     get_run_runtime_tool,
     inspect_run_tool,
@@ -141,10 +140,6 @@ def build_server() -> Any:
     @mcp.tool(description="Read only the runtime diagnostics for one recorded run.")
     def linkar_get_run_runtime(run_ref: str, project: str | None = None) -> dict[str, Any]:
         return get_run_runtime_tool(run_ref=run_ref, project=project)
-
-    @mcp.tool(description="Generate short methods text from recorded runs in the current or selected project.")
-    def linkar_generate_methods(project: str | None = None) -> dict[str, Any]:
-        return generate_methods_tool(project=project)
 
     return mcp
 

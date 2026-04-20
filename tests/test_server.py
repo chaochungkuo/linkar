@@ -453,16 +453,6 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
     assert status == "200 OK"
     assert assets_payload["data"]["assets"][0]["pack_ref"] == str(ROOT / "examples" / "packs" / "basic")
 
-    status, _, methods_payload = call_app(
-        app,
-        method="GET",
-        path="/methods",
-        query=f"project={project_dir}",
-    )
-    assert status == "200 OK"
-    assert "simple_echo" in methods_payload["data"]["text"]
-
-
 def test_server_resolve_and_test_endpoints(tmp_path: Path) -> None:
     app = make_app()
 

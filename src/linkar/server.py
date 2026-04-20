@@ -15,7 +15,6 @@ from linkar.assets import resolve_asset_refs
 from linkar.core import (
     collect_run_outputs,
     describe_template,
-    generate_methods,
     inspect_run,
     inspect_runtime,
     list_configured_packs,
@@ -772,10 +771,6 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
                 if raw_path.startswith("/v1/"):
                     metadata = {"kind": "run", **metadata}
                 return success_response(start_response, metadata)
-
-            if method == "GET" and path == "/methods":
-                text = generate_methods(project=query_value(query, "project"))
-                return success_response(start_response, {"text": text})
 
             if method == "POST" and path == "/resolve":
                 payload = load_json_body(environ)

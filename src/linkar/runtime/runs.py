@@ -15,7 +15,7 @@ from typing import Any
 
 from linkar import __version__
 from linkar.assets import resolve_asset_refs
-from linkar.errors import ExecutionError, LinkarError, ProjectValidationError, TemplateValidationError
+from linkar.errors import ExecutionError, ProjectValidationError, TemplateValidationError
 from linkar.runtime.bindings import (
     load_binding_config,
     resolve_bound_outdir,
@@ -1481,34 +1481,6 @@ def collect_run_outputs(
         "meta": str(meta_path),
         "outputs": outputs,
     }
-
-
-def generate_methods(project: str | Path | Project | None = None) -> str:
-    runs = list_project_runs(project=project)
-    if not runs:
-        raise LinkarError("No recorded runs found for methods generation")
-
-    fragments: list[str] = []
-    for index, run in enumerate(runs, start=1):
-        metadata = inspect_run(run["instance_id"], project=project)
-        template = metadata["template"]
-        software = metadata.get("software") or []
-        software_text = ", ".join(
-            f"{item['name']} {item.get('version', 'unknown')}"
-            for item in software
-            if isinstance(item, dict) and item.get("name")
-        )
-        params = metadata.get("params") or {}
-        params_text = ", ".join(f"{key}={value}" for key, value in sorted(params.items()))
-
-        sentence = f"Step {index}: template '{template}' was run"
-        if software_text:
-            sentence += f" using {software_text}"
-        if params_text:
-            sentence += f" with parameters {params_text}"
-        sentence += "."
-        fragments.append(sentence)
-    return " ".join(fragments)
 
 
 def test_template(

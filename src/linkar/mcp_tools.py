@@ -6,7 +6,6 @@ from typing import Any
 from linkar.core import (
     collect_run_outputs,
     describe_template,
-    generate_methods,
     inspect_run,
     inspect_runtime,
     list_project_runs,
@@ -135,7 +134,3 @@ def get_run_outputs_tool(*, run_ref: str | Path, project: str | Path | None = No
 
 def get_run_runtime_tool(*, run_ref: str | Path, project: str | Path | None = None) -> dict[str, Any]:
     return inspect_runtime(run_ref, project=project)
-
-
-def generate_methods_tool(*, project: str | Path | None = None) -> dict[str, Any]:
-    return {"text": generate_methods(project=project)}

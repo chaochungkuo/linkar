@@ -30,7 +30,6 @@ from linkar.core import (
     clear_project_author,
     collect_run_outputs,
     discover_project,
-    generate_methods,
     get_active_global_pack_entry,
     get_active_pack_entry,
     get_global_author,
@@ -1017,19 +1016,6 @@ def inspect_run_command(run_ref: str, project: str | None, output_format: str, u
         ui.print_metadata(metadata)
         return
     ui.print_data(metadata, format=output_format)
-
-
-@app.command("methods")
-@click.option(
-    "--project",
-    type=click.Path(path_type=str, dir_okay=True, file_okay=True),
-    help="Project directory or project.yaml path. Defaults to the current directory.",
-    show_default=False,
-)
-@handle_linkar_errors
-def methods_command(project: str | None, ui: CliUI) -> None:
-    """Generate an editable methods summary from the runs recorded in a project."""
-    ui.print_methods(generate_methods(project=project))
 
 
 @app.command("serve")
