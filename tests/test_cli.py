@@ -1302,7 +1302,13 @@ def test_collect_command_updates_outputs_after_manual_run(tmp_path: Path) -> Non
 
     meta = json.loads((rendered_dir / ".linkar" / "meta.json").read_text())
     assert meta["outputs"]["greeting_file"] == str((rendered_dir / "results" / "greeting.txt").resolve())
-    assert "project unchanged" in collect.stdout
+    assert collect.stdout.strip() == str(rendered_dir)
+
+    collect_json = run_cli("collect", str(rendered_dir), "--format", "json", cwd=tmp_path)
+    assert collect_json.returncode == 0, collect_json.stderr
+    collect_payload = json.loads(collect_json.stdout)
+    assert collect_payload["kind"] == "run_collect"
+    assert collect_payload["project_updated"] is False
 
 
 def test_collect_command_accepts_unique_template_id(tmp_path: Path) -> None:
@@ -1333,8 +1339,51 @@ def test_collect_command_accepts_unique_template_id(tmp_path: Path) -> None:
 
     collected = run_cli("collect", "simple_echo", cwd=project_dir)
     assert collected.returncode == 0, collected.stderr
-    assert str(outdir) in collected.stdout
-    assert "project updated" in collected.stdout
+    assert collected.stdout.strip() == str(outdir)
+
+    collected_json = run_cli("collect", "simple_echo", "--format", "json", cwd=project_dir)
+    assert collected_json.returncode == 0, collected_json.stderr
+    collected_payload = json.loads(collected_json.stdout)
+    assert collected_payload["kind"] == "run_collect"
+    assert collected_payload["project_updated"] is True
+
+
+def test_run_and_render_commands_support_structured_output_formats(tmp_path: Path) -> None:
+    run_json = run_cli(
+        "run",
+        "simple_echo",
+        "--pack",
+        str(ROOT / "examples" / "packs" / "basic"),
+        "--param",
+        "name=Structured",
+        "--format",
+        "json",
+        cwd=tmp_path,
+    )
+    assert run_json.returncode == 0, run_json.stderr
+    run_payload = json.loads(run_json.stdout)
+    assert run_payload["kind"] == "run_submission"
+    assert run_payload["template"] == "simple_echo"
+    assert Path(run_payload["outdir"]).exists()
+
+    render_yaml = run_cli(
+        "render",
+        "simple_echo",
+        "--pack",
+        str(ROOT / "examples" / "packs" / "basic"),
+        "--param",
+        "name=Structured",
+        "--outdir",
+        str(tmp_path / "structured_render"),
+        "--format",
+        "yaml",
+        cwd=tmp_path,
+    )
+    assert render_yaml.returncode == 0, render_yaml.stderr
+    render_payload = yaml.safe_load(render_yaml.stdout)
+    assert render_payload["kind"] == "render_submission"
+    assert render_payload["template"] == "simple_echo"
+    assert Path(render_payload["outdir"]).exists()
 
 
 def test_render_in_project_defaults_to_visible_project_template_dir(tmp_path: Path) -> None:
@@ -2022,12 +2071,16 @@ cp "${LINKAR_TESTDATA_DIR}/fixture.txt" "${LINKAR_RESULTS_DIR}/copied.txt"
 
     completed = run_cli("test", str(template), cwd=tmp_path)
     assert completed.returncode == 0, completed.stderr
-    assert "PASS self_tested" in completed.stdout
-
-    workspace = Path(completed.stdout.strip().split("\t", 1)[1])
+    workspace = Path(completed.stdout.strip())
     assert (workspace / "results" / "copied.txt").read_text().strip() == "fixture"
     runtime = json.loads((workspace / ".linkar" / "runtime.json").read_text())
     assert runtime["success"] is True
+
+    completed_json = run_cli("test", str(template), "--format", "json", cwd=tmp_path)
+    assert completed_json.returncode == 0, completed_json.stderr
+    test_payload = json.loads(completed_json.stdout)
+    assert test_payload["kind"] == "test_submission"
+    assert Path(test_payload["outdir"]).exists()
 
 
 def test_template_test_command_can_resolve_template_from_pack(tmp_path: Path) -> None:
@@ -2052,7 +2105,7 @@ printf 'pack test\n' > "${LINKAR_RESULTS_DIR}/result.txt"
 
     completed = run_cli("test", "pack_tested", "--pack", str(pack_root), cwd=tmp_path)
     assert completed.returncode == 0, completed.stderr
-    assert "PASS pack_tested" in completed.stdout
+    assert Path(completed.stdout.strip()).exists()
 
 
 def test_template_test_command_fails_cleanly_without_test_script(tmp_path: Path) -> None:
@@ -2100,7 +2153,7 @@ assert (results_dir / "value.txt").read_text().strip() == "ok"
 
     completed = run_cli("test", str(template), cwd=tmp_path)
     assert completed.returncode == 0, completed.stderr
-    assert "PASS python_tested" in completed.stdout
+    assert Path(completed.stdout.strip()).exists()
 
 
 def test_template_test_command_rejects_multiple_test_entrypoints(tmp_path: Path) -> None:

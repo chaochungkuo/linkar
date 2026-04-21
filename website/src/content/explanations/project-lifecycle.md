@@ -183,6 +183,9 @@ Use:
 - `inspect run` when you need provenance
 - `project prune` when history has become cluttered
 
+When you script these steps, prefer `--format json` or `--format yaml` on execution commands. The
+default plain stdout stays intentionally minimal and prints the primary path only.
+
 ## Related pages
 
 - `Project runs and metadata` explains what is recorded in `project.yaml` and `.linkar/`

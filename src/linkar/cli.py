@@ -941,12 +941,23 @@ def templates_command(pack: tuple[str, ...], project: str | None, output_format:
     help="Project directory or project.yaml path. Defaults to the current directory.",
     show_default=False,
 )
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["rich", "json", "yaml"]),
+    default="rich",
+    show_default=True,
+    help="Output format.",
+)
 @handle_linkar_errors
-def collect_command(run_ref: str, project: str | None, ui: CliUI) -> None:
+def collect_command(run_ref: str, project: str | None, output_format: str, ui: CliUI) -> None:
     """Collect declared outputs by run reference and report whether the active project ledger was updated."""
     with ui.status("Collecting outputs"):
         result = collect_run_outputs(run_ref, project=project)
-    ui.print_collect_completed(result)
+    if output_format == "rich":
+        ui.print_collect_completed(result)
+        return
+    ui.print_data(result, format=output_format)
 
 
 @app.command("test")
@@ -977,6 +988,14 @@ def collect_command(run_ref: str, project: str | None, ui: CliUI) -> None:
     help="Stream the template test stdout and stderr while it runs.",
     show_default=False,
 )
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["rich", "json", "yaml"]),
+    default="rich",
+    show_default=True,
+    help="Output format.",
+)
 @handle_linkar_errors
 def test_command(
     template: str,
@@ -984,6 +1003,7 @@ def test_command(
     project: str | None,
     outdir: str | None,
     verbose: bool,
+    output_format: str,
     ui: CliUI,
 ) -> None:
     """Run a template-local test.sh or test.py if the template provides one."""
@@ -1003,7 +1023,10 @@ def test_command(
                 outdir=outdir,
                 pack_refs=list(pack),
             )
-    ui.print_test_completed(result)
+    if output_format == "rich":
+        ui.print_test_completed(result)
+        return
+    ui.print_data(result, format=output_format)
 
 
 @app.group("inspect")

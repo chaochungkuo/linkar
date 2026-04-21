@@ -1531,6 +1531,7 @@ def collect_run_outputs(
     write_json(meta_path, metadata)
     project_updated = maybe_update_project_outputs(meta_path, outputs, project_obj)
     return {
+        "kind": "run_collect",
         "run_ref": str(run_ref),
         "outdir": str(outdir),
         "meta": str(meta_path),
@@ -1626,6 +1627,7 @@ def test_template(
         )
 
     return {
+        "kind": "test_submission",
         "template": template.id,
         "outdir": str(test_dir),
         "runtime": str(runtime_path),
@@ -1771,6 +1773,7 @@ def run_template(
         )
 
     return {
+        "kind": "run_submission",
         "template": template.id,
         "instance_id": instance_id,
         "outdir": str(display_dir),
@@ -1937,6 +1940,7 @@ def render_template(
         )
 
     return {
+        "kind": "render_submission",
         "template": template.id,
         "instance_id": instance_id,
         "outdir": str(display_dir),

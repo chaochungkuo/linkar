@@ -42,6 +42,7 @@ def template_command_callback(
         project: str | None,
         binding: str | None,
         outdir: str | None,
+        output_format: str,
         prompt_missing: bool,
         *,
         param: tuple[tuple[str, str], ...],
@@ -65,9 +66,9 @@ def template_command_callback(
                 binding_ref=binding,
                 prompt_missing=prompt_missing,
                 action=action,
-                verbose=True,
-                refresh=refresh,
-            )
+                    verbose=True,
+                    refresh=refresh,
+                )
         else:
             with ui.status(status_message):
                 result = execute_with_optional_prompts(
@@ -81,7 +82,9 @@ def template_command_callback(
                     action=action,
                     refresh=refresh,
                 )
-        if action == "render":
+        if output_format != "rich":
+            ui.print_data(result, format=output_format)
+        elif action == "render":
             ui.print_render_completed(result)
         else:
             ui.print_run_completed(result)
@@ -119,6 +122,13 @@ def template_command_callback(
                 type=click.Path(path_type=str, dir_okay=True, file_okay=True),
                 help="Write run artifacts to a specific directory instead of the default location.",
                 show_default=False,
+            ),
+            click.Option(
+                ["--format", "output_format"],
+                type=click.Choice(["rich", "json", "yaml"]),
+                default="rich",
+                show_default=True,
+                help="Output format.",
             ),
             click.Option(
                 ["--prompt/--no-prompt", "prompt_missing"],
@@ -181,6 +191,7 @@ def generic_run_callback(bound_template: str | None = None, *, action: str = "ru
         binding: str | None,
         project: str | None,
         outdir: str | None,
+        output_format: str,
         prompt_missing: bool,
         *,
         param: tuple[tuple[str, str], ...],
@@ -226,7 +237,9 @@ def generic_run_callback(bound_template: str | None = None, *, action: str = "ru
                     action=action,
                     refresh=refresh,
                 )
-        if action == "render":
+        if output_format != "rich":
+            ui.print_data(result, format=output_format)
+        elif action == "render":
             ui.print_render_completed(result)
         else:
             ui.print_run_completed(result)
@@ -279,6 +292,13 @@ def make_generic_run_command(
                 type=click.Path(path_type=str, dir_okay=True, file_okay=True),
                 help="Write run artifacts to a specific directory instead of the default location.",
                 show_default=False,
+            ),
+            click.Option(
+                ["--format", "output_format"],
+                type=click.Choice(["rich", "json", "yaml"]),
+                default="rich",
+                show_default=True,
+                help="Output format.",
             ),
             click.Option(
                 ["--prompt/--no-prompt", "prompt_missing"],

@@ -275,13 +275,6 @@ class CliUI:
         project_path = str(result.get("project_path") or "")
         if not self.rich_enabled:
             self.plain_print(str(outdir))
-            if project_path:
-                if project_updated:
-                    self.plain_print(f"project updated\t{project_path}")
-                else:
-                    self.plain_print(f"project unchanged\t{project_path}")
-            else:
-                self.plain_print("project unchanged\t(no active project)")
             return
         body = Text()
         body.append("Run Dir", style="label")
@@ -314,7 +307,7 @@ class CliUI:
     def print_test_completed(self, result: dict[str, Any]) -> None:
         outdir = Path(result["outdir"])
         if not self.rich_enabled:
-            self.plain_print(f"PASS {result['template']}\t{outdir}")
+            self.plain_print(str(outdir))
             return
         body = Text()
         body.append("Template", style="label")

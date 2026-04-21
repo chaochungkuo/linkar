@@ -41,6 +41,12 @@ Key behavior:
 - `project prune --keep N` keeps more than one recent run per visible path when you want shallow history instead of a single survivor
 - `config author` stores reusable author defaults for new projects
 
+Execution command output contract:
+
+- default human output is rich when a terminal supports it
+- default plain stdout is the primary workspace or run directory path
+- `--format json` and `--format yaml` are the stable structured forms for `run`, `render`, `collect`, and `test`
+
 If you want the end-to-end mental model first, read `Project lifecycle` before the more detailed
 runtime pages.
 

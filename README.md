@@ -76,6 +76,11 @@ Command model:
 
 `RUN_REF` accepts an instance id such as `fastqc_001`, a unique template id within the project such as `fastqc`, a run directory path, or a `.linkar/meta.json` path.
 
+For execution-style commands such as `run`, `render`, `collect`, and `test`:
+
+- the default plain stdout is the primary workspace or run directory path
+- use `--format json` or `--format yaml` when you want stable structured output
+
 Typical project lifecycle:
 
 1. `linkar project init --name study`
