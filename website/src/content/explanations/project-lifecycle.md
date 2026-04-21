@@ -16,7 +16,8 @@ For most project work, the lifecycle is:
 4. `run` when you want Linkar to execute the template
 5. `collect` after manual execution of a rendered bundle
 6. `inspect run` to review metadata and provenance
-7. `project prune` when stale duplicate-path history accumulates
+7. `project latest` when you want the newest active recorded run
+8. `project prune` when stale duplicate-path history accumulates
 
 ## Step 1: initialize a project
 
@@ -98,6 +99,12 @@ linkar collect ./demultiplex
 - `.linkar/meta.json`
 - `project.yaml` when the run belongs to the active project
 
+The CLI now tells you whether the active project ledger was updated or left unchanged, so it is
+easier to distinguish:
+
+- collected outputs for a project-registered run
+- collected outputs for an ad hoc run outside any active project
+
 Accepted run references include:
 
 - instance ids such as `fastqc_001`
@@ -122,7 +129,25 @@ This is the primary way to answer:
 - what outputs were collected
 - what warnings were recorded
 
-## Step 7: prune stale history
+## Step 7: ask for the newest active recorded run
+
+Sometimes you do not want the whole history. You only want the newest recorded run for a template
+or visible path.
+
+Use:
+
+```bash
+linkar project latest methods
+linkar project latest ./methods
+```
+
+This is useful when:
+
+- a template has been rerun several times
+- you want the current visible run quickly
+- you want a stable precursor before `inspect run` or export logic
+
+## Step 8: prune stale history
 
 Over time, rerendering or replacing visible bundles can leave older duplicate-path entries in
 `project.yaml`.

@@ -35,6 +35,7 @@ Key behavior:
 - `render` always stages only
 - render-mode templates reuse the visible project bundle on `run`; pass `--refresh` to rerender first
 - `collect` records outputs after manual execution
+- `project latest` returns the newest matching recorded run without making you scan full history
 - `project remove-run` can detach or delete recorded runs
 - `project prune` can collapse older duplicate-path history while keeping the newest visible run
 - `config author` stores reusable author defaults for new projects

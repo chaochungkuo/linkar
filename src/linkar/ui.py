@@ -271,8 +271,17 @@ class CliUI:
 
     def print_collect_completed(self, result: dict[str, Any]) -> None:
         outdir = Path(result["outdir"])
+        project_updated = bool(result.get("project_updated"))
+        project_path = str(result.get("project_path") or "")
         if not self.rich_enabled:
             self.plain_print(str(outdir))
+            if project_path:
+                if project_updated:
+                    self.plain_print(f"project updated\t{project_path}")
+                else:
+                    self.plain_print(f"project unchanged\t{project_path}")
+            else:
+                self.plain_print("project unchanged\t(no active project)")
             return
         body = Text()
         body.append("Run Dir", style="label")
@@ -282,6 +291,17 @@ class CliUI:
         body.append("Outputs", style="label")
         body.append(": ", style="muted")
         body.append(str(len(result.get("outputs", {}))), style="accent")
+        body.append("\n")
+        body.append("Project", style="label")
+        body.append(": ", style="muted")
+        if project_path:
+            body.append("updated" if project_updated else "unchanged", style="accent" if project_updated else "warn")
+            body.append(" ", style="muted")
+            body.append(project_path, style="value")
+        else:
+            body.append("unchanged", style="warn")
+            body.append(" ", style="muted")
+            body.append("(no active project)", style="value")
         self.console.print(
             Panel(
                 body,

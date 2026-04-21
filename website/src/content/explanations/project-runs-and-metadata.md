@@ -145,6 +145,9 @@ This updates:
 `collect` refreshes declared outputs for a registered run. It does not create an unrelated project
 entry from scratch; registration happens during `render`, `run`, or explicit adoption.
 
+The CLI also tells you whether the active project's `project.yaml` entry was updated or whether the
+collection only affected local run metadata.
+
 Shared run references across `collect`, `inspect run`, `project view`, and `project remove-run`
 accept:
 
@@ -160,6 +163,7 @@ Project run removal is first-class:
 ```bash
 linkar project remove-run fastqc_001
 linkar project remove-run fastqc --delete-files
+linkar project latest fastqc
 linkar project prune --dry-run
 linkar project prune
 ```
@@ -169,6 +173,7 @@ Behavior:
 - accepts `instance_id`
 - accepts a unique template id if it is unambiguous in the project
 - accepts a run path or meta path
+- `project latest` returns the newest matching recorded run for a template id, visible path, instance id, or meta path
 - `--delete-files` also removes the recorded run directory from disk
 - `project prune` keeps the newest run per visible path and, by default, deletes orphaned historical run directories for the pruned entries
 - `project prune --keep-files` cleans `project.yaml` without deleting directories

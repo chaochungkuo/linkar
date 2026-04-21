@@ -1194,6 +1194,43 @@ def resolve_project_run(run_ref: str | Path, *, project: str | Path | Project | 
     return matches[0]
 
 
+def latest_project_run(run_ref: str | Path, *, project: str | Path | Project | None = None) -> dict[str, Any]:
+    project_obj = _load_project_for_runs(project, action="Resolving the latest run")
+    templates = project_obj.data.setdefault("templates", [])
+    run_ref_str = str(run_ref)
+
+    exact_instance_matches = [entry for entry in templates if entry.get("instance_id") == run_ref_str]
+    if exact_instance_matches:
+        return exact_instance_matches[-1]
+
+    template_matches = [entry for entry in templates if entry.get("id") == run_ref_str]
+    if template_matches:
+        return template_matches[-1]
+
+    resolved_ref = Path(run_ref).expanduser().resolve() if Path(run_ref).expanduser().exists() else None
+    if resolved_ref is not None:
+        path_matches: list[dict[str, Any]] = []
+        for entry in templates:
+            candidates = {
+                candidate
+                for candidate in (
+                    _entry_meta_path(project_obj.root, entry),
+                    _entry_history_path(project_obj.root, entry),
+                    _entry_visible_path(project_obj.root, entry),
+                )
+                if candidate is not None
+            }
+            history_path = _entry_history_path(project_obj.root, entry)
+            if history_path is not None:
+                candidates.add((history_path / ".linkar" / "meta.json").resolve())
+            if resolved_ref in candidates:
+                path_matches.append(entry)
+        if path_matches:
+            return path_matches[-1]
+
+    raise ProjectValidationError(f"Run not found in project: {run_ref}")
+
+
 def _stale_duplicate_path_runs(
     project: Project,
     *,
@@ -1457,9 +1494,9 @@ def resolve_run_meta_path(run_ref: str | Path, project: str | Path | Project | N
     raise ProjectValidationError(f"Run not found: {run_ref}")
 
 
-def maybe_update_project_outputs(meta_path: Path, outputs: dict[str, Any], project: Project | None) -> None:
+def maybe_update_project_outputs(meta_path: Path, outputs: dict[str, Any], project: Project | None) -> bool:
     if project is None:
-        return
+        return False
     from linkar.runtime.shared import save_yaml
 
     relative_meta = os.path.relpath(meta_path, project.root)
@@ -1472,6 +1509,7 @@ def maybe_update_project_outputs(meta_path: Path, outputs: dict[str, Any], proje
             break
     if changed:
         save_yaml(project.root / "project.yaml", project.data)
+    return changed
 
 
 def collect_run_outputs(
@@ -1493,12 +1531,14 @@ def collect_run_outputs(
     metadata["outputs"] = outputs
     metadata["collected_at"] = utc_now().isoformat()
     write_json(meta_path, metadata)
-    maybe_update_project_outputs(meta_path, outputs, project_obj)
+    project_updated = maybe_update_project_outputs(meta_path, outputs, project_obj)
     return {
         "run_ref": str(run_ref),
         "outdir": str(outdir),
         "meta": str(meta_path),
         "outputs": outputs,
+        "project_updated": project_updated,
+        "project_path": str(project_obj.root) if project_obj is not None else "",
     }
 
 

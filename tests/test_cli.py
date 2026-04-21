@@ -383,6 +383,40 @@ def test_project_view_command_accepts_visible_run_path(tmp_path: Path) -> None:
     assert [item["instance_id"] for item in payload["templates"]] == ["methods_001"]
 
 
+def test_project_latest_command_returns_newest_matching_template_run(tmp_path: Path) -> None:
+    project_dir = tmp_path / "study"
+    completed = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert completed.returncode == 0, completed.stderr
+
+    project_file = project_dir / "project.yaml"
+    project_data = yaml.safe_load(project_file.read_text())
+    project_data["templates"] = [
+        {
+            "id": "methods",
+            "instance_id": "methods_001",
+            "path": "methods",
+            "history_path": ".linkar/runs/methods_001",
+            "meta": ".linkar/runs/methods_001/.linkar/meta.json",
+            "state": "completed",
+        },
+        {
+            "id": "methods",
+            "instance_id": "methods_002",
+            "path": "methods",
+            "history_path": "methods",
+            "meta": "methods/.linkar/meta.json",
+            "state": "completed",
+        },
+    ]
+    project_file.write_text(yaml.safe_dump(project_data, sort_keys=False), encoding="utf-8")
+
+    latest = run_cli("project", "latest", "methods", "--format", "json", cwd=project_dir)
+    assert latest.returncode == 0, latest.stderr
+    payload = json.loads(latest.stdout)
+    assert payload["instance_id"] == "methods_002"
+    assert payload["path"] == "methods"
+
+
 def test_project_init_author_options_override_global_defaults(tmp_path: Path) -> None:
     env = {"LINKAR_HOME": str(tmp_path / "home")}
     configured = run_cli(
@@ -1213,6 +1247,7 @@ def test_collect_command_updates_outputs_after_manual_run(tmp_path: Path) -> Non
 
     meta = json.loads((rendered_dir / ".linkar" / "meta.json").read_text())
     assert meta["outputs"]["greeting_file"] == str((rendered_dir / "results" / "greeting.txt").resolve())
+    assert "project unchanged" in collect.stdout
 
 
 def test_collect_command_accepts_unique_template_id(tmp_path: Path) -> None:
@@ -1244,6 +1279,7 @@ def test_collect_command_accepts_unique_template_id(tmp_path: Path) -> None:
     collected = run_cli("collect", "simple_echo", cwd=project_dir)
     assert collected.returncode == 0, collected.stderr
     assert str(outdir) in collected.stdout
+    assert "project updated" in collected.stdout
 
 
 def test_render_in_project_defaults_to_visible_project_template_dir(tmp_path: Path) -> None:

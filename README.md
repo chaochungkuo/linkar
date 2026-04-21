@@ -84,7 +84,8 @@ Typical project lifecycle:
 4. `linkar run TEMPLATE ...` when you want Linkar to execute it
 5. `linkar collect RUN_REF` after manual execution of a rendered bundle
 6. `linkar inspect run RUN_REF` to review provenance
-7. `linkar project prune` when duplicate-path history accumulates
+7. `linkar project latest TEMPLATE_ID` when you want the newest active recorded run
+8. `linkar project prune` when duplicate-path history accumulates
 
 For a fuller walkthrough, see the website explanation `Project lifecycle`.
 
@@ -96,6 +97,13 @@ linkar project prune
 ```
 
 By default, `project prune` keeps the newest run per visible path and removes orphaned historical run directories for the pruned entries. Use `--keep-files` if you only want to clean `project.yaml`.
+
+If you only want the newest recorded run for a template or visible path, use:
+
+```bash
+linkar project latest fastqc
+linkar project latest ./methods
+```
 
 For ad hoc runs without a project:
 

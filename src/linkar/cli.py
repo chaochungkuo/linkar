@@ -37,6 +37,7 @@ from linkar.core import (
     global_config_path,
     init_project,
     inspect_run,
+    latest_project_run,
     list_configured_packs,
     list_global_packs,
     list_project_runs,
@@ -798,6 +799,31 @@ def project_runs(project: str | None, output_format: str, ui: CliUI) -> None:
     ui.print_data(runs, format=output_format)
 
 
+@project_group.command("latest")
+@click.argument("run_ref")
+@click.option(
+    "--project",
+    type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+    help="Project directory or project.yaml path. Defaults to the current directory.",
+)
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["rich", "json", "yaml"]),
+    default="rich",
+    show_default=True,
+    help="Output format.",
+)
+@handle_linkar_errors
+def project_latest_command(run_ref: str, project: str | None, output_format: str, ui: CliUI) -> None:
+    """Show the newest matching run for a template id, run path, instance id, or meta path."""
+    run_entry = latest_project_run(run_ref, project=project)
+    if output_format == "rich":
+        ui.print_runs([run_entry])
+        return
+    ui.print_data(run_entry, format=output_format)
+
+
 @project_group.command("view")
 @click.argument("run_ref", required=False)
 @click.option(
@@ -906,7 +932,7 @@ def templates_command(pack: tuple[str, ...], project: str | None, output_format:
 )
 @handle_linkar_errors
 def collect_command(run_ref: str, project: str | None, ui: CliUI) -> None:
-    """Collect declared outputs by instance id, unique template id, run path, or meta path."""
+    """Collect declared outputs by run reference and report whether the active project ledger was updated."""
     with ui.status("Collecting outputs"):
         result = collect_run_outputs(run_ref, project=project)
     ui.print_collect_completed(result)
