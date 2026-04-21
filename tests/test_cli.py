@@ -3196,12 +3196,50 @@ def test_print_runs_and_packs_render_rich_panels(monkeypatch: pytest.MonkeyPatch
     )
 
     rendered = ui.console.export_text()
+    assert "Run Catalog" in rendered
     assert "Recorded Runs" in rendered
+    assert "Pack Summary" in rendered
     assert "Configured Packs" in rendered
     assert "completed (adopted)" in rendered
     assert "default" in rendered
     assert "0.1.0" in rendered
     assert "/home/ckuo/github/izkf_pack" in rendered
+
+
+def test_print_templates_render_rich_summary_and_group_panels(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    ui = CliUI()
+    ui.console = Console(record=True, force_terminal=True, width=120, theme=THEME)
+
+    ui.print_templates(
+        [
+            {
+                "id": "simple_echo",
+                "description": "Echo one value",
+                "required_inputs": [],
+                "expected_outputs": ["results_dir"],
+                "version": "0.1.0",
+                "pack_ref": "/packs/basic",
+            },
+            {
+                "id": "fastqc",
+                "description": "Run FastQC",
+                "required_inputs": ["input"],
+                "expected_outputs": ["results_dir"],
+                "version": "1.0.0",
+                "pack_ref": "/packs/secondary",
+            },
+        ]
+    )
+
+    rendered = ui.console.export_text()
+    assert "Template Summary" in rendered
+    assert "Total Templates" in rendered
+    assert "Pack Groups" in rendered
+    assert "simple_echo" in rendered
+    assert "fastqc" in rendered
+    assert "/packs/basic" in rendered
+    assert "/packs/secondary" in rendered
 
 
 def test_empty_states_render_clear_messages(monkeypatch: pytest.MonkeyPatch) -> None:

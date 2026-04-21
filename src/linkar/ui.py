@@ -337,6 +337,15 @@ class CliUI:
                 self.plain_print(f"{run['instance_id']}\t{run['id']}\t{run['path']}{suffix}")
             return
 
+        self.print_summary_panel(
+            "[info]Run Catalog[/info]",
+            [
+                ("Total Runs", len(runs)),
+                ("Templates", len({str(run.get("id") or "") for run in runs})),
+            ],
+            border_style="info",
+        )
+
         has_state = any(run.get("state") not in (None, "") or "adopted" in run for run in runs)
         has_binding = any(isinstance(run.get("binding"), dict) and run["binding"].get("ref") for run in runs)
         has_version = any(run.get("template_version") not in (None, "") for run in runs)
@@ -684,12 +693,19 @@ class CliUI:
                         f"{template['id']}\t{description}\t{required_inputs}\t{expected_outputs}\t{version}"
                     )
             return
+        self.print_summary_panel(
+            "[info]Template Summary[/info]",
+            [
+                ("Total Templates", len(templates)),
+                ("Pack Groups", len(grouped)),
+            ],
+            border_style="info",
+        )
         first_group = True
         for pack_ref, pack_templates in grouped.items():
             if not first_group:
                 self.console.print()
             first_group = False
-            self.console.print(f"[label]Pack:[/label] [value]{self._project_value_text(pack_ref)}[/value]")
             table = Table(box=box.SIMPLE_HEAVY, header_style="accent")
             table.add_column("Template")
             table.add_column("Description", style="value")
@@ -704,7 +720,10 @@ class CliUI:
                     ", ".join(template.get("expected_outputs") or []) or "-",
                     template.get("version") or "-",
                 )
-            self._print_tabled_panel(table, title="[info]Template Catalog[/info]")
+            self._print_tabled_panel(
+                table,
+                title=f"[info]Templates[/info] [muted]{self._project_value_text(pack_ref)}[/muted]",
+            )
 
     def print_packs(self, packs: list[dict[str, Any]]) -> None:
         if not packs:
@@ -716,6 +735,14 @@ class CliUI:
                 binding = pack.get("binding") or ""
                 self.plain_print(f"{active}\t{pack['id']}\t{pack['ref']}\t{binding}")
             return
+        self.print_summary_panel(
+            "[info]Pack Summary[/info]",
+            [
+                ("Total Packs", len(packs)),
+                ("Active Packs", sum(1 for pack in packs if pack.get("active"))),
+            ],
+            border_style="info",
+        )
         table = Table(box=box.SIMPLE_HEAVY, header_style="accent")
         table.add_column("Active")
         table.add_column("Pack")
