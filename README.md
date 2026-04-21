@@ -76,6 +76,18 @@ Command model:
 
 `RUN_REF` accepts an instance id such as `fastqc_001`, a unique template id within the project such as `fastqc`, a run directory path, or a `.linkar/meta.json` path.
 
+Typical project lifecycle:
+
+1. `linkar project init --name study`
+2. attach project packs with `linkar pack add ...` if needed
+3. `linkar render TEMPLATE ...` when you want an editable bundle
+4. `linkar run TEMPLATE ...` when you want Linkar to execute it
+5. `linkar collect RUN_REF` after manual execution of a rendered bundle
+6. `linkar inspect run RUN_REF` to review provenance
+7. `linkar project prune` when duplicate-path history accumulates
+
+For a fuller walkthrough, see the website explanation `Project lifecycle`.
+
 If you accumulate older duplicate run entries for the same visible project path, use:
 
 ```bash

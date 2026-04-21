@@ -1124,6 +1124,24 @@ def _load_project_for_runs(project: str | Path | Project | None, *, action: str)
     return project_obj
 
 
+def _describe_project_run_match(entry: dict[str, Any]) -> str:
+    instance_id = str(entry.get("instance_id") or "-")
+    state = str(entry.get("state") or "-")
+    path = str(entry.get("path") or "-")
+    history_path = str(entry.get("history_path") or "-")
+    return (
+        f"{instance_id} [state={state}, path={path}, history_path={history_path}]"
+    )
+
+
+def _raise_ambiguous_project_run(run_ref: str | Path, entries: list[dict[str, Any]]) -> None:
+    matching_instances = "; ".join(_describe_project_run_match(entry) for entry in entries)
+    raise ProjectValidationError(
+        f"Run reference '{run_ref}' is ambiguous in this project. Matching runs: {matching_instances}. "
+        "Use an instance id, a run path, or a .linkar/meta.json path."
+    )
+
+
 def select_project_runs(
     run_ref: str | Path,
     *,
@@ -1143,12 +1161,7 @@ def select_project_runs(
     resolved_ref = None if is_bare_name and template_matches else (ref_path.resolve() if ref_path.exists() else None)
     if template_matches:
         if len(template_matches) > 1:
-            matching_instances = ", ".join(
-                str(entry.get("instance_id")) for entry in template_matches if entry.get("instance_id")
-            )
-            raise ProjectValidationError(
-                f"Run reference '{run_ref}' is ambiguous in this project. Matching instances: {matching_instances}"
-            )
+            _raise_ambiguous_project_run(run_ref, template_matches)
         return template_matches
 
     if resolved_ref is not None:
@@ -1170,12 +1183,7 @@ def select_project_runs(
                 path_matches.append(entry)
         if path_matches:
             if len(path_matches) > 1:
-                matching_instances = ", ".join(
-                    str(entry.get("instance_id")) for entry in path_matches if entry.get("instance_id")
-                )
-                raise ProjectValidationError(
-                    f"Run reference '{run_ref}' is ambiguous in this project. Matching instances: {matching_instances}"
-                )
+                _raise_ambiguous_project_run(run_ref, path_matches)
             return path_matches
 
     raise ProjectValidationError(f"Run not found in project: {run_ref}")

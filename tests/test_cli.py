@@ -702,6 +702,10 @@ def test_project_remove_run_rejects_ambiguous_template_id(tmp_path: Path) -> Non
     assert "ambiguous" in removed.stderr
     assert "simple_echo_001" in removed.stderr
     assert "simple_echo_002" in removed.stderr
+    assert "state=completed" in removed.stderr
+    assert "path=simple_echo" in removed.stderr
+    assert "history_path=.linkar/runs/simple_echo_001" in removed.stderr
+    assert ".linkar/meta.json path" in removed.stderr
 
 
 def test_project_prune_removes_older_duplicate_paths_and_deletes_orphaned_dirs(tmp_path: Path) -> None:

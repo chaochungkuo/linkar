@@ -39,6 +39,9 @@ Key behavior:
 - `project prune` can collapse older duplicate-path history while keeping the newest visible run
 - `config author` stores reusable author defaults for new projects
 
+If you want the end-to-end mental model first, read `Project lifecycle` before the more detailed
+runtime pages.
+
 Run references accepted across `collect`, `inspect run`, `project view`, and `project remove-run` are:
 
 - instance ids such as `fastqc_001`

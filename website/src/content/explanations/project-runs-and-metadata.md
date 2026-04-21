@@ -6,6 +6,9 @@ order: 5
 
 Linkar projects are local working state, not a registry and not a hidden database.
 
+If you want the step-by-step user flow first, read `Project lifecycle` and come back here for the
+storage and provenance details.
+
 ## What a project records
 
 `project.yaml` records:
@@ -175,4 +178,5 @@ When you rerun a render-mode template in place and older duplicate-path history 
 Linkar keeps the current visible run active and prints a warning suggesting `linkar project prune`.
 
 If a template id matches multiple recorded runs, Linkar returns an ambiguity error instead of
-guessing.
+guessing. The error now includes each matching run's instance id, state, visible path, and history
+path so you can choose a precise reference quickly.
