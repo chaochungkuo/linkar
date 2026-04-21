@@ -724,6 +724,14 @@ def project_remove_run_command(
     help="Only prune duplicate-path history for the selected template id.",
 )
 @click.option(
+    "--keep",
+    "keep_count",
+    type=click.IntRange(min=1),
+    default=1,
+    show_default=True,
+    help="Keep the newest N runs per visible path instead of only the newest one.",
+)
+@click.option(
     "--project",
     type=click.Path(path_type=str, dir_okay=True, file_okay=True),
     help="Project directory or project.yaml path. Defaults to the current directory.",
@@ -734,6 +742,7 @@ def project_prune_command(
     delete_files: bool,
     dry_run: bool,
     template_id: str | None,
+    keep_count: int,
     project: str | None,
     ui: CliUI,
 ) -> None:
@@ -743,6 +752,7 @@ def project_prune_command(
         delete_files=delete_files,
         dry_run=dry_run,
         template_id=template_id,
+        keep_count=keep_count,
     )
     removed_runs = result.get("removed_runs") if isinstance(result.get("removed_runs"), list) else []
     deleted_paths = result.get("deleted_paths") if isinstance(result.get("deleted_paths"), list) else []
@@ -760,6 +770,7 @@ def project_prune_command(
         [
             ("Mode", mode_label),
             ("Template", template_id or "all"),
+            ("Keep newest", str(keep_count)),
             ("Removed runs", str(len(removed_runs))),
             ("Deleted dirs", str(len(deleted_paths))),
             ("Skipped dirs", str(len(skipped_paths))),
@@ -769,7 +780,7 @@ def project_prune_command(
         plain_text=(
             f"{mode_label}\tremoved={len(removed_runs)}\tdeleted={len(deleted_paths)}"
             f"\tskipped={len(skipped_paths)}\tmissing={len(missing_paths)}\t"
-            f"template={template_id or 'all'}\t"
+            f"template={template_id or 'all'}\tkeep={keep_count}\t"
             f"runs={removed_ids or '-'}"
         ),
     )

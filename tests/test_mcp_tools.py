@@ -9,6 +9,7 @@ from linkar.mcp_tools import (
     describe_template_tool,
     get_run_outputs_tool,
     get_run_runtime_tool,
+    latest_project_run_tool,
     list_project_assets_tool,
     list_project_runs_tool,
     list_templates_tool,
@@ -54,6 +55,9 @@ def test_mcp_tools_cover_discovery_resolution_and_inspection(tmp_path: Path) -> 
 
     runs = list_project_runs_tool(project=project_dir)
     assert runs["runs"][0]["instance_id"] == "simple_echo_001"
+
+    latest = latest_project_run_tool(run_ref="simple_echo", project=project_dir)
+    assert latest["run"]["instance_id"] == "simple_echo_001"
 
     outputs = get_run_outputs_tool(run_ref="simple_echo_001", project=project_dir)
     assert outputs["outputs"]["greeting_file"].endswith("results/greeting.txt")

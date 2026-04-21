@@ -8,6 +8,7 @@ from linkar.mcp_tools import (
     get_run_outputs_tool,
     get_run_runtime_tool,
     inspect_run_tool,
+    latest_project_run_tool,
     list_project_assets_tool,
     list_project_runs_tool,
     list_templates_tool,
@@ -124,6 +125,10 @@ def build_server() -> Any:
     @mcp.tool(description="List recorded runs from the current or selected project.")
     def linkar_list_project_runs(project: str | None = None) -> dict[str, Any]:
         return list_project_runs_tool(project=project)
+
+    @mcp.tool(description="Return the newest matching recorded run for a template id, run path, instance id, or meta path.")
+    def linkar_get_latest_project_run(run_ref: str, project: str | None = None) -> dict[str, Any]:
+        return latest_project_run_tool(run_ref=run_ref, project=project)
 
     @mcp.tool(description="List packs configured on the current or selected project.")
     def linkar_list_project_assets(project: str | None = None) -> dict[str, Any]:

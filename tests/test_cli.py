@@ -889,6 +889,61 @@ def test_project_prune_can_filter_by_template_id(tmp_path: Path) -> None:
     assert (project_dir / ".linkar" / "runs" / "export_001").exists()
 
 
+def test_project_prune_can_keep_newest_two_runs_per_visible_path(tmp_path: Path) -> None:
+    init = run_cli("project", "init", "--name", "study", cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    project_dir = tmp_path / "study"
+    (project_dir / ".linkar" / "runs" / "methods_001").mkdir(parents=True)
+    (project_dir / ".linkar" / "runs" / "methods_002").mkdir(parents=True)
+    (project_dir / ".linkar" / "runs" / "methods_003").mkdir(parents=True)
+    (project_dir / "methods" / "results").mkdir(parents=True)
+
+    project_file = project_dir / "project.yaml"
+    project_file.write_text(
+        yaml.safe_dump(
+            {
+                "id": "study",
+                "active_pack": None,
+                "packs": [],
+                "templates": [
+                    {
+                        "id": "methods",
+                        "instance_id": "methods_001",
+                        "path": "methods",
+                        "history_path": ".linkar/runs/methods_001",
+                    },
+                    {
+                        "id": "methods",
+                        "instance_id": "methods_002",
+                        "path": "methods",
+                        "history_path": ".linkar/runs/methods_002",
+                    },
+                    {
+                        "id": "methods",
+                        "instance_id": "methods_003",
+                        "path": "methods",
+                        "history_path": "methods",
+                    },
+                ],
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    pruned = run_cli("project", "prune", "--keep", "2", cwd=project_dir)
+    assert pruned.returncode == 0, pruned.stderr
+    assert "keep=2" in pruned.stdout
+    assert "removed=1" in pruned.stdout
+
+    data = yaml.safe_load(project_file.read_text())
+    assert [entry["instance_id"] for entry in data["templates"]] == ["methods_002", "methods_003"]
+    assert not (project_dir / ".linkar" / "runs" / "methods_001").exists()
+    assert (project_dir / ".linkar" / "runs" / "methods_002").exists()
+    assert (project_dir / "methods").exists()
+
+
 def test_pack_commands_manage_project_configuration(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
     init = run_cli("project", "init", str(project_dir), cwd=tmp_path)

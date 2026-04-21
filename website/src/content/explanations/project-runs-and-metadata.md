@@ -166,6 +166,7 @@ linkar project remove-run fastqc --delete-files
 linkar project latest fastqc
 linkar project prune --dry-run
 linkar project prune
+linkar project prune --keep 2
 ```
 
 Behavior:
@@ -176,6 +177,7 @@ Behavior:
 - `project latest` returns the newest matching recorded run for a template id, visible path, instance id, or meta path
 - `--delete-files` also removes the recorded run directory from disk
 - `project prune` keeps the newest run per visible path and, by default, deletes orphaned historical run directories for the pruned entries
+- `project prune --keep N` retains the newest `N` runs per visible path
 - `project prune --keep-files` cleans `project.yaml` without deleting directories
 - `project prune --dry-run` previews the cleanup before applying it
 

@@ -165,6 +165,12 @@ By default, `project prune`:
 - removes stale duplicate-path entries from `project.yaml`
 - deletes orphaned historical run directories for the pruned entries
 
+If you want to keep shallow recent history instead of only one survivor, use:
+
+```bash
+linkar project prune --keep 2
+```
+
 Use `--keep-files` if you only want to clean metadata and keep directories on disk.
 
 ## Practical rule of thumb

@@ -94,6 +94,7 @@ Project scope:
 
 - `GET /v1/projects/current`
 - `GET /v1/projects/current/runs`
+- `GET /v1/projects/current/runs/latest`
 - `GET /v1/projects/current/assets`
 
 Template scope:
@@ -108,9 +109,17 @@ Template scope:
 Run scope:
 
 - `GET /v1/runs/{run_ref}`
+- `POST /v1/runs:collect`
 - `GET /v1/runs/{run_ref}/outputs`
 - `GET /v1/runs/{run_ref}/status`
 - `GET /v1/runs/{run_ref}/runtime`
+
+For run-oriented endpoints, `run_ref` can be:
+
+- an instance id such as `fastqc_001`
+- a unique template id within the project such as `fastqc`
+- a run directory path
+- a `.linkar/meta.json` path
 
 Legacy unversioned routes still exist for backward compatibility, but new clients should prefer `/v1/...`.
 
@@ -167,6 +176,13 @@ curl -H 'Authorization: Bearer local-dev' \
   'http://127.0.0.1:8000/v1/projects/current/runs?project=/data/projects/my_project'
 ```
 
+Get the newest matching recorded run:
+
+```bash
+curl -H 'Authorization: Bearer local-dev' \
+  'http://127.0.0.1:8000/v1/projects/current/runs/latest?project=/data/projects/my_project&run_ref=methods'
+```
+
 Inspect a run:
 
 ```bash
@@ -180,6 +196,22 @@ Read run outputs:
 curl -H 'Authorization: Bearer local-dev' \
   'http://127.0.0.1:8000/v1/runs/my_run_001/outputs?project=/data/projects/my_project'
 ```
+
+Refresh outputs and learn whether the project ledger changed:
+
+```bash
+curl -X POST http://127.0.0.1:8000/v1/runs:collect \
+  -H 'Authorization: Bearer local-dev' \
+  -H 'Content-Type: application/json' \
+  -d '{"project":"/data/projects/my_project","run_ref":"methods"}'
+```
+
+The response includes:
+
+- `project_updated`
+- `project_path`
+- `meta`
+- `outputs`
 
 ## Why this matters for agents
 

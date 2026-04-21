@@ -97,12 +97,20 @@ linkar project prune
 ```
 
 By default, `project prune` keeps the newest run per visible path and removes orphaned historical run directories for the pruned entries. Use `--keep-files` if you only want to clean `project.yaml`.
+Use `--keep N` when you want to retain the newest `N` runs per visible path instead of only the newest one.
 
 If you only want the newest recorded run for a template or visible path, use:
 
 ```bash
 linkar project latest fastqc
 linkar project latest ./methods
+```
+
+From the local API, the project-scoped equivalent is:
+
+```bash
+curl -H 'Authorization: Bearer local-dev' \
+  'http://127.0.0.1:8000/v1/projects/current/runs/latest?project=/data/projects/my_project&run_ref=methods'
 ```
 
 For ad hoc runs without a project:
@@ -183,6 +191,7 @@ Recommended v1 routes:
 - `GET /v1/health`
 - `GET /v1/projects/current`
 - `GET /v1/projects/current/runs`
+- `GET /v1/projects/current/runs/latest`
 - `GET /v1/projects/current/assets`
 - `GET /v1/templates`
 - `GET /v1/templates/{template_id}`
@@ -191,6 +200,7 @@ Recommended v1 routes:
 - `POST /v1/templates/{template_id}:render`
 - `POST /v1/templates/{template_id}:test`
 - `GET /v1/runs/{run_ref}`
+- `POST /v1/runs:collect`
 - `GET /v1/runs/{run_ref}/outputs`
 - `GET /v1/runs/{run_ref}/status`
 - `GET /v1/runs/{run_ref}/runtime`

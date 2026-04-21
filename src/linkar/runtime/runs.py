@@ -1255,6 +1255,7 @@ def prune_project_runs(
     delete_files: bool = True,
     dry_run: bool = False,
     template_id: str | None = None,
+    keep_count: int = 1,
 ) -> dict[str, Any]:
     if isinstance(project, (str, Path)):
         project_obj = load_project(project)
@@ -1266,10 +1267,11 @@ def prune_project_runs(
         raise ProjectValidationError(
             "Pruning runs requires an active project. Run it inside a directory containing project.yaml or pass --project PATH."
         )
+    if keep_count < 1:
+        raise ProjectValidationError("Pruning runs requires keep_count >= 1")
 
     templates = list(project_obj.data.setdefault("templates", []))
-    visible_key_last_index: dict[str, int] = {}
-    visible_key_counts: dict[str, int] = {}
+    visible_key_indices: dict[str, list[int]] = {}
 
     for index, entry in enumerate(templates):
         if template_id and str(entry.get("id") or "") != template_id:
@@ -1278,19 +1280,13 @@ def prune_project_runs(
         if visible_path is None:
             continue
         key = str(visible_path)
-        visible_key_last_index[key] = index
-        visible_key_counts[key] = visible_key_counts.get(key, 0) + 1
+        visible_key_indices.setdefault(key, []).append(index)
 
     prune_indices: set[int] = set()
-    for index, entry in enumerate(templates):
-        if template_id and str(entry.get("id") or "") != template_id:
+    for indices in visible_key_indices.values():
+        if len(indices) <= keep_count:
             continue
-        visible_path = _entry_visible_path(project_obj.root, entry)
-        if visible_path is None:
-            continue
-        key = str(visible_path)
-        if visible_key_counts.get(key, 0) > 1 and visible_key_last_index.get(key) != index:
-            prune_indices.add(index)
+        prune_indices.update(indices[:-keep_count])
 
     if not prune_indices:
         return {
@@ -1301,6 +1297,7 @@ def prune_project_runs(
             "delete_files": delete_files,
             "dry_run": dry_run,
             "template_id": template_id or "",
+            "keep_count": keep_count,
         }
 
     kept_templates = [entry for index, entry in enumerate(templates) if index not in prune_indices]
@@ -1365,6 +1362,7 @@ def prune_project_runs(
         "delete_files": delete_files,
         "dry_run": dry_run,
         "template_id": template_id or "",
+        "keep_count": keep_count,
     }
 
 

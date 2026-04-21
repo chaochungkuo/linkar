@@ -10,6 +10,7 @@ from linkar.core import (
     inspect_runtime,
     list_project_runs,
     list_templates,
+    latest_project_run,
     render_template,
     resolve_project_assets,
     run_template,
@@ -117,6 +118,10 @@ def test_template_tool(
 
 def list_project_runs_tool(*, project: str | Path | None = None) -> dict[str, Any]:
     return {"runs": list_project_runs(project=project)}
+
+
+def latest_project_run_tool(*, run_ref: str | Path, project: str | Path | None = None) -> dict[str, Any]:
+    return {"run": latest_project_run(run_ref, project=project)}
 
 
 def list_project_assets_tool(*, project: str | Path | None = None) -> dict[str, Any]:

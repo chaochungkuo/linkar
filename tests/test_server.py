@@ -424,6 +424,16 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
     assert project_runs_payload["data"]["items"][0]["kind"] == "run_summary"
     assert project_runs_payload["data"]["items"][0]["template"] == "simple_echo"
 
+    status, _, latest_payload = call_app(
+        app,
+        method="GET",
+        path="/v1/projects/current/runs/latest",
+        query=f"project={project_dir}&run_ref=simple_echo",
+    )
+    assert status == "200 OK"
+    assert latest_payload["data"]["kind"] == "run_summary"
+    assert latest_payload["data"]["instance_id"] == instance_id
+
     status, _, templates_payload = call_app(
         app,
         method="GET",
@@ -452,6 +462,16 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
     )
     assert status == "200 OK"
     assert assets_payload["data"]["assets"][0]["pack_ref"] == str(ROOT / "examples" / "packs" / "basic")
+
+    status, _, collect_payload = call_app(
+        app,
+        method="POST",
+        path="/v1/runs:collect",
+        json_body={"run_ref": instance_id, "project": str(project_dir)},
+    )
+    assert status == "200 OK"
+    assert collect_payload["data"]["kind"] == "run_collect"
+    assert collect_payload["data"]["project_updated"] is True
 
 def test_server_resolve_and_test_endpoints(tmp_path: Path) -> None:
     app = make_app()

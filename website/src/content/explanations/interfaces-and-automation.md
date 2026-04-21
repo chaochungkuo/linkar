@@ -38,6 +38,7 @@ Key behavior:
 - `project latest` returns the newest matching recorded run without making you scan full history
 - `project remove-run` can detach or delete recorded runs
 - `project prune` can collapse older duplicate-path history while keeping the newest visible run
+- `project prune --keep N` keeps more than one recent run per visible path when you want shallow history instead of a single survivor
 - `config author` stores reusable author defaults for new projects
 
 If you want the end-to-end mental model first, read `Project lifecycle` before the more detailed
@@ -98,6 +99,7 @@ Recommended v1 routes:
 - `GET /v1/schema`
 - `GET /v1/projects/current`
 - `GET /v1/projects/current/runs`
+- `GET /v1/projects/current/runs/latest`
 - `GET /v1/projects/current/assets`
 - `GET /v1/templates`
 - `GET /v1/templates/{template_id}`
@@ -106,6 +108,7 @@ Recommended v1 routes:
 - `POST /v1/templates/{template_id}:render`
 - `POST /v1/templates/{template_id}:test`
 - `GET /v1/runs/{run_ref}`
+- `POST /v1/runs:collect`
 - `GET /v1/runs/{run_ref}/outputs`
 - `GET /v1/runs/{run_ref}/status`
 - `GET /v1/runs/{run_ref}/runtime`

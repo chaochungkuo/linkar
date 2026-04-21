@@ -500,8 +500,8 @@ packages:
   timestamp: 1774072956767
 - pypi: ./
   name: linkar
-  version: 0.5.1
-  sha256: 0920ba40b9adc6968dfc6df90d1cb7eef24d518ad4d9f9e7d7e1d4d6d069e763
+  version: 0.5.2
+  sha256: 013e539f66473cf5f1f753a0e1f4440cd9db078d607552f009f4badf28fe8ecc
   requires_dist:
   - click>=8.1
   - pyyaml>=6.0

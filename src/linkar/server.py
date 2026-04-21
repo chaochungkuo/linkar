@@ -20,6 +20,7 @@ from linkar.core import (
     list_configured_packs,
     list_project_runs,
     list_templates,
+    latest_project_run,
     load_template,
     preview_params_detailed,
     render_template,
@@ -459,6 +460,7 @@ def v1_routes_document() -> list[dict[str, object]]:
         {"path": "/v1/docs", "method": "GET", "kind": "docs", "role": "read", "description": "Live HTML documentation for the running local API server."},
         {"path": "/v1/projects/current", "method": "GET", "kind": "project", "role": "read", "description": "Summary of the current or selected Linkar project."},
         {"path": "/v1/projects/current/runs", "method": "GET", "kind": "run_collection", "role": "read", "description": "Recorded runs for the current or selected project."},
+        {"path": "/v1/projects/current/runs/latest", "method": "GET", "kind": "run_summary", "role": "read", "description": "Newest matching recorded run for a project-scoped run_ref query."},
         {"path": "/v1/projects/current/assets", "method": "GET", "kind": "asset_collection", "role": "read", "description": "Resolved pack assets visible to the current or selected project."},
         {"path": "/v1/templates", "method": "GET", "kind": "template_collection", "role": "read", "description": "Available templates for the selected project or pack scope."},
         {"path": "/v1/templates/{template_id}", "method": "GET", "kind": "template", "role": "read", "description": "Template detail and declared contract."},
@@ -467,6 +469,7 @@ def v1_routes_document() -> list[dict[str, object]]:
         {"path": "/v1/templates/{template_id}:render", "method": "POST", "kind": "render_submission", "role": "execute", "description": "Render a runnable template bundle without executing it."},
         {"path": "/v1/templates/{template_id}:test", "method": "POST", "kind": "test_submission", "role": "execute", "description": "Run the template test workflow."},
         {"path": "/v1/runs/{instance_id}", "method": "GET", "kind": "run", "role": "read", "description": "Detailed run metadata and provenance."},
+        {"path": "/v1/runs:collect", "method": "POST", "kind": "run_collect", "role": "execute", "description": "Refresh outputs for a run_ref and report whether the project ledger was updated."},
         {"path": "/v1/runs/{instance_id}/outputs", "method": "GET", "kind": "run_outputs", "role": "read", "description": "Collected outputs for a run."},
         {"path": "/v1/runs/{instance_id}/status", "method": "GET", "kind": "run_status", "role": "read", "description": "Compact runtime status for a run."},
         {"path": "/v1/runs/{instance_id}/runtime", "method": "GET", "kind": "run_runtime", "role": "read", "description": "Full recorded runtime metadata for a run."},
@@ -707,6 +710,13 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
                 runs = [normalize_run_summary(entry) for entry in runs]
                 return success_response(start_response, collection_payload("run_collection", "runs", runs))
 
+            if method == "GET" and raw_path == "/v1/projects/current/runs/latest":
+                run_ref = query_value(query, "run_ref")
+                if not run_ref:
+                    raise ProjectValidationError("Query field 'run_ref' is required")
+                run_entry = latest_project_run(run_ref, project=query_value(query, "project"))
+                return success_response(start_response, normalize_run_summary(run_entry))
+
             if method == "GET" and raw_path == "/v1/projects/current/assets":
                 assets = resolve_project_assets(project=query_value(query, "project"))
                 assets = [normalize_asset_summary(entry) for entry in assets]
@@ -771,6 +781,18 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
                 if raw_path.startswith("/v1/"):
                     metadata = {"kind": "run", **metadata}
                 return success_response(start_response, metadata)
+
+            if method == "POST" and raw_path == "/v1/runs:collect":
+                payload = load_json_body(environ)
+                run_ref = payload.get("run_ref")
+                if not isinstance(run_ref, str) or not run_ref:
+                    raise ProjectValidationError("Request field 'run_ref' is required")
+                result = collect_run_outputs(
+                    run_ref,
+                    project=payload.get("project"),
+                )
+                result["kind"] = "run_collect"
+                return success_response(start_response, result)
 
             if method == "POST" and path == "/resolve":
                 payload = load_json_body(environ)
