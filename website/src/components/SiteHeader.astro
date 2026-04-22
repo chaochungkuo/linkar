@@ -11,16 +11,22 @@ import SiteNav from "./SiteNav.astro";
         <span class="hero-badge">LINKing All Resources</span>
         <span class="hero-badge">CLI + API + MCP</span>
       </div>
-      <p class="eyebrow">Link reusable analysis resources without losing flexibility</p>
+      <p class="eyebrow">Reusable analysis templates for humans and machines</p>
       <h1 class="hero-title">Turn scripts, tools, and notebooks into reusable work.</h1>
       <p class="lede">
-        Data scientists constantly adapt CLI tools, scripts, packages, and notebooks to the current
-        dataset or project. Linkar helps you keep that work reusable at the same time: package each
-        step as a template, connect steps through bindings, and run everything through a short CLI
-        or a machine-readable local API.
+        Package each analysis step as a template with explicit inputs and outputs. Connect steps
+        through bindings. Run everything from a short CLI, a local JSON API, or an MCP agent.
       </p>
+      <div class="install-block" data-install>
+        <span class="install-label">Install</span>
+        <code class="install-cmd" id="install-cmd">pipx install git+https://github.com/chaochungkuo/linkar.git</code>
+        <button class="install-copy" type="button" aria-label="Copy install command" data-copy-btn>
+          Copy
+        </button>
+      </div>
       <div class="hero-actions">
-        <a class="button button-primary" href={`${import.meta.env.BASE_URL}tutorials/getting-started/`}>Start Here</a>
+        <a class="button button-primary" href={`${import.meta.env.BASE_URL}tutorials/getting-started/`}>Get started</a>
+        <a class="button button-secondary" href={`${import.meta.env.BASE_URL}explanations/`}>Read concepts</a>
       </div>
     </div>
 
@@ -29,15 +35,35 @@ import SiteNav from "./SiteNav.astro";
         <div class="terminal-bar">
           <span></span><span></span><span></span>
         </div>
-        <pre><code>$ linkar project init --name study
-$ linkar run produce_message --message "hello"
-$ linkar run consume_message
+        <pre><code>$ linkar config author set --name "Your Name"
+$ linkar project init --name study
+$ cd study
+$ linkar pack add ../examples/packs/basic --id basic
+$ linkar run simple_echo --name Linkar
+$ linkar inspect run simple_echo_001
 
 study/
-  produce_message/
-  consume_message/
+  simple_echo/            ← stable project alias
+  .linkar/runs/
+    simple_echo_001/
+      meta.json           ← provenance
+      results/greeting.txt
 </code></pre>
       </div>
     </div>
   </div>
 </header>
+
+<script is:inline>
+  (() => {
+    const btn = document.querySelector("[data-copy-btn]");
+    const cmd = document.getElementById("install-cmd");
+    if (!btn || !cmd) return;
+    btn.addEventListener("click", () => {
+      navigator.clipboard.writeText(cmd.textContent.trim()).then(() => {
+        btn.textContent = "Copied!";
+        setTimeout(() => { btn.textContent = "Copy"; }, 2000);
+      }).catch(() => {});
+    });
+  })();
+</script>
