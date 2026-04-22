@@ -2,6 +2,7 @@
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import SiteNav from "../../components/SiteNav.astro";
+import SiteFooter from "../../components/SiteFooter.astro";
 
 const explanations = (await getCollection("explanations")).sort((a, b) => a.data.order - b.data.order);
 const explanationHref = (slug: string) => `${import.meta.env.BASE_URL}explanations/${slug}/`;
@@ -32,5 +33,6 @@ const explanationHref = (slug: string) => `${import.meta.env.BASE_URL}explanatio
         </div>
       </section>
     </main>
+    <SiteFooter />
   </div>
 </BaseLayout>

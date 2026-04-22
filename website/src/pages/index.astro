@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import SiteHeader from "../components/SiteHeader.astro";
+import SiteFooter from "../components/SiteFooter.astro";
 ---
 
 <BaseLayout
@@ -13,16 +14,11 @@ import SiteHeader from "../components/SiteHeader.astro";
     <main>
       <section class="section">
         <div class="section-heading">
-          <p class="eyebrow">What Linkar Is</p>
-          <h2>A small runtime for reusable analysis work.</h2>
+          <p class="eyebrow">How It Works</p>
+          <h2>Three building blocks.</h2>
           <p class="section-copy">
-            Data scientists often start from something useful already: a script, a package, a CLI
-            tool, or a notebook. Then reality arrives. Inputs differ, defaults change, one step
-            must feed another, and the same local adjustments get repeated by hand. That is where
-            reuse becomes fragile and chaining becomes error-prone.
-          </p>
-          <p class="section-copy">
-            The name reflects that goal: Linkar stands for <code>LINKing All Resources</code>.
+            Every Linkar project is built from templates, bindings, and a project directory.
+            Each piece has a single job — together they make analysis work reusable and inspectable.
           </p>
         </div>
 
@@ -30,20 +26,42 @@ import SiteHeader from "../components/SiteHeader.astro";
           <article class="feature-card">
             <h3>Templates</h3>
             <p>
-              Standalone units with explicit inputs, outputs, scripts, helpers, and tests.
+              Standalone units with explicit params, declared outputs, and a reproducible run
+              command. Each template is testable on its own.
             </p>
+            <pre class="feature-snippet"><code>id: fastq_stats
+params:
+  input:
+    type: path
+    required: true
+outputs:
+  report:
+    path: stats.txt
+run:
+  command: fastqc "$&#123;param:input&#125;"</code></pre>
           </article>
           <article class="feature-card">
             <h3>Bindings</h3>
             <p>
-              Reusable connection logic that links outputs to inputs and captures custom resolution once.
+              Encode how outputs from one template become inputs to the next.
+              Write the resolution logic once; reuse it every run.
             </p>
+            <pre class="feature-snippet"><code># step_a produced output_file
+# binding auto-resolves it
+$ linkar run step_b
+# no manual path wiring needed</code></pre>
           </article>
           <article class="feature-card">
             <h3>Projects</h3>
             <p>
-              Readable local working state with recorded runs, stable paths, and inspectable metadata.
+              A local directory with stable run aliases, immutable history under
+              <code>.linkar/runs/</code>, and inspectable metadata for every execution.
             </p>
+            <pre class="feature-snippet"><code>$ linkar inspect run fastqc_001
+instance:  fastqc_001
+status:    completed
+outputs:
+  report: ./fastqc/stats.txt</code></pre>
           </article>
         </div>
       </section>
@@ -51,10 +69,10 @@ import SiteHeader from "../components/SiteHeader.astro";
       <section class="section section-alt">
         <div class="section-heading">
           <p class="eyebrow">Interfaces</p>
-          <h2>One runtime, two entry points.</h2>
+          <h2>One runtime, three entry points.</h2>
           <p class="section-copy">
-            Humans use the CLI. Machines use the local API or MCP. Both paths write the same run
-            artifact on disk.
+            Humans use the CLI. Scripts and agents use the local JSON API or MCP server.
+            All three paths write the same run artifact on disk.
           </p>
         </div>
 
@@ -65,13 +83,13 @@ import SiteHeader from "../components/SiteHeader.astro";
               <h3>Short CLI</h3>
             </div>
             <p>
-              Discover the current project, expose template params as flags, and keep the common
-              path short.
+              Template params become flags. The active project is discovered automatically.
+              Common paths stay short.
             </p>
             <pre><code>linkar config author set --name "Your Name"
 linkar project init --name study
 cd study
-linkar pack add ../examples/packs/chaining --id chaining --binding default
+linkar pack add ../examples/packs/chaining --id chaining
 linkar run produce_message --message "hello"
 linkar run consume_message
 linkar inspect run consume_message_001</code></pre>
@@ -80,22 +98,24 @@ linkar inspect run consume_message_001</code></pre>
           <article class="interface-card">
             <div class="interface-head">
               <span class="interface-tag">Machine</span>
-              <h3>Structured API</h3>
+              <h3>Local API &amp; MCP</h3>
             </div>
             <p>
-              Inspect templates, resolve params, run work, and read outputs without shell scraping.
+              Resolve params, execute templates, and read outputs without shell scraping.
+              Agents can use the MCP server directly.
             </p>
             <pre><code>linkar serve --port 8000 --api-token local-dev:read,resolve,execute
 
-GET  /v1
-GET  /v1/schema
-POST /v1/templates/&lcub;template_id&rcub;:resolve
-POST /v1/templates/&lcub;template_id&rcub;:run
-GET  /v1/projects/current/runs/latest?run_ref=methods
-POST /v1/runs:collect
-GET  /v1/runs/&lcub;run_ref&rcub;/outputs
-GET  /v1/runs/&lcub;run_ref&rcub;/status
+# resolve params → get a short-lived token
+POST /v1/templates/&#123;template_id&#125;:resolve
 
+# run with the token
+POST /v1/templates/&#123;template_id&#125;:run
+
+# read outputs by run reference
+GET  /v1/runs/&#123;run_ref&#125;/outputs
+
+# or use the MCP server for agents
 linkar mcp serve</code></pre>
           </article>
         </div>
@@ -103,18 +123,19 @@ linkar mcp serve</code></pre>
 
       <section class="section">
         <div class="section-heading">
-          <p class="eyebrow">Read In Order</p>
+          <p class="eyebrow">Documentation</p>
           <h2>Concepts, tutorials, then examples.</h2>
           <p class="section-copy">
-            Keep the path simple. Read the concepts first, use the tutorials to do real work, and
-            use the bundled examples when you want the smallest runnable pack for a specific case.
+            Read the concepts first to understand the model. Use the tutorials to do real work
+            step by step. Browse the bundled examples when you want the smallest runnable pack
+            for a specific pattern.
           </p>
         </div>
 
         <div class="card-grid three-up">
           <a class="doc-card" href={`${import.meta.env.BASE_URL}explanations/`}>
             <h3>Concepts</h3>
-            <p>Understand templates, bindings, packs, and projects.</p>
+            <p>Understand templates, bindings, packs, projects, and the interfaces layer.</p>
           </a>
           <a class="tutorial-card tutorial-link" href={`${import.meta.env.BASE_URL}tutorials/`}>
             <h3>Tutorials</h3>
@@ -128,8 +149,11 @@ linkar mcp serve</code></pre>
 
         <div class="hero-actions section-top-gap">
           <a class="button button-primary" href={`${import.meta.env.BASE_URL}tutorials/getting-started/`}>Start with getting started</a>
+          <a class="button button-secondary" href="https://github.com/chaochungkuo/linkar" target="_blank" rel="noopener noreferrer">View on GitHub</a>
         </div>
       </section>
     </main>
+
+    <SiteFooter />
   </div>
 </BaseLayout>

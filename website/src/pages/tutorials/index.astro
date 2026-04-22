@@ -2,6 +2,7 @@
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import SiteNav from "../../components/SiteNav.astro";
+import SiteFooter from "../../components/SiteFooter.astro";
 
 const tutorials = (await getCollection("tutorials")).sort((a, b) => a.data.order - b.data.order);
 const tutorialHref = (slug: string) => `${import.meta.env.BASE_URL}tutorials/${slug}/`;
@@ -31,5 +32,6 @@ const tutorialHref = (slug: string) => `${import.meta.env.BASE_URL}tutorials/${s
         </div>
       </section>
     </main>
+    <SiteFooter />
   </div>
 </BaseLayout>
