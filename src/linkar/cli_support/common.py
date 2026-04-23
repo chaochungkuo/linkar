@@ -81,7 +81,11 @@ def help_for_param(name: str, spec: dict[str, Any]) -> str:
         pieces.append("required when not resolved elsewhere")
     if "default" in spec:
         pieces.append(f"default: {spec['default']}")
-    return f"{name} ({'; '.join(pieces)})"
+    summary = f"{name} ({'; '.join(pieces)})"
+    description = str(spec.get("description") or "").strip()
+    if not description:
+        return summary
+    return f"{summary}\n{description}"
 
 
 def prompt_for_param(name: str, spec: dict[str, Any]) -> Any:

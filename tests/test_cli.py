@@ -13,6 +13,7 @@ import yaml
 from rich.console import Console
 
 from linkar import __version__
+from linkar.cli_support.common import help_for_param
 from linkar.core import load_project, load_template, resolve_project_assets, run_template
 from linkar.errors import (
     AssetResolutionError,
@@ -86,6 +87,7 @@ def make_template(
     description: str | None = None,
     outputs: str | None = None,
     entry_name: str = "run.sh",
+    run_mode: str = "direct",
 ) -> Path:
     template_dir = root / template_id
     template_dir.mkdir(parents=True)
@@ -104,7 +106,7 @@ def make_template(
                 outputs or "  results_dir: {}",
                 "run:",
                 f"  entry: {entry_name}",
-                "  mode: direct",
+                f"  mode: {run_mode}",
                 "",
             ]
         )
@@ -1072,14 +1074,14 @@ def test_help_output_is_clean_and_descriptive(tmp_path: Path) -> None:
 
     run_help = run_cli("run", "--help", cwd=tmp_path, env_extra=env)
     assert run_help.returncode == 0, run_help.stderr
-    assert "Run templates with template-aware options or the generic TEMPLATE" in run_help.stdout
+    assert "Run templates. Render-mode templates reuse the visible project bundle" in run_help.stdout
     assert "raw" not in run_help.stdout
     assert "╭─ Options" in run_help.stdout
     assert "╭─ Commands" in run_help.stdout
 
     render_help = run_cli("render", "--help", cwd=tmp_path, env_extra=env)
     assert render_help.returncode == 0, render_help.stderr
-    assert "Render template bundles with template-aware options" in render_help.stdout
+    assert "Render template bundles without executing them." in render_help.stdout
     assert "raw" not in render_help.stdout
     assert "╭─ Options" in render_help.stdout
     assert "╭─ Commands" in render_help.stdout
@@ -2044,6 +2046,52 @@ printf '%s\n' "${THREADS}" > "${LINKAR_RESULTS_DIR}/threads.txt"
     assert "╭─ Options" in completed.stdout
 
 
+def test_help_for_param_includes_description_text() -> None:
+    help_text = help_for_param(
+        "input_h5ad",
+        {
+            "type": "path",
+            "description": "Preferred input for an existing AnnData file.",
+        },
+    )
+    assert help_text == "input_h5ad (type: path)\nPreferred input for an existing AnnData file."
+
+
+def test_dynamic_render_help_includes_template_param_descriptions(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    make_template(
+        pack_root / "templates",
+        "prep_help",
+        (
+            "  input_h5ad:\n"
+            "    type: path\n"
+            "    description: Preferred input for an existing AnnData file.\n"
+            "  organism:\n"
+            "    type: str\n"
+            "    description: Required organism alias such as human or mouse.\n"
+        ),
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'rendered\n' > "${LINKAR_RESULTS_DIR}/rendered.txt"
+""",
+        run_mode="render",
+    )
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    project_file = project_dir / "project.yaml"
+    project = yaml.safe_load(project_file.read_text())
+    project["packs"] = [{"ref": str(pack_root)}]
+    project_file.write_text(yaml.safe_dump(project, sort_keys=False))
+
+    completed = run_cli("render", "prep_help", "--help", cwd=project_dir)
+    assert completed.returncode == 0, completed.stderr
+    assert "--input-h5ad" in completed.stdout
+    assert "--organism" in completed.stdout
+    assert "Options" in completed.stdout
+
+
 def test_template_test_command_runs_template_local_test_script(tmp_path: Path) -> None:
     template = make_template(
         tmp_path / "templates",
@@ -2749,10 +2797,12 @@ def test_pack_list_commands_support_json_and_yaml_formats(tmp_path: Path) -> Non
     init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
     assert init.returncode == 0, init.stderr
 
+    pack_root = tmp_path / "izkf_pack"
+    pack_root.mkdir()
     project_file = project_dir / "project.yaml"
     project_data = yaml.safe_load(project_file.read_text())
     project_data["active_pack"] = "izkf_pack"
-    project_data["packs"] = [{"id": "izkf_pack", "ref": "/packs/izkf_pack", "binding": "default"}]
+    project_data["packs"] = [{"id": "izkf_pack", "ref": str(pack_root), "binding": "default"}]
     project_file.write_text(yaml.safe_dump(project_data, sort_keys=False))
 
     project_json = run_cli("pack", "list", "--format", "json", cwd=project_dir)
@@ -2771,7 +2821,7 @@ def test_pack_list_commands_support_json_and_yaml_formats(tmp_path: Path) -> Non
         "config",
         "pack",
         "add",
-        "/packs/izkf_pack",
+        str(pack_root),
         "--id",
         "izkf_pack",
         cwd=tmp_path,
@@ -3257,7 +3307,7 @@ def test_empty_states_render_clear_messages(monkeypatch: pytest.MonkeyPatch) -> 
     assert "No templates found." in rendered
 
 
-def test_methods_command_aggregates_runs_in_project_order(tmp_path: Path) -> None:
+def test_project_runs_aggregate_runs_in_project_order(tmp_path: Path) -> None:
     project_dir = tmp_path / "study"
     init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
     assert init.returncode == 0, init.stderr
@@ -3288,12 +3338,12 @@ cp "${RESULTS_DIR}/fastq/sample.txt" "${LINKAR_RESULTS_DIR}/consumed.txt"
     consume = run_cli("run", str(consumer), cwd=project_dir)
     assert consume.returncode == 0, consume.stderr
 
-    methods = run_cli("methods", cwd=project_dir)
-    assert methods.returncode == 0, methods.stderr
-    assert "Step 1: template 'produce_fastq'" in methods.stdout
-    assert "Step 2: template 'consume_fastq'" in methods.stdout
-    assert methods.stdout.index("produce_fastq") < methods.stdout.index("consume_fastq")
-    assert "sample_name=S1" in methods.stdout
+    runs = run_cli("project", "runs", "--format", "json", cwd=project_dir)
+    assert runs.returncode == 0, runs.stderr
+    payload = json.loads(runs.stdout)
+    assert [item["id"] for item in payload] == ["produce_fastq", "consume_fastq"]
+    assert [item["instance_id"] for item in payload] == ["produce_fastq_001", "consume_fastq_001"]
+    assert payload[0]["params"]["sample_name"] == "S1"
 
 
 def test_core_raises_typed_project_and_template_errors(tmp_path: Path) -> None:

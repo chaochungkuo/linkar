@@ -364,7 +364,7 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
     status, _, inspect_payload = call_app(
         app,
         method="GET",
-        path=f"/runs/{instance_id}",
+        path=f"/v1/runs/{instance_id}",
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
@@ -375,7 +375,7 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
     status, _, outputs_payload = call_app(
         app,
         method="GET",
-        path=f"/runs/{instance_id}/outputs",
+        path=f"/v1/runs/{instance_id}/outputs",
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
@@ -385,10 +385,11 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
     status, _, runtime_payload = call_app(
         app,
         method="GET",
-        path=f"/runs/{instance_id}/runtime",
+        path=f"/v1/runs/{instance_id}/runtime",
         query=f"project={project_dir}",
     )
     assert status == "200 OK"
+    assert runtime_payload["data"]["kind"] == "run_runtime"
     assert runtime_payload["data"]["success"] is True
 
     status, _, status_payload = call_app(
@@ -467,7 +468,7 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
         app,
         method="POST",
         path="/v1/runs:collect",
-        json_body={"run_ref": instance_id, "project": str(project_dir)},
+        body=json.dumps({"run_ref": instance_id, "project": str(project_dir)}).encode("utf-8"),
     )
     assert status == "200 OK"
     assert collect_payload["data"]["kind"] == "run_collect"
