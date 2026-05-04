@@ -133,6 +133,11 @@ def parse_param_value(value: Any, param_type: str) -> Any:
             return False
         raise ParameterResolutionError(f"Invalid bool value: {value}")
     if param_type == "path":
+        if value is None:
+            return ""
+        raw = str(value).strip()
+        if raw == "":
+            return ""
         return str(Path(value).expanduser().resolve())
     if param_type == "list[path]":
         if isinstance(value, (list, tuple)):

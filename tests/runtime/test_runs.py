@@ -826,6 +826,45 @@ def test_render_template_with_run_command_writes_single_launcher(tmp_path: Path)
     assert not (outdir / "results" / "name.txt").exists()
 
 
+def test_render_template_preserves_empty_default_path_params(tmp_path: Path) -> None:
+    template_dir = tmp_path / "empty_path_defaults"
+    template_dir.mkdir(parents=True)
+    (template_dir / "run.sh").write_text("#!/usr/bin/env bash\nset -euo pipefail\n")
+    (template_dir / "run.sh").chmod(0o755)
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: empty_path_defaults",
+                "params:",
+                "  input_h5ad:",
+                "    type: path",
+                '    default: ""',
+                "  sample_metadata:",
+                "    type: path",
+                '    default: ""',
+                "run:",
+                "  mode: render",
+                "  entry: run.sh",
+                "",
+            ]
+        )
+    )
+
+    project_path = init_project(tmp_path / "project")
+    project = load_project(project_path.parent)
+
+    result = render_template(template_dir, project=project)
+    outdir = Path(result["history_outdir"])
+    launcher_text = render_mode_launcher_path(outdir).read_text(encoding="utf-8")
+    project_after = load_project(project.root)
+    entry = project_after.data["templates"][0]
+
+    assert entry["params"]["input_h5ad"] == ""
+    assert entry["params"]["sample_metadata"] == ""
+    assert "export INPUT_H5AD=''" in launcher_text
+    assert "export SAMPLE_METADATA=''" in launcher_text
+
+
 def test_render_template_supports_explicit_param_placeholders(tmp_path: Path) -> None:
     template_dir = tmp_path / "command_render_param_placeholder"
     template_dir.mkdir(parents=True)
