@@ -182,6 +182,28 @@ def collect_outputs_from_declared(
     return outputs
 
 
+def load_template_outputs_contract(outdir: Path, metadata: dict[str, Any]) -> dict[str, Any]:
+    contract_path = outdir / "template_outputs.json"
+    if not contract_path.exists():
+        return {}
+    try:
+        payload = json.loads(contract_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+
+    contract_template = payload.get("template") or payload.get("id") or payload.get("source_template")
+    metadata_template = metadata.get("template") or metadata.get("id") or metadata.get("source_template")
+    if contract_template and metadata_template and contract_template != metadata_template:
+        return {}
+
+    outputs = payload.get("outputs")
+    if not isinstance(outputs, dict):
+        return {}
+    return outputs
+
+
 RUNTIME_BUNDLE_EXCLUDES = {
     ".git",
     ".pixi",
@@ -1526,6 +1548,9 @@ def collect_run_outputs(
     metadata = json.loads(meta_path.read_text(encoding="utf-8"))
     declared_outputs = metadata.get("declared_outputs") or {"results_dir": {}}
     outputs = collect_outputs_from_declared(declared_outputs, outdir)
+    contract_outputs = load_template_outputs_contract(outdir, metadata)
+    if contract_outputs:
+        outputs = {**contract_outputs, **outputs}
     metadata["outputs"] = outputs
     metadata["collected_at"] = utc_now().isoformat()
     write_json(meta_path, metadata)

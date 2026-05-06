@@ -1112,6 +1112,48 @@ def test_collect_run_outputs_updates_rendered_meta_after_manual_execution(tmp_pa
     assert "collected_at" in meta
 
 
+def test_collect_run_outputs_merges_template_outputs_contract(tmp_path: Path) -> None:
+    outdir = tmp_path / "adoptable_project"
+    linkar_dir = outdir / ".linkar"
+    linkar_dir.mkdir(parents=True)
+    fastq = outdir / "sample_R1_001.fastq.gz"
+    report = outdir / "qc" / "multiqc" / "multiqc_report.html"
+    report.parent.mkdir(parents=True)
+    fastq.write_text("fastq\n", encoding="utf-8")
+    report.write_text("report\n", encoding="utf-8")
+
+    metadata = {
+        "template": "demultiplex",
+        "instance_id": "demultiplex_001",
+        "params": {"sample_project": "adoptable_project"},
+        "declared_outputs": {
+            "results_dir": {"path": ".."},
+            "multiqc_report": {"path": "../qc/multiqc/multiqc_report.html"},
+        },
+        "outputs": {},
+    }
+    (linkar_dir / "meta.json").write_text(json.dumps(metadata), encoding="utf-8")
+    (outdir / "template_outputs.json").write_text(
+        json.dumps(
+            {
+                "template": "demultiplex",
+                "outputs": {
+                    "demux_fastq_files": [str(fastq.resolve())],
+                    "multiqc_report": str(report.resolve()),
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = collect_run_outputs(outdir)
+    refreshed = json.loads((linkar_dir / "meta.json").read_text(encoding="utf-8"))
+
+    assert result["outputs"]["demux_fastq_files"] == [str(fastq.resolve())]
+    assert result["outputs"]["multiqc_report"] == str(report.resolve())
+    assert refreshed["outputs"] == result["outputs"]
+
+
 def test_load_template_parses_tool_requirements(tmp_path: Path) -> None:
     template_dir = make_template(tmp_path / "templates", "tool_demo", "#!/usr/bin/env bash\n")
     (template_dir / "linkar_template.yaml").write_text(
