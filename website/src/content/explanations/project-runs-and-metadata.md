@@ -1,7 +1,7 @@
 ---
 title: Project runs and metadata
 description: What lives in `project.yaml`, what lives under `.linkar/`, and how run adoption, render, collect, and remove fit together.
-order: 5
+order: 6
 ---
 
 Linkar projects are local working state, not a registry and not a hidden database.

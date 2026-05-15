@@ -1,7 +1,7 @@
 ---
 title: Discovery layers and site packs
 description: Keep Linkar generic by putting site-specific data discovery next to the pack instead of inside core runtime semantics.
-order: 8
+order: 9
 ---
 
 Linkar should know how to orchestrate reusable work.

@@ -53,6 +53,8 @@ from linkar.core import (
     set_active_global_pack,
     set_active_pack,
     test_template,
+    update_global_pack,
+    update_project_pack,
 )
 from linkar.errors import ProjectValidationError
 from linkar.mcp_server import main as serve_mcp
@@ -131,6 +133,7 @@ def config_pack_add_command(ref: str, pack_id: str | None, activate: bool, ui: C
         "[accent]Global Pack Added[/accent]",
         pack_id=result["id"],
         ref=result["ref"],
+        revision=result.get("revision"),
         active=result.get("active"),
         plain_text=f"{result['id']}\t{result['ref']}",
     )
@@ -155,6 +158,34 @@ def config_pack_list_command(output_format: str, ui: CliUI) -> None:
     ui.print_data(packs, format=output_format)
 
 
+@config_pack_group.command("update")
+@click.argument("identifier", required=False)
+@click.option("--all", "all_packs", is_flag=True, help="Update all configured global packs.")
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["rich", "json", "yaml"]),
+    default="rich",
+    show_default=True,
+    help="Output format.",
+)
+@handle_linkar_errors
+def config_pack_update_command(
+    identifier: str | None,
+    all_packs: bool,
+    output_format: str,
+    ui: CliUI,
+) -> None:
+    """Fetch and fast-forward cached remote global packs."""
+    if identifier and all_packs:
+        raise ProjectValidationError("Pass either IDENTIFIER or --all, not both")
+    results = update_global_pack(identifier, all_packs=all_packs)
+    if output_format == "rich":
+        ui.print_pack_updates(results)
+        return
+    ui.print_data(results, format=output_format)
+
+
 @config_pack_group.command("use")
 @click.argument("identifier")
 @handle_linkar_errors
@@ -165,6 +196,7 @@ def config_pack_use_command(identifier: str, ui: CliUI) -> None:
         "[accent]Global Pack Selected[/accent]",
         pack_id=result["id"],
         ref=result["ref"],
+        revision=result.get("revision"),
         active=result.get("active"),
         plain_text=f"{result['id']}\t{result['ref']}",
     )
@@ -180,6 +212,7 @@ def config_pack_remove_command(identifier: str, ui: CliUI) -> None:
         "[accent]Global Pack Removed[/accent]",
         pack_id=result["id"],
         ref=result["ref"],
+        revision=result.get("revision"),
         plain_text=f"{result['id']}\t{result['ref']}",
     )
 
@@ -197,6 +230,7 @@ def config_pack_show_command(ui: CliUI) -> None:
         "[accent]Active Global Pack[/accent]",
         pack_id=active_entry.id,
         ref=active_entry.asset.ref,
+        revision=active_entry.asset.revision,
         plain_text=f"{active_entry.id}\t{active_entry.asset.ref}",
         active=True,
     )
@@ -276,6 +310,7 @@ def pack_add_command(
         pack_id=result["id"],
         ref=result["ref"],
         binding=result.get("binding"),
+        revision=result.get("revision"),
         active=result.get("active"),
         plain_text=f"{result['id']}\t{result['ref']}",
     )
@@ -306,6 +341,41 @@ def pack_list_command(project: str | None, output_format: str, ui: CliUI) -> Non
     ui.print_data(packs, format=output_format)
 
 
+@pack_group.command("update")
+@click.argument("identifier", required=False)
+@click.option("--all", "all_packs", is_flag=True, help="Update all configured project packs.")
+@click.option(
+    "--project",
+    type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+    help="Project directory or project.yaml path. Defaults to the current directory.",
+    show_default=False,
+)
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["rich", "json", "yaml"]),
+    default="rich",
+    show_default=True,
+    help="Output format.",
+)
+@handle_linkar_errors
+def pack_update_command(
+    identifier: str | None,
+    all_packs: bool,
+    project: str | None,
+    output_format: str,
+    ui: CliUI,
+) -> None:
+    """Fetch and fast-forward cached remote project packs."""
+    if identifier and all_packs:
+        raise ProjectValidationError("Pass either IDENTIFIER or --all, not both")
+    results = update_project_pack(identifier, project=project, all_packs=all_packs)
+    if output_format == "rich":
+        ui.print_pack_updates(results)
+        return
+    ui.print_data(results, format=output_format)
+
+
 @pack_group.command("use")
 @click.argument("identifier")
 @click.option(
@@ -323,6 +393,7 @@ def pack_use_command(identifier: str, project: str | None, ui: CliUI) -> None:
         pack_id=result["id"],
         ref=result["ref"],
         binding=result.get("binding"),
+        revision=result.get("revision"),
         active=result.get("active"),
         plain_text=f"{result['id']}\t{result['ref']}",
     )
@@ -345,6 +416,7 @@ def pack_remove_command(identifier: str, project: str | None, ui: CliUI) -> None
         pack_id=result["id"],
         ref=result["ref"],
         binding=result.get("binding"),
+        revision=result.get("revision"),
         plain_text=f"{result['id']}\t{result['ref']}",
     )
 
@@ -370,6 +442,7 @@ def pack_show_command(project: str | None, ui: CliUI) -> None:
         pack_id=active_entry.id,
         ref=active_entry.asset.ref,
         binding=active_entry.binding,
+        revision=active_entry.asset.revision,
         active=True,
         plain_text=f"{active_entry.id}\t{active_entry.asset.ref}",
     )

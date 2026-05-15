@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from linkar.assets import resolve_asset_ref
+from linkar.assets import update_remote_asset, resolve_asset_ref
 from linkar.errors import ProjectValidationError
 from linkar.runtime.models import PackEntry
 from linkar.runtime.shared import derive_pack_id, load_yaml, pack_entry_to_data, save_yaml
@@ -153,6 +153,25 @@ def list_global_packs() -> list[dict[str, Any]]:
     ]
 
 
+def update_global_pack(identifier: str | None = None, *, all_packs: bool = False) -> list[dict[str, Any]]:
+    config = load_global_config()
+    if all_packs:
+        entries = global_pack_entries(config)
+    else:
+        if not identifier:
+            entry = get_active_global_pack_entry(config)
+            if entry is None:
+                raise ProjectValidationError("No active global pack configured")
+        else:
+            entry = find_global_pack_entry(identifier, config)
+            if entry is None:
+                raise ProjectValidationError(f"Pack not found in global config: {identifier}")
+        entries = [entry]
+    if not entries:
+        raise ProjectValidationError("No global packs configured")
+    return [update_remote_asset(entry.asset.ref).as_dict() | {"id": entry.id, "binding": None} for entry in entries]
+
+
 def add_global_pack(
     ref: str,
     *,
@@ -176,6 +195,7 @@ def add_global_pack(
         "id": resolved_id,
         "ref": asset.ref,
         "binding": None,
+        "revision": asset.revision,
         "active": config.data.get("active_pack") == resolved_id,
     }
 
@@ -191,6 +211,7 @@ def set_active_global_pack(identifier: str) -> dict[str, Any]:
         "id": entry.id,
         "ref": entry.asset.ref,
         "binding": None,
+        "revision": entry.asset.revision,
         "active": True,
     }
 
@@ -219,4 +240,5 @@ def remove_global_pack(identifier: str) -> dict[str, Any]:
         "id": entry.id,
         "ref": entry.asset.ref,
         "binding": None,
+        "revision": entry.asset.revision,
     }

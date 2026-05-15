@@ -90,3 +90,5 @@ For a project that should carry its own pack definition:
 4. use `--pack` only for overrides or one-off comparisons
 
 That keeps the command path short without making the source of a template ambiguous.
+
+For GitHub-hosted packs, continue with [Managing Git-backed packs](../managing-git-backed-packs/).

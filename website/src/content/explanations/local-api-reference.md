@@ -1,7 +1,7 @@
 ---
 title: Local API reference
 description: A practical reference for Linkar's local HTTP API, including auth, discovery, route conventions, and the resolve-confirm-run flow.
-order: 7
+order: 10
 ---
 
 Linkar's local HTTP API exposes the same runtime semantics as the CLI.

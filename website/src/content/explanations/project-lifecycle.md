@@ -1,7 +1,7 @@
 ---
 title: Project lifecycle
 description: A practical end-to-end view of how projects move from initialization to cleanup.
-order: 4
+order: 5
 ---
 
 This page is the shortest way to understand how a typical Linkar project evolves over time.

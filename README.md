@@ -151,6 +151,170 @@ linkar config pack list
 linkar run fastqc --input sample.fastq.gz
 ```
 
+## Managing Remote And Local Packs
+
+Git-backed packs are first-class refs. Linkar treats the Git revision as the
+pack version source of truth rather than requiring a separate pack-level
+semantic version in `linkar_pack.yaml`. Use Git tags when you want a
+human-readable release name.
+
+Use `linkar config pack ...` for user-level defaults and `linkar pack ...` for
+project-level pack configuration.
+
+### Install a published GitHub pack
+
+Use this on a normal user machine:
+
+```bash
+linkar config pack add github:IZKF-Genomics/izkf_pack --id izkf_pack
+linkar config pack show
+linkar config pack list
+linkar templates
+```
+
+After this, Linkar can find pack templates without passing `--pack`:
+
+```bash
+linkar run scrna_prep --binding default --verbose
+```
+
+### Update a GitHub pack
+
+Remote packs are cached under `~/.linkar/assets/` or `$LINKAR_HOME/assets`.
+Linkar does not fetch on every command. Updates are explicit so users control
+when a pack changes.
+
+```bash
+linkar config pack update izkf_pack
+linkar config pack list --format yaml
+```
+
+Update every configured global pack:
+
+```bash
+linkar config pack update --all
+```
+
+### Use a pack for one command
+
+Use `--pack` when you want a one-off command and do not want to modify global or
+project config:
+
+```bash
+linkar run scrna_prep \
+  --pack github:IZKF-Genomics/izkf_pack \
+  --binding default \
+  --verbose
+```
+
+### Use a local checkout while developing
+
+Template authors usually work from a local checkout:
+
+```bash
+cd ~/github
+gh repo clone IZKF-Genomics/izkf_pack
+
+linkar config pack add ~/github/izkf_pack --id izkf_pack_local
+linkar config pack use izkf_pack_local
+linkar config pack show
+```
+
+Run or test templates from the local checkout:
+
+```bash
+linkar test scrna_prep --pack ~/github/izkf_pack
+linkar run scrna_prep \
+  --pack ~/github/izkf_pack \
+  --input-h5ad /path/to/input.h5ad \
+  --organism human
+```
+
+### Switch between GitHub and local packs
+
+It is common to keep both the published pack and a local development checkout
+configured:
+
+```bash
+linkar config pack add github:IZKF-Genomics/izkf_pack --id izkf_pack
+linkar config pack add ~/github/izkf_pack --id izkf_pack_local --no-activate
+```
+
+Switch the active global pack:
+
+```bash
+linkar config pack use izkf_pack
+linkar config pack use izkf_pack_local
+```
+
+### Pin a pack for reproducible work
+
+For day-to-day internal work, an unpinned ref or branch is convenient:
+
+```bash
+linkar config pack add github:IZKF-Genomics/izkf_pack --id izkf_pack
+linkar config pack add github:IZKF-Genomics/izkf_pack@main --id izkf_pack_main
+```
+
+For publication-grade or handover work, pin a tag or commit SHA:
+
+```bash
+linkar config pack add \
+  github:IZKF-Genomics/izkf_pack@v2026.05.15 \
+  --id izkf_pack_2026_05_15
+
+linkar config pack add \
+  github:IZKF-Genomics/izkf_pack@6463e5d47a6880285672deb2af95908854ed63e6 \
+  --id izkf_pack_6463e5d
+```
+
+Tags are just named Git revisions. Linkar still records the resolved commit SHA.
+
+### Save a pack in a project
+
+Use project-level pack config when the project should carry its own pack choice:
+
+```bash
+linkar project init --name example_project
+cd example_project
+
+linkar pack add github:IZKF-Genomics/izkf_pack --id izkf_pack --binding default
+linkar pack show
+linkar pack list
+```
+
+Update the project-configured pack:
+
+```bash
+linkar pack update izkf_pack
+linkar pack list --format yaml
+```
+
+Pin a formal project to a release tag:
+
+```bash
+linkar pack add \
+  github:IZKF-Genomics/izkf_pack@v2026.05.15 \
+  --id izkf_pack_2026_05_15 \
+  --binding default
+```
+
+### Remove packs
+
+Remove a global pack:
+
+```bash
+linkar config pack remove izkf_pack_local
+```
+
+Remove a project pack:
+
+```bash
+linkar pack remove izkf_pack
+```
+
+For the same guide as a website page, see the tutorial `Managing Git-backed packs`.
+
 Use `linkar run TEMPLATE ...` when you want the generic path-or-pack execution interface.
 
 Shell completion can be printed or installed for `bash`, `zsh`, and `fish`:

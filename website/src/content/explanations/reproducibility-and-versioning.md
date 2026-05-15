@@ -1,7 +1,7 @@
 ---
 title: Reproducibility and versioning
 description: What Linkar records, what it leaves to the wrapped tool, and how packs should think about pinned versus floating upstreams.
-order: 7
+order: 8
 ---
 
 Linkar improves reproducibility, but it does not create it automatically from nothing.
@@ -21,6 +21,30 @@ For every recorded run, Linkar can capture:
 - warnings
 
 This is enough to explain what Linkar asked the template to do.
+
+## Pack revision is the pack version
+
+For Git-backed packs, Linkar treats the resolved Git revision as the pack version source of truth.
+It does not require a separate pack-level semantic version in `linkar_pack.yaml`.
+
+That keeps one authoritative answer to the question: which pack did this run use?
+
+Use:
+
+- an unpinned GitHub ref or branch when users should be able to update with `linkar config pack update`
+- a Git tag when you want a human-readable release point
+- a commit SHA when a project needs exact reproducibility
+
+Examples:
+
+```bash
+linkar config pack add github:IZKF-Genomics/izkf_pack --id izkf_pack
+linkar config pack add github:IZKF-Genomics/izkf_pack@main --id izkf_pack_main
+linkar config pack add github:IZKF-Genomics/izkf_pack@v2026.05.15 --id izkf_pack_2026_05_15
+```
+
+Tags are named Git revisions. Linkar still records the resolved commit SHA in run metadata and pack
+list output.
 
 ## What Linkar does not control
 

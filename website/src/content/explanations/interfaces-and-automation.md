@@ -1,7 +1,7 @@
 ---
 title: CLI, API, and MCP interfaces
 description: The same runtime semantics are exposed to humans, local API clients, and agent tooling.
-order: 6
+order: 7
 ---
 
 Linkar has three interface layers:

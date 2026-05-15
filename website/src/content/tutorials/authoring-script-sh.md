@@ -1,7 +1,7 @@
 ---
 title: Authoring a Template Runtime
 description: Use run.command for thin wrappers and run.sh only when the template needs real script logic.
-order: 4
+order: 5
 status: ready
 ---
 
