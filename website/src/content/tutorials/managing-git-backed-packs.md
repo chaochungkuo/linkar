@@ -11,6 +11,9 @@ from the Git ref.
 
 This guide uses `github:IZKF-Genomics/izkf_pack` as the concrete example.
 
+If you want the conceptual difference between `--pack`, project packs, and global packs first, read
+[Using global packs vs project packs](../packs-and-scope/).
+
 ## The versioning rule
 
 Linkar treats the resolved Git revision as the pack version source of truth. Do not add a separate

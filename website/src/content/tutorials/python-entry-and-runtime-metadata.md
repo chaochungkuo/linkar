@@ -1,7 +1,7 @@
 ---
 title: Python entrypoints, shell wrappers, and runtime metadata
 description: A practical pattern for templates that outgrow shell while still rendering a readable `run.sh` and recording the real runtime command.
-order: 9
+order: 10
 status: ready
 ---
 

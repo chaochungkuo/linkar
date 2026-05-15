@@ -1,7 +1,7 @@
 ---
 title: Build a real pack with templates and bindings
 description: "Create a small but realistic pack: one standalone producer template, one consumer template, and one pack-level binding that removes repeated manual wiring."
-order: 3
+order: 4
 status: ready
 ---
 
@@ -235,11 +235,54 @@ templates:
 Use this only when you need real custom resolution behavior. If a simple `template` plus `output`
 rule is enough, keep the binding declarative.
 
+## 8. Publish and update the pack
+
+Once the pack works locally, publish it to GitHub like any normal Git repository:
+
+```bash
+git add message_pack
+git commit -m "Add message pack"
+git push
+```
+
+Users can install the published pack from the Git ref:
+
+```bash
+linkar config pack add github:ORG/message_pack --id message_pack
+linkar templates
+linkar run produce_message --message "hello from a remote pack"
+```
+
+When you publish changes, users update their cached checkout explicitly:
+
+```bash
+linkar config pack update message_pack
+linkar config pack list --format yaml
+```
+
+For a project that should record its pack choice, save the pack in `project.yaml`:
+
+```bash
+linkar project init --name message-demo
+cd message-demo
+linkar pack add github:ORG/message_pack --id message_pack --binding default
+```
+
+Git revision is the pack version source of truth. Use Git tags when you want a named release:
+
+```bash
+linkar pack add github:ORG/message_pack@v2026.05.15 --id message_pack_2026_05_15
+```
+
+See [Managing Git-backed packs](../managing-git-backed-packs/) for the full remote/local
+pack command guide.
+
 ## What this tutorial demonstrates
 
 - templates remain standalone units
 - packs are where reusable chaining logic belongs
 - bindings reduce repeated manual parameter wiring
 - the project records local runs, while the pack carries reusable behavior
+- Git-backed packs are updated explicitly and identified by Git revision
 
 That is the core Linkar model in one small pack.
