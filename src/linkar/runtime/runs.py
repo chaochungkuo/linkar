@@ -60,8 +60,12 @@ def infer_default_binding_ref(
     template: TemplateSpec,
     selected_binding_ref: str | Path | None,
     project_obj: Project | None,
+    *,
+    allow_global: bool = True,
 ) -> str | Path | None:
     if selected_binding_ref is not None or template.pack_root is None:
+        return selected_binding_ref
+    if not allow_global:
         return selected_binding_ref
     active_global_entry = get_active_global_pack_entry()
     if active_global_entry is None:
@@ -270,6 +274,21 @@ def ensure_required_tools_available(template: TemplateSpec) -> None:
 
 def should_render_shell_wrapper(template: TemplateSpec) -> bool:
     return template.run_entry is not None and Path(template.run_entry).name == "script.sh"
+
+
+def should_skip_configured_pack_resolution(
+    template_ref: str | Path,
+    pack_refs: str | Path | list[str | Path] | None,
+) -> bool:
+    if pack_refs:
+        return False
+    ref_path = Path(template_ref).expanduser()
+    is_bare_name = (
+        isinstance(template_ref, str)
+        and not ref_path.is_absolute()
+        and ref_path.parent == Path(".")
+    )
+    return not is_bare_name and ref_path.exists()
 
 
 def resolve_param_placeholders(
@@ -618,7 +637,12 @@ def prepare_template_execution(
         project_obj = discover_project()
     else:
         project_obj = project
-    configured_entries, active_entry = combined_configured_pack_entries(project_obj)
+    skip_configured_packs = should_skip_configured_pack_resolution(template_ref, pack_refs)
+    if skip_configured_packs:
+        configured_entries = []
+        active_entry = None
+    else:
+        configured_entries, active_entry = combined_configured_pack_entries(project_obj)
     explicit_pack_assets = resolve_asset_refs(pack_refs)
     combined_pack_assets = unique_assets(
         explicit_pack_assets + [entry.asset for entry in configured_entries]
@@ -635,7 +659,12 @@ def prepare_template_execution(
             if entry.asset.root == template.pack_root:
                 selected_binding_ref = normalize_binding_ref(entry.binding)
                 break
-    selected_binding_ref = infer_default_binding_ref(template, selected_binding_ref, project_obj)
+    selected_binding_ref = infer_default_binding_ref(
+        template,
+        selected_binding_ref,
+        project_obj,
+        allow_global=not skip_configured_packs,
+    )
     reuse_existing_render_bundle = False
     existing_output_dir: Path | None = None
     if (

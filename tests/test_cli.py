@@ -2684,6 +2684,81 @@ printf 'Git wave, %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/wave.txt"
     assert cache_root.exists()
 
 
+def test_global_git_pack_update_fast_forwards_cached_pack(tmp_path: Path) -> None:
+    pack_root = tmp_path / "remote_pack"
+    template = make_template(
+        pack_root / "templates",
+        "git_wave",
+        "  name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'Git wave, %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/wave.txt"
+""",
+    )
+    git_url = f"git+{create_git_repo(pack_root)}"
+    linkar_home = tmp_path / "linkar_home_update"
+    linkar_home.mkdir()
+    env = {"LINKAR_HOME": str(linkar_home)}
+
+    added = run_cli("config", "pack", "add", git_url, "--id", "remote", cwd=tmp_path, env_extra=env)
+    assert added.returncode == 0, added.stderr
+    before = run_cli("config", "pack", "list", "--format", "yaml", cwd=tmp_path, env_extra=env)
+    assert before.returncode == 0, before.stderr
+    before_revision = yaml.safe_load(before.stdout)[0]["revision"]
+
+    template_yaml = template / "linkar_template.yaml"
+    template_yaml.write_text(template_yaml.read_text().replace("git_wave", "git_wave"))
+    (pack_root / "README.md").write_text("updated\n")
+    run_git("add", ".", cwd=pack_root)
+    run_git("commit", "-m", "update pack", cwd=pack_root)
+
+    updated = run_cli("config", "pack", "update", "remote", "--format", "yaml", cwd=tmp_path, env_extra=env)
+    assert updated.returncode == 0, updated.stderr
+    result = yaml.safe_load(updated.stdout)[0]
+    assert result["id"] == "remote"
+    assert result["action"] == "updated"
+    assert result["before"] == before_revision
+    assert result["after"] != before_revision
+
+
+def test_project_git_pack_update_fast_forwards_cached_pack(tmp_path: Path) -> None:
+    pack_root = tmp_path / "remote_project_pack"
+    make_template(
+        pack_root / "templates",
+        "git_project_wave",
+        "  name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'Project wave, %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/wave.txt"
+""",
+    )
+    git_url = f"git+{create_git_repo(pack_root)}"
+    linkar_home = tmp_path / "linkar_home_project_update"
+    linkar_home.mkdir()
+    env = {"LINKAR_HOME": str(linkar_home)}
+    project_dir = tmp_path / "project"
+
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path, env_extra=env)
+    assert init.returncode == 0, init.stderr
+    added = run_cli("pack", "add", git_url, "--id", "remote_project", cwd=project_dir, env_extra=env)
+    assert added.returncode == 0, added.stderr
+    before = run_cli("pack", "list", "--format", "yaml", cwd=project_dir, env_extra=env)
+    assert before.returncode == 0, before.stderr
+    before_revision = yaml.safe_load(before.stdout)[0]["revision"]
+
+    (pack_root / "README.md").write_text("project update\n")
+    run_git("add", ".", cwd=pack_root)
+    run_git("commit", "-m", "update project pack", cwd=pack_root)
+
+    updated = run_cli("pack", "update", "remote_project", "--format", "yaml", cwd=project_dir, env_extra=env)
+    assert updated.returncode == 0, updated.stderr
+    result = yaml.safe_load(updated.stdout)[0]
+    assert result["id"] == "remote_project"
+    assert result["action"] == "updated"
+    assert result["before"] == before_revision
+    assert result["after"] != before_revision
+
+
 def test_git_binding_reference_can_be_loaded_from_cache(tmp_path: Path) -> None:
     pack_root = tmp_path / "pack"
     make_template(
