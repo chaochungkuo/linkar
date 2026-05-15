@@ -797,6 +797,86 @@ class CliUI:
             )
         self._print_tabled_panel(table, title="[info]Pack Updates[/info]")
 
+    def print_pack_status(self, statuses: list[dict[str, Any]]) -> None:
+        if not statuses:
+            self._print_empty_state("[warn]Pack Status[/warn]", "No packs configured.")
+            return
+        if not self.rich_enabled:
+            for status in statuses:
+                active = "*" if status.get("active") else "-"
+                locked = status.get("locked_revision") or "-"
+                source = status.get("source_revision") or "-"
+                remote = status.get("remote_revision") or "-"
+                self.plain_print(
+                    f"{active}\t{status.get('id', '-')}\t{status.get('status', '-')}\t{locked}\t{source}\t{remote}\t{status.get('ref', '-')}"
+                )
+            return
+        table = Table(box=box.SIMPLE_HEAVY, header_style="accent")
+        table.add_column("Active")
+        table.add_column("Pack")
+        table.add_column("Status", style="value", no_wrap=True)
+        table.add_column("Locked", style="value")
+        table.add_column("Source", style="value")
+        if any(status.get("checked_remote") for status in statuses):
+            table.add_column("Remote", style="value")
+            show_remote = True
+        else:
+            show_remote = False
+        table.add_column("Ref", style="value")
+        for status in statuses:
+            locked = str(status.get("locked_revision") or "-")
+            source = str(status.get("source_revision") or "-")
+            row = [
+                "yes" if status.get("active") else "",
+                str(status.get("id") or "-"),
+                str(status.get("status") or "-"),
+                locked[:12] if len(locked) > 12 else locked,
+                source[:12] if len(source) > 12 else source,
+            ]
+            if show_remote:
+                remote = str(status.get("remote_revision") or "-")
+                row.append(remote[:12] if len(remote) > 12 else remote)
+            row.append(self._project_value_text(str(status.get("ref") or "-")))
+            table.add_row(*row)
+        self._print_tabled_panel(table, title="[info]Pack Status[/info]")
+
+    def print_pack_update_hint(self, statuses: list[dict[str, Any]]) -> None:
+        stale = [status for status in statuses if status.get("status") == "update_available"]
+        if not stale:
+            return
+        command = f"linkar pack update {stale[0].get('id')}" if len(stale) == 1 else "linkar pack update --all"
+        if len(stale) == 1:
+            status = stale[0]
+            pack_id = str(status.get("id") or "-")
+            locked = str(status.get("locked_revision") or "-")
+            latest = str(status.get("remote_revision") or status.get("source_revision") or "-")
+            locked_short = locked[:12] if len(locked) > 12 else locked
+            latest_short = latest[:12] if len(latest) > 12 else latest
+            line = f"Pack update available: {pack_id} (locked {locked_short}, latest {latest_short}). Run: {command}"
+        else:
+            line = f"Pack updates available for {len(stale)} packs. Run: {command}"
+        if not self.rich_enabled:
+            self.plain_error(line)
+            return
+        text = Text()
+        text.append("Pack update available", style="warn")
+        if len(stale) == 1:
+            status = stale[0]
+            pack_id = str(status.get("id") or "-")
+            locked = str(status.get("locked_revision") or "-")
+            latest = str(status.get("remote_revision") or status.get("source_revision") or "-")
+            text.append(": ", style="muted")
+            text.append(pack_id, style="accent")
+            text.append(" (locked ", style="muted")
+            text.append(locked[:12] if len(locked) > 12 else locked, style="value")
+            text.append(", latest ", style="muted")
+            text.append(latest[:12] if len(latest) > 12 else latest, style="value")
+            text.append("). Run: ", style="muted")
+        else:
+            text.append(f"s for {len(stale)} packs. Run: ", style="muted")
+        text.append(command, style="accent")
+        self.error_console.print(text)
+
     def _looks_like_run_metadata(self, metadata: dict[str, Any]) -> bool:
         required = {"template", "instance_id", "params", "outputs"}
         return required.issubset(metadata)

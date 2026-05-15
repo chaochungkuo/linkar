@@ -8,7 +8,14 @@ try:
 except ImportError:
     import click
 
-from linkar.core import discover_project, get_active_global_pack_entry, get_active_pack_entry, list_templates, load_template
+from linkar.core import (
+    discover_project,
+    get_active_global_pack_entry,
+    get_active_pack_entry,
+    list_templates,
+    load_template,
+    project_pack_status,
+)
 from linkar.errors import LinkarError, ProjectValidationError
 from linkar.ui import CliUI
 from linkar.cli_support.common import (
@@ -25,6 +32,14 @@ from linkar.cli_support.common import (
 
 CommandClass = getattr(click, "RichCommand", click.Command)
 GroupClass = getattr(click, "RichGroup", click.Group)
+
+
+def notify_project_pack_updates(project: str | None, ui: CliUI) -> None:
+    try:
+        statuses = project_pack_status(project=project, check_remote=True)
+    except LinkarError:
+        return
+    ui.print_pack_update_hint(statuses)
 
 
 def template_command_callback(
@@ -54,8 +69,9 @@ def template_command_callback(
         params = {key: value for key, value in template_values.items() if value is not None}
         params.update(params_from_pairs(param))
         run_template_ref = template_id if pack_ref is not None else template_path
-        run_pack_refs = [pack_ref] if pack_ref is not None else None
+        run_pack_refs = None
         effective_verbose = verbose or (action == "run" and template_spec.run_verbose_by_default)
+        notify_project_pack_updates(project, ui)
         if effective_verbose and action == "run":
             result = execute_with_optional_prompts(
                 run_template_ref,
@@ -211,6 +227,7 @@ def generic_run_callback(bound_template: str | None = None, *, action: str = "ru
                 pack_refs=list(pack),
             )
         )
+        notify_project_pack_updates(project, ui)
         if effective_verbose and action == "run":
             result = execute_with_optional_prompts(
                 template_ref,

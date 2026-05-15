@@ -43,6 +43,7 @@ from linkar.core import (
     list_project_runs,
     list_templates,
     load_project,
+    project_pack_status,
     remove_global_pack,
     remove_project_pack,
     prune_project_runs,
@@ -339,6 +340,41 @@ def pack_list_command(project: str | None, output_format: str, ui: CliUI) -> Non
         ui.print_packs(packs)
         return
     ui.print_data(packs, format=output_format)
+
+
+@pack_group.command("status")
+@click.option(
+    "--check-remote",
+    is_flag=True,
+    help="Fetch remote refs before comparing the project lock with the latest cached source revision.",
+)
+@click.option(
+    "--project",
+    type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+    help="Project directory or project.yaml path. Defaults to the current directory.",
+    show_default=False,
+)
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["rich", "json", "yaml"]),
+    default="rich",
+    show_default=True,
+    help="Output format.",
+)
+@handle_linkar_errors
+def pack_status_command(
+    check_remote: bool,
+    project: str | None,
+    output_format: str,
+    ui: CliUI,
+) -> None:
+    """Show project pack locks and whether updates are known locally or after a remote check."""
+    statuses = project_pack_status(project=project, check_remote=check_remote)
+    if output_format == "rich":
+        ui.print_pack_status(statuses)
+        return
+    ui.print_data(statuses, format=output_format)
 
 
 @pack_group.command("update")

@@ -172,6 +172,15 @@ def ensure_remote_asset(ref: str) -> ResolvedAsset:
     return ResolvedAsset(ref=ref, root=cache_dir, revision=revision)
 
 
+def resolve_asset_ref_at_revision(ref: str, revision: str | None) -> ResolvedAsset:
+    if revision is None or not is_remote_asset_ref(ref):
+        return resolve_asset_ref(ref)
+    base_ref, _ = parse_remote_ref(ref)
+    locked_ref = f"{base_ref}@{revision}"
+    asset = resolve_asset_ref(locked_ref)
+    return ResolvedAsset(ref=ref, root=asset.root, revision=asset.revision)
+
+
 def update_remote_asset(ref: str) -> AssetUpdateResult:
     if not is_remote_asset_ref(ref):
         asset = resolve_asset_ref(ref)

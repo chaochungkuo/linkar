@@ -2742,6 +2742,8 @@ printf 'Project wave, %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/wave.txt"
     assert init.returncode == 0, init.stderr
     added = run_cli("pack", "add", git_url, "--id", "remote_project", cwd=project_dir, env_extra=env)
     assert added.returncode == 0, added.stderr
+    project_data = yaml.safe_load((project_dir / "project.yaml").read_text())
+    assert project_data["packs"][0]["revision"]
     before = run_cli("pack", "list", "--format", "yaml", cwd=project_dir, env_extra=env)
     assert before.returncode == 0, before.stderr
     before_revision = yaml.safe_load(before.stdout)[0]["revision"]
@@ -2757,6 +2759,110 @@ printf 'Project wave, %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/wave.txt"
     assert result["action"] == "updated"
     assert result["before"] == before_revision
     assert result["after"] != before_revision
+    project_data = yaml.safe_load((project_dir / "project.yaml").read_text())
+    assert project_data["packs"][0]["revision"] == result["after"]
+
+
+def test_project_git_pack_revision_lock_controls_template_resolution(tmp_path: Path) -> None:
+    pack_root = tmp_path / "remote_project_lock_pack"
+    template = make_template(
+        pack_root / "templates",
+        "git_locked_wave",
+        "  name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'Locked v1, %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/wave.txt"
+""",
+    )
+    git_url = f"git+{create_git_repo(pack_root)}"
+    linkar_home = tmp_path / "linkar_home_project_lock"
+    linkar_home.mkdir()
+    env = {"LINKAR_HOME": str(linkar_home)}
+    project_dir = tmp_path / "project"
+
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path, env_extra=env)
+    assert init.returncode == 0, init.stderr
+    added = run_cli("pack", "add", git_url, "--id", "locked", cwd=project_dir, env_extra=env)
+    assert added.returncode == 0, added.stderr
+    project_data = yaml.safe_load((project_dir / "project.yaml").read_text())
+    locked_revision = project_data["packs"][0]["revision"]
+    assert locked_revision
+
+    first_outdir = tmp_path / "first"
+    first = run_cli(
+        "run",
+        "git_locked_wave",
+        "--param",
+        "name=Linkar",
+        "--outdir",
+        str(first_outdir),
+        cwd=project_dir,
+        env_extra=env,
+    )
+    assert first.returncode == 0, first.stderr
+    assert (first_outdir / "results" / "wave.txt").read_text() == "Locked v1, Linkar\n"
+
+    run_script = template / "run.sh"
+    run_script.write_text(run_script.read_text().replace("Locked v1", "Locked v2"))
+    run_git("add", ".", cwd=pack_root)
+    run_git("commit", "-m", "update locked pack", cwd=pack_root)
+
+    second_outdir = tmp_path / "second"
+    second = run_cli(
+        "run",
+        "git_locked_wave",
+        "--param",
+        "name=Linkar",
+        "--outdir",
+        str(second_outdir),
+        cwd=project_dir,
+        env_extra=env,
+    )
+    assert second.returncode == 0, second.stderr
+    assert "Pack update available: locked" in second.stderr
+    assert "locked " in second.stderr
+    assert "latest " in second.stderr
+    assert "linkar pack update locked" in second.stderr
+    assert (second_outdir / "results" / "wave.txt").read_text() == "Locked v1, Linkar\n"
+    project_data = yaml.safe_load((project_dir / "project.yaml").read_text())
+    assert project_data["packs"][0]["revision"] == locked_revision
+
+    status = run_cli("pack", "status", "--check-remote", "--format", "yaml", cwd=project_dir, env_extra=env)
+    assert status.returncode == 0, status.stderr
+    status_payload = yaml.safe_load(status.stdout)
+    assert status_payload[0]["id"] == "locked"
+    assert status_payload[0]["status"] == "update_available"
+    assert status_payload[0]["locked_revision"] == locked_revision
+    assert status_payload[0]["source_revision"] != locked_revision
+    project_data = yaml.safe_load((project_dir / "project.yaml").read_text())
+    assert project_data["packs"][0]["revision"] == locked_revision
+
+    updated = run_cli("pack", "update", "locked", "--format", "yaml", cwd=project_dir, env_extra=env)
+    assert updated.returncode == 0, updated.stderr
+    result = yaml.safe_load(updated.stdout)[0]
+    assert result["after"] != locked_revision
+    project_data = yaml.safe_load((project_dir / "project.yaml").read_text())
+    assert project_data["packs"][0]["revision"] == result["after"]
+
+    third_outdir = tmp_path / "third"
+    third = run_cli(
+        "run",
+        "git_locked_wave",
+        "--param",
+        "name=Linkar",
+        "--outdir",
+        str(third_outdir),
+        cwd=project_dir,
+        env_extra=env,
+    )
+    assert third.returncode == 0, third.stderr
+    assert "Pack update available" not in third.stderr
+    assert (third_outdir / "results" / "wave.txt").read_text() == "Locked v2, Linkar\n"
+
+    status = run_cli("pack", "status", "--format", "yaml", cwd=project_dir, env_extra=env)
+    assert status.returncode == 0, status.stderr
+    status_payload = yaml.safe_load(status.stdout)
+    assert status_payload[0]["status"] == "current"
 
 
 def test_git_binding_reference_can_be_loaded_from_cache(tmp_path: Path) -> None:

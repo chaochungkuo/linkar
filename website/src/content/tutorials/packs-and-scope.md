@@ -46,7 +46,9 @@ linkar run scrna_prep --input-h5ad /data/study/raw_counts.h5ad --organism human
 ```
 
 Now the project remembers the pack, so later runs are shorter and the pack choice is saved with the
-project.
+project. For Git-backed packs, `project.yaml` also stores the resolved revision; `linkar pack status`
+can check whether the lock is current, and `linkar pack update` is the explicit action that moves
+that project lock forward.
 
 Use this when:
 
@@ -74,7 +76,7 @@ Move a pack into project config only when the project needs to be explicit about
 
 - `--pack` wins when you want full explicitness
 - global packs are the normal personal default
-- project packs override global ones for project-specific behavior and reproducibility
+- project packs override global ones for project-specific behavior and revision-locked reproducibility
 
 If a template id exists in multiple packs, use `--pack` or select the active project pack
 explicitly. That keeps resolution deterministic and readable.

@@ -72,11 +72,13 @@ def derive_pack_id(ref: str) -> str:
     return slug or "pack"
 
 
-def pack_entry_to_data(entry: PackEntry) -> dict[str, Any]:
+def pack_entry_to_data(entry: PackEntry, *, include_revision: bool = False) -> dict[str, Any]:
     data: dict[str, Any] = {
         "id": entry.id,
         "ref": entry.asset.ref,
     }
+    if include_revision and entry.asset.revision is not None:
+        data["revision"] = entry.asset.revision
     if entry.binding is not None:
         data["binding"] = entry.binding
     return data

@@ -38,6 +38,7 @@ class PackEntry:
     id: str
     asset: ResolvedAsset
     binding: str | None = None
+    locked_revision: str | None = None
 
 
 @dataclass

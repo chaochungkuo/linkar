@@ -129,17 +129,34 @@ cd example_project
 linkar pack add github:IZKF-Genomics/izkf_pack --id izkf_pack --binding default
 linkar pack show
 linkar pack list
+linkar pack status
 ```
 
-Update the project-configured pack:
+`linkar pack add` writes the resolved Git revision into `project.yaml`. Later project runs use that
+locked revision, even if the cached branch or the upstream GitHub repository has moved.
+
+Check whether the project lock is current with the latest remote state:
+
+```bash
+linkar pack status --check-remote
+```
+
+This may fetch remote Git refs into Linkar's local asset cache, but it does not change
+`project.yaml`.
+
+`linkar run ...` and `linkar render ...` also show a one-line reminder when they notice that the
+remote pack has moved ahead. The command still uses the locked project revision.
+
+Update the project-configured pack when you want the project lock to move forward:
 
 ```bash
 linkar pack update izkf_pack
 linkar pack list --format yaml
+linkar pack status
 ```
 
-Use this when a project should stay explicit about its pack source instead of relying on each
-user's personal global config.
+Use this when a project should stay explicit about its pack source and revision instead of relying
+on each user's personal global config.
 
 ## The versioning rule
 
@@ -153,8 +170,8 @@ Use:
 - Git tags for human-readable release points
 - commit SHAs for exact provenance
 
-`linkar config pack list --format yaml`, `linkar pack list --format yaml`, and run metadata record
-the resolved commit revision.
+`linkar config pack list --format yaml`, `linkar pack list --format yaml`, `project.yaml`, and run
+metadata record the resolved commit revision.
 
 ## Pin a pack for reproducible work
 

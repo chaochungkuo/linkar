@@ -46,6 +46,13 @@ linkar config pack add github:IZKF-Genomics/izkf_pack@v2026.05.15 --id izkf_pack
 Tags are named Git revisions. Linkar still records the resolved commit SHA in run metadata and pack
 list output.
 
+Project-configured packs also store the resolved revision in `project.yaml`. That makes the project
+pack selection restorable: `ref` records the update source, while `revision` records the exact pack
+state used by the project until `linkar pack update` moves it forward.
+
+Use `linkar pack status --check-remote` when you want to compare the project lock with the latest
+remote state. Status checks do not move the project lock; update remains explicit.
+
 ## What Linkar does not control
 
 Linkar does not automatically pin:

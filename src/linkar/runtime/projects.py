@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from linkar.assets import update_remote_asset, resolve_asset_ref
+from linkar.assets import is_remote_asset_ref, update_remote_asset, resolve_asset_ref, resolve_asset_ref_at_revision
 from linkar.errors import ProjectValidationError
 from linkar.runtime.models import PackEntry, Project
 from linkar.runtime.shared import derive_pack_id, load_yaml, pack_entry_to_data, project_file, save_yaml
@@ -96,12 +96,16 @@ def project_pack_entries(project: Project | None) -> list[PackEntry]:
         binding = item.get("binding")
         if binding is not None and not isinstance(binding, str):
             raise ProjectValidationError("project.yaml pack entry field 'binding' must be a string")
-        asset = resolve_asset_ref(ref)
+        revision = item.get("revision")
+        if revision is not None and not isinstance(revision, str):
+            raise ProjectValidationError("project.yaml pack entry field 'revision' must be a string")
+        asset = resolve_asset_ref_at_revision(ref, revision)
         entries.append(
             PackEntry(
                 id=pack_id or derive_pack_id(asset.ref),
                 asset=asset,
                 binding=binding,
+                locked_revision=revision,
             )
         )
     return entries
@@ -150,6 +154,84 @@ def list_configured_packs(project: str | Path | Project | None = None) -> list[d
     ]
 
 
+def _project_pack_raw_entry(project: Project, entry: PackEntry) -> dict[str, Any] | str | None:
+    for item in project.data.get("packs", []):
+        if isinstance(item, str):
+            if resolve_asset_ref(item).ref == entry.asset.ref:
+                return item
+            continue
+        if not isinstance(item, dict):
+            continue
+        if item.get("id") == entry.id or item.get("ref") == entry.asset.ref:
+            return item
+    return None
+
+
+def project_pack_status(
+    *,
+    project: str | Path | Project | None = None,
+    check_remote: bool = False,
+) -> list[dict[str, Any]]:
+    if isinstance(project, (str, Path)):
+        project_obj = load_project(project)
+    elif project is None:
+        project_obj = discover_project()
+    else:
+        project_obj = project
+    if project_obj is None:
+        raise missing_project_error("Checking pack status")
+
+    active = project_obj.data.get("active_pack")
+    statuses: list[dict[str, Any]] = []
+    for entry in project_pack_entries(project_obj):
+        raw_entry = _project_pack_raw_entry(project_obj, entry)
+        locked_revision = entry.locked_revision
+        if isinstance(raw_entry, dict):
+            raw_revision = raw_entry.get("revision")
+            locked_revision = raw_revision if isinstance(raw_revision, str) else locked_revision
+
+        remote = is_remote_asset_ref(entry.asset.ref)
+        source_revision = entry.asset.revision
+        checked_remote = False
+        remote_revision: str | None = None
+        if remote:
+            source_asset = resolve_asset_ref(entry.asset.ref)
+            source_revision = source_asset.revision
+            if check_remote:
+                update_result = update_remote_asset(entry.asset.ref)
+                checked_remote = True
+                after = update_result.after
+                if isinstance(after, str) and after:
+                    remote_revision = after
+                    source_revision = after
+
+        comparison_revision = remote_revision or source_revision
+        if not remote:
+            status = "local"
+        elif not locked_revision:
+            status = "unlocked"
+        elif comparison_revision and comparison_revision != locked_revision:
+            status = "update_available"
+        else:
+            status = "current"
+
+        statuses.append(
+            {
+                "id": entry.id,
+                "ref": entry.asset.ref,
+                "binding": entry.binding,
+                "active": active == entry.id or (active is None and len(project_obj.data.get("packs", [])) == 1),
+                "remote": remote,
+                "locked_revision": locked_revision,
+                "source_revision": source_revision,
+                "remote_revision": remote_revision,
+                "checked_remote": checked_remote,
+                "status": status,
+            }
+        )
+    return statuses
+
+
 def update_project_pack(
     identifier: str | None = None,
     *,
@@ -179,10 +261,20 @@ def update_project_pack(
         entries = [entry]
     if not entries:
         raise ProjectValidationError("No packs configured in project")
-    return [
-        update_remote_asset(entry.asset.ref).as_dict() | {"id": entry.id, "binding": entry.binding}
-        for entry in entries
-    ]
+    results: list[dict[str, Any]] = []
+    for entry in entries:
+        result = update_remote_asset(entry.asset.ref).as_dict() | {"id": entry.id, "binding": entry.binding}
+        after_revision = result.get("after")
+        if isinstance(after_revision, str) and after_revision:
+            for item in project_obj.data.get("packs", []):
+                if not isinstance(item, dict):
+                    continue
+                if item.get("id") == entry.id or item.get("ref") == entry.asset.ref:
+                    item["revision"] = after_revision
+                    break
+        results.append(result)
+    save_yaml(project_obj.root / "project.yaml", project_obj.data)
+    return results
 
 
 def get_project_author(project: str | Path | Project | None = None) -> dict[str, str] | None:
@@ -271,7 +363,7 @@ def add_project_pack(
         if entry.asset.ref == asset.ref:
             raise ProjectValidationError(f"Pack already exists in project: {asset.ref}")
     entry = PackEntry(id=resolved_id, asset=asset, binding=binding)
-    project_obj.data.setdefault("packs", []).append(pack_entry_to_data(entry))
+    project_obj.data.setdefault("packs", []).append(pack_entry_to_data(entry, include_revision=True))
     if activate or len(project_obj.data["packs"]) == 1:
         project_obj.data["active_pack"] = resolved_id
     save_yaml(project_obj.root / "project.yaml", project_obj.data)
