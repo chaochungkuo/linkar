@@ -151,6 +151,27 @@ linkar config pack list
 linkar run fastqc --input sample.fastq.gz
 ```
 
+Git-backed packs are first-class refs. Linkar treats the Git revision as the
+pack version source of truth rather than requiring a separate pack-level
+semantic version in `linkar_pack.yaml`. Use Git tags when you want a
+human-readable release name. The short author-to-user flow looks like this:
+
+```bash
+# Template author: develop and test locally.
+linkar test scrna_prep --pack ~/github/izkf_pack
+
+# User: install the published pack from GitHub.
+linkar config pack add github:IZKF-Genomics/izkf_pack --id izkf_pack
+linkar config pack list
+linkar templates
+linkar run scrna_prep ...
+
+# User: update the cached GitHub checkout when the author publishes changes.
+linkar config pack update izkf_pack
+```
+
+For the full command guide, see the website tutorial `Managing Git-backed packs`.
+
 Use `linkar run TEMPLATE ...` when you want the generic path-or-pack execution interface.
 
 Shell completion can be printed or installed for `bash`, `zsh`, and `fish`:

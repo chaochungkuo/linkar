@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from linkar.assets import resolve_asset_ref
+from linkar.assets import update_remote_asset, resolve_asset_ref
 from linkar.errors import ProjectValidationError
 from linkar.runtime.models import PackEntry, Project
 from linkar.runtime.shared import derive_pack_id, load_yaml, pack_entry_to_data, project_file, save_yaml
@@ -150,6 +150,41 @@ def list_configured_packs(project: str | Path | Project | None = None) -> list[d
     ]
 
 
+def update_project_pack(
+    identifier: str | None = None,
+    *,
+    project: str | Path | Project | None = None,
+    all_packs: bool = False,
+) -> list[dict[str, Any]]:
+    if isinstance(project, (str, Path)):
+        project_obj = load_project(project)
+    elif project is None:
+        project_obj = discover_project()
+    else:
+        project_obj = project
+    if project_obj is None:
+        raise missing_project_error("Updating packs")
+
+    if all_packs:
+        entries = project_pack_entries(project_obj)
+    else:
+        if not identifier:
+            entry = get_active_pack_entry(project_obj)
+            if entry is None:
+                raise ProjectValidationError("No active pack configured")
+        else:
+            entry = find_project_pack_entry(project_obj, identifier)
+            if entry is None:
+                raise ProjectValidationError(f"Pack not found in project: {identifier}")
+        entries = [entry]
+    if not entries:
+        raise ProjectValidationError("No packs configured in project")
+    return [
+        update_remote_asset(entry.asset.ref).as_dict() | {"id": entry.id, "binding": entry.binding}
+        for entry in entries
+    ]
+
+
 def get_project_author(project: str | Path | Project | None = None) -> dict[str, str] | None:
     if isinstance(project, (str, Path)):
         project_obj = load_project(project)
@@ -244,6 +279,7 @@ def add_project_pack(
         "id": resolved_id,
         "ref": asset.ref,
         "binding": binding,
+        "revision": asset.revision,
         "active": project_obj.data.get("active_pack") == resolved_id,
     }
 
@@ -270,6 +306,7 @@ def set_active_pack(
         "id": entry.id,
         "ref": entry.asset.ref,
         "binding": entry.binding,
+        "revision": entry.asset.revision,
         "active": True,
     }
 
@@ -309,6 +346,7 @@ def remove_project_pack(
         "id": entry.id,
         "ref": entry.asset.ref,
         "binding": entry.binding,
+        "revision": entry.asset.revision,
     }
 
 

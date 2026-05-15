@@ -733,7 +733,8 @@ class CliUI:
             for pack in packs:
                 active = "*" if pack.get("active") else "-"
                 binding = pack.get("binding") or ""
-                self.plain_print(f"{active}\t{pack['id']}\t{pack['ref']}\t{binding}")
+                revision = pack.get("revision") or ""
+                self.plain_print(f"{active}\t{pack['id']}\t{pack['ref']}\t{binding}\t{revision}")
             return
         self.print_summary_panel(
             "[info]Pack Summary[/info]",
@@ -748,14 +749,53 @@ class CliUI:
         table.add_column("Pack")
         table.add_column("Ref", style="value")
         table.add_column("Binding", style="value")
+        if any(pack.get("revision") for pack in packs):
+            table.add_column("Revision", style="value")
+            show_revision = True
+        else:
+            show_revision = False
         for pack in packs:
-            table.add_row(
+            row = [
                 "yes" if pack.get("active") else "",
                 pack["id"],
                 self._project_value_text(pack["ref"]),
                 pack.get("binding") or "",
-            )
+            ]
+            if show_revision:
+                revision = str(pack.get("revision") or "-")
+                row.append(revision[:12] if len(revision) > 12 else revision)
+            table.add_row(*row)
         self._print_tabled_panel(table, title="[info]Configured Packs[/info]")
+
+    def print_pack_updates(self, results: list[dict[str, Any]]) -> None:
+        if not results:
+            self._print_empty_state("[warn]Pack Updates[/warn]", "No packs updated.")
+            return
+        if not self.rich_enabled:
+            for result in results:
+                before = result.get("before") or "-"
+                after = result.get("after") or "-"
+                self.plain_print(
+                    f"{result.get('id', '-')}\t{result.get('action', '-')}\t{before}\t{after}\t{result.get('ref', '-')}"
+                )
+            return
+        table = Table(box=box.SIMPLE_HEAVY, header_style="accent")
+        table.add_column("Pack")
+        table.add_column("Action", style="value", no_wrap=True)
+        table.add_column("Before", style="value")
+        table.add_column("After", style="value")
+        table.add_column("Ref", style="value")
+        for result in results:
+            before = str(result.get("before") or "-")
+            after = str(result.get("after") or "-")
+            table.add_row(
+                str(result.get("id") or "-"),
+                str(result.get("action") or "-"),
+                before[:12] if len(before) > 12 else before,
+                after[:12] if len(after) > 12 else after,
+                self._project_value_text(str(result.get("ref") or "-")),
+            )
+        self._print_tabled_panel(table, title="[info]Pack Updates[/info]")
 
     def _looks_like_run_metadata(self, metadata: dict[str, Any]) -> bool:
         required = {"template", "instance_id", "params", "outputs"}
@@ -1000,12 +1040,15 @@ class CliUI:
         pack_id: str,
         ref: str,
         binding: str | None = None,
+        revision: str | None = None,
         active: bool | None = None,
         plain_text: str | None = None,
     ) -> None:
         fields: list[tuple[str, Any]] = [("Pack", pack_id), ("Ref", ref)]
         if binding:
             fields.append(("Binding", binding))
+        if revision:
+            fields.append(("Revision", revision[:12] if len(revision) > 12 else revision))
         if active is not None:
             fields.append(("Active", "yes" if active else "no"))
         self.print_summary_panel(title, fields, plain_text=plain_text, border_style="accent")

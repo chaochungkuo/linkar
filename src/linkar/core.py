@@ -12,6 +12,7 @@ from linkar.runtime.config import (
     remove_global_pack,
     set_global_author,
     set_active_global_pack,
+    update_global_pack,
 )
 from linkar.runtime.bindings import (
     binding_asset_root,
@@ -38,6 +39,7 @@ from linkar.runtime.projects import (
     remove_project_pack,
     set_project_author,
     set_active_pack,
+    update_project_pack,
 )
 from linkar.runtime.runs import (
     adopt_run_into_project,
@@ -145,6 +147,8 @@ __all__ = [
     "test_template",
     "unique_assets",
     "update_project",
+    "update_project_pack",
+    "update_global_pack",
     "utc_now",
     "write_json",
 ]
