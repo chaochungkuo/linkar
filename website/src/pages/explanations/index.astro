@@ -6,6 +6,40 @@ import SiteFooter from "../../components/SiteFooter.astro";
 
 const explanations = (await getCollection("explanations")).sort((a, b) => a.data.order - b.data.order);
 const explanationHref = (slug: string) => `${import.meta.env.BASE_URL}explanations/${slug}/`;
+const bySlug = new Map(explanations.map((entry) => [entry.slug, entry]));
+const route = [
+  "why-linkar",
+  "pack-and-project-model",
+  "template-runtime-contract",
+  "params-bindings-and-resolution",
+];
+const groups = [
+  {
+    title: "Start Here",
+    description: "Read these first to understand the problem Linkar is trying to solve and the boundary between reusable assets and local work.",
+    slugs: ["why-linkar", "pack-and-project-model"],
+  },
+  {
+    title: "Core Runtime Model",
+    description: "Use these pages when you need to understand how templates run, how params resolve, and how project state is recorded.",
+    slugs: [
+      "template-runtime-contract",
+      "params-bindings-and-resolution",
+      "project-lifecycle",
+      "project-runs-and-metadata",
+    ],
+  },
+  {
+    title: "Advanced And Integration",
+    description: "These are for automation, reproducibility policy, site-specific discovery, and API-level integration.",
+    slugs: [
+      "interfaces-and-automation",
+      "reproducibility-and-versioning",
+      "discovery-layers-and-site-packs",
+      "local-api-reference",
+    ],
+  },
+];
 ---
 
 <BaseLayout title="Concepts | Linkar" description="Understand the core ideas behind Linkar: reusable templates, reusable bindings, portable packs, readable projects, and human-plus-machine interfaces.">
@@ -23,15 +57,48 @@ const explanationHref = (slug: string) => `${import.meta.env.BASE_URL}explanatio
       </section>
 
       <section class="section page-section-tight">
-        <div class="card-grid two-up">
-          {explanations.map((entry) => (
-            <a class="doc-card" href={explanationHref(entry.slug)}>
-              <h3>{entry.data.title}</h3>
-              <p>{entry.data.description}</p>
-            </a>
-          ))}
+        <div class="section-heading">
+          <p class="eyebrow">Recommended Route</p>
+          <h2>Build the mental model in this order.</h2>
+        </div>
+        <div class="route-strip">
+          {route.map((slug, index) => {
+            const entry = bySlug.get(slug);
+            if (!entry) return null;
+            return (
+              <a class="route-step" href={explanationHref(slug)}>
+                <span class="route-number">{index + 1}</span>
+                <span>{entry.data.title}</span>
+              </a>
+            );
+          })}
         </div>
       </section>
+
+      {groups.map((group) => (
+        <section class="section page-section-tight">
+          <div class="section-heading">
+            <p class="eyebrow">Concepts</p>
+            <h2>{group.title}</h2>
+            <p class="section-copy">{group.description}</p>
+          </div>
+          <div class="card-grid two-up">
+            {group.slugs.map((slug) => {
+              const entry = bySlug.get(slug);
+              if (!entry) return null;
+              return (
+                <a class="doc-card" href={explanationHref(slug)}>
+                  <div class="card-tags">
+                    <span class="card-tag">{group.title}</span>
+                  </div>
+                  <h3>{entry.data.title}</h3>
+                  <p>{entry.data.description}</p>
+                </a>
+              );
+            })}
+          </div>
+        </section>
+      ))}
     </main>
     <SiteFooter />
   </div>

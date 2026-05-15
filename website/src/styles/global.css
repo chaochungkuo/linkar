@@ -450,6 +450,48 @@ h3 {
   margin-top: 3.5rem;
 }
 
+.route-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.route-step {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 4rem;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--ink);
+  text-decoration: none;
+  box-shadow: var(--shadow-soft);
+  transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
+}
+
+.route-step:hover {
+  transform: translateY(-3px);
+  border-color: var(--line-strong);
+  background: var(--panel-strong);
+}
+
+.route-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #f8fbfd;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
 .card-grid,
 .doc-grid,
 .split-grid,
@@ -752,7 +794,8 @@ h3 {
   .split-grid,
   .workflow-strip,
   .interface-grid,
-  .proof-grid {
+  .proof-grid,
+  .route-strip {
     grid-template-columns: 1fr;
   }
 

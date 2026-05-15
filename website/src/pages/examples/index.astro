@@ -1,8 +1,65 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import SiteNav from "../../components/SiteNav.astro";
+import SiteFooter from "../../components/SiteFooter.astro";
 
 const base = import.meta.env.BASE_URL;
+const examples = [
+  {
+    title: "First Template",
+    description: "Start with the smallest runnable pack and learn the template contract before adding chaining or remote sources.",
+    cards: [
+      {
+        tag: "Start",
+        title: "Basic",
+        href: `${base}tutorials/testing-basic-templates/`,
+        text: "Start here for the template contract: `run.command`, `run.sh`, `run.py`, declared outputs, `glob` outputs, `tools.required_any`, file inputs, and local tests.",
+      },
+    ],
+  },
+  {
+    title: "Connect Templates",
+    description: "Move here when one template is clear and you want to understand how packs remove repeated manual path wiring.",
+    cards: [
+      {
+        tag: "Bindings",
+        title: "Chaining",
+        href: `${base}tutorials/example-pack-progression/#2-learn-pack-level-chaining-with-chaining`,
+        text: "Open this when you want to see pack-level default binding in action. The key lesson is that template-to-template connection lives in the pack, not in manual operator steps.",
+      },
+      {
+        tag: "Bindings",
+        title: "Binding overrides",
+        href: `${base}tutorials/example-pack-progression/#3-compare-defaults-and-caller-overrides-with-binding_overrides`,
+        text: "Use this when you want to compare three things directly: project history, a pack's default binding, and an explicit override binding passed by the caller.",
+      },
+    ],
+  },
+  {
+    title: "Resolve Ambiguity",
+    description: "Use these examples when multiple packs or references could answer the same template request.",
+    cards: [
+      {
+        tag: "Pack Selection",
+        title: "Pack management",
+        href: `${base}tutorials/example-pack-progression/#4-learn-pack-selection-with-pack_management`,
+        text: "Use this when multiple packs expose the same template id and you want to see how active-pack selection and `--pack` keep resolution explicit.",
+      },
+    ],
+  },
+  {
+    title: "Remote Sharing",
+    description: "Finish here when you want to connect the local pack model to GitHub-backed distribution and revision-aware provenance.",
+    cards: [
+      {
+        tag: "Remote",
+        title: "Remote",
+        href: `${base}tutorials/example-pack-progression/#5-learn-remote-pack-references-with-remote`,
+        text: "Use this once local packs are clear and you want to see GitHub-style pack references, cached remote assets, and revision-aware provenance.",
+      },
+    ],
+  },
+];
 ---
 
 <BaseLayout title="Examples | Linkar" description="Choose the right bundled Linkar example pack based on what you want to learn: basic template authoring, chaining, binding overrides, pack selection, or remote packs.">
@@ -18,63 +75,41 @@ const base = import.meta.env.BASE_URL;
       </section>
 
       <section class="section page-section-tight">
-        <div class="card-grid two-up">
-          <a class="doc-card" href={`${base}tutorials/testing-basic-templates/`}>
-            <div class="card-tags">
-              <span class="card-tag">Authoring</span>
-            </div>
-            <h3>Basic</h3>
-            <p>
-              Start here for the template contract: `run.command`, `run.sh`, `run.py`, declared
-              outputs, `glob` outputs, `tools.required_any`, file inputs, and local tests.
-            </p>
-          </a>
-
-          <a class="doc-card" href={`${base}tutorials/example-pack-progression/#2-learn-pack-level-chaining-with-chaining`}>
-            <div class="card-tags">
-              <span class="card-tag">Bindings</span>
-            </div>
-            <h3>Chaining</h3>
-            <p>
-              Open this when you want to see pack-level default binding in action. The key lesson is
-              that template-to-template connection lives in the pack, not in manual operator steps.
-            </p>
-          </a>
-
-          <a class="doc-card" href={`${base}tutorials/example-pack-progression/#3-compare-defaults-and-caller-overrides-with-binding_overrides`}>
-            <div class="card-tags">
-              <span class="card-tag">Bindings</span>
-            </div>
-            <h3>Binding overrides</h3>
-            <p>
-              Use this when you want to compare three things directly: project history, a pack's
-              default binding, and an explicit override binding passed by the caller.
-            </p>
-          </a>
-
-          <a class="doc-card" href={`${base}tutorials/example-pack-progression/#4-learn-pack-selection-with-pack_management`}>
-            <div class="card-tags">
-              <span class="card-tag">Pack Selection</span>
-            </div>
-            <h3>Pack management</h3>
-            <p>
-              Use this when multiple packs expose the same template id and you want to see how
-              active-pack selection and `--pack` keep resolution explicit.
-            </p>
-          </a>
-
-          <a class="doc-card" href={`${base}tutorials/example-pack-progression/#5-learn-remote-pack-references-with-remote`}>
-            <div class="card-tags">
-              <span class="card-tag">Remote</span>
-            </div>
-            <h3>Remote</h3>
-            <p>
-              Use this once local packs are clear and you want to see GitHub-style pack references,
-              cached remote assets, and revision-aware provenance.
-            </p>
-          </a>
+        <div class="section-heading">
+          <p class="eyebrow">Recommended Route</p>
+          <h2>Read examples as a progression.</h2>
+        </div>
+        <div class="route-strip">
+          {examples.map((group, index) => (
+            <a class="route-step" href={group.cards[0].href}>
+              <span class="route-number">{index + 1}</span>
+              <span>{group.title}</span>
+            </a>
+          ))}
         </div>
       </section>
+
+      {examples.map((group) => (
+        <section class="section page-section-tight">
+          <div class="section-heading">
+            <p class="eyebrow">Examples</p>
+            <h2>{group.title}</h2>
+            <p class="section-copy">{group.description}</p>
+          </div>
+          <div class="card-grid two-up">
+            {group.cards.map((card) => (
+              <a class="doc-card" href={card.href}>
+                <div class="card-tags">
+                  <span class="card-tag">{card.tag}</span>
+                </div>
+                <h3>{card.title}</h3>
+                <p>{card.text}</p>
+              </a>
+            ))}
+          </div>
+        </section>
+      ))}
     </main>
+    <SiteFooter />
   </div>
 </BaseLayout>

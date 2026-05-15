@@ -6,6 +6,42 @@ import SiteFooter from "../../components/SiteFooter.astro";
 
 const tutorials = (await getCollection("tutorials")).sort((a, b) => a.data.order - b.data.order);
 const tutorialHref = (slug: string) => `${import.meta.env.BASE_URL}tutorials/${slug}/`;
+const bySlug = new Map(tutorials.map((entry) => [entry.slug, entry]));
+const route = [
+  "getting-started",
+  "packs-and-scope",
+  "managing-git-backed-packs",
+  "build-a-real-pack",
+];
+const groups = [
+  {
+    title: "Use A Shared Pack",
+    description: "Start here when you want to install a pack, attach it to local work, and understand pack scope.",
+    slugs: ["getting-started", "packs-and-scope", "managing-git-backed-packs"],
+    tag: "User path",
+  },
+  {
+    title: "Author Packs",
+    description: "Use these guides when you are building templates, testing them locally, and preparing a pack for others.",
+    slugs: [
+      "build-a-real-pack",
+      "authoring-script-sh",
+      "python-entry-and-runtime-metadata",
+      "testing-basic-templates",
+    ],
+    tag: "Authoring",
+  },
+  {
+    title: "Advanced Workflows",
+    description: "Continue here for external pipelines, agent/API use, and the bundled examples that teach specific patterns.",
+    slugs: [
+      "wrapping-external-pipelines",
+      "using-linkar-from-agents",
+      "example-pack-progression",
+    ],
+    tag: "Advanced",
+  },
+];
 ---
 
 <BaseLayout title="Tutorials | Linkar" description="Step-by-step Linkar guides for starting projects, authoring templates, testing packs, and using Linkar from agents.">
@@ -19,6 +55,25 @@ const tutorialHref = (slug: string) => `${import.meta.env.BASE_URL}tutorials/${s
           Start with the shortest GitHub-pack path. Then continue based on the job you need Linkar
           to do.
         </p>
+      </section>
+
+      <section class="section page-section-tight">
+        <div class="section-heading">
+          <p class="eyebrow">Recommended Route</p>
+          <h2>One clean first pass through the docs.</h2>
+        </div>
+        <div class="route-strip">
+          {route.map((slug, index) => {
+            const entry = bySlug.get(slug);
+            if (!entry) return null;
+            return (
+              <a class="route-step" href={tutorialHref(slug)}>
+                <span class="route-number">{index + 1}</span>
+                <span>{entry.data.title}</span>
+              </a>
+            );
+          })}
+        </div>
       </section>
 
       <section class="section page-section-tight">
@@ -50,17 +105,28 @@ const tutorialHref = (slug: string) => `${import.meta.env.BASE_URL}tutorials/${s
         </div>
       </section>
 
-      <section class="section page-section-tight">
-        <div class="card-grid two-up">
-          {tutorials.map((entry) => (
-            <a class="tutorial-card tutorial-link" href={tutorialHref(entry.slug)}>
-              <h3>{entry.data.title}</h3>
-              <p>{entry.data.description}</p>
-              <span class="status-tag">{entry.data.status}</span>
-            </a>
-          ))}
-        </div>
-      </section>
+      {groups.map((group) => (
+        <section class="section page-section-tight">
+          <div class="section-heading">
+            <p class="eyebrow">Tutorials</p>
+            <h2>{group.title}</h2>
+            <p class="section-copy">{group.description}</p>
+          </div>
+          <div class="card-grid two-up">
+            {group.slugs.map((slug) => {
+              const entry = bySlug.get(slug);
+              if (!entry) return null;
+              return (
+                <a class="tutorial-card tutorial-link" href={tutorialHref(slug)}>
+                  <h3>{entry.data.title}</h3>
+                  <p>{entry.data.description}</p>
+                  <span class="status-tag">{group.tag}</span>
+                </a>
+              );
+            })}
+          </div>
+        </section>
+      ))}
     </main>
     <SiteFooter />
   </div>
