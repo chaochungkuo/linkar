@@ -16,8 +16,38 @@ const tutorialHref = (slug: string) => `${import.meta.env.BASE_URL}tutorials/${s
         <p class="eyebrow">Tutorials</p>
         <h1 class="page-title">Learn Linkar one path at a time.</h1>
         <p class="lede page-lede">
-          Start with the shortest project path. Then continue based on what you need to do next.
+          Start with the shortest GitHub-pack path. Then continue based on the job you need Linkar
+          to do.
         </p>
+      </section>
+
+      <section class="section page-section-tight">
+        <div class="section-heading">
+          <p class="eyebrow">Choose Your Path</p>
+          <h2>Different roles need different first pages.</h2>
+        </div>
+        <div class="card-grid two-up">
+          <a class="tutorial-card tutorial-link" href={tutorialHref("getting-started")}>
+            <h3>Run a shared pack</h3>
+            <p>Install a GitHub pack, create a project, run a template, and inspect the result.</p>
+            <span class="status-tag">User path</span>
+          </a>
+          <a class="tutorial-card tutorial-link" href={tutorialHref("build-a-real-pack")}>
+            <h3>Author and publish a pack</h3>
+            <p>Build templates and bindings locally, then publish the pack so users can update it.</p>
+            <span class="status-tag">Author path</span>
+          </a>
+          <a class="tutorial-card tutorial-link" href={tutorialHref("managing-git-backed-packs")}>
+            <h3>Manage remote and local packs</h3>
+            <p>Switch between GitHub and local checkouts, update caches, and pin revisions.</p>
+            <span class="status-tag">Maintainer path</span>
+          </a>
+          <a class="tutorial-card tutorial-link" href={tutorialHref("using-linkar-from-agents")}>
+            <h3>Automate through API or MCP</h3>
+            <p>Use the same runtime from scripts, local services, and agent clients.</p>
+            <span class="status-tag">Automation path</span>
+          </a>
+        </div>
       </section>
 
       <section class="section page-section-tight">

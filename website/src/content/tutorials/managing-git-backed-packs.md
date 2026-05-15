@@ -14,35 +14,34 @@ This guide uses `github:IZKF-Genomics/izkf_pack` as the concrete example.
 If you want the conceptual difference between `--pack`, project packs, and global packs first, read
 [Using global packs vs project packs](../packs-and-scope/).
 
-## The versioning rule
-
-Linkar treats the resolved Git revision as the pack version source of truth. Do not add a separate
-pack-level version number to `linkar_pack.yaml` unless your site has a compatibility contract that
-really needs it.
-
-Use:
-
-- commit SHAs for exact provenance
-- Git tags for human-readable release points
-- branches when users should be able to fast-forward to new work
-
-`linkar config pack list --format yaml` and run metadata record the resolved commit revision.
-
-## Install a published GitHub pack
+## Quick start
 
 Register a shared pack once in your user config:
 
 ```bash
 linkar config pack add github:IZKF-Genomics/izkf_pack --id izkf_pack
-linkar config pack show
-linkar config pack list
+linkar config pack list --format yaml
 linkar templates
 ```
 
-After this, Linkar can find templates from that pack without passing `--pack` each time:
+After this, Linkar can find templates from that pack without passing `--pack` each time. Create a
+project and run a template with the inputs it needs:
 
 ```bash
-linkar run scrna_prep --binding default --verbose
+linkar project init --name study
+cd study
+
+linkar run scrna_prep \
+  --input-h5ad /data/study/raw_counts.h5ad \
+  --organism human \
+  --binding default \
+  --verbose
+```
+
+Inspect the recorded run:
+
+```bash
+linkar inspect run scrna_prep_001
 ```
 
 ## Update a GitHub pack
@@ -63,6 +62,8 @@ Update every configured global pack:
 linkar config pack update --all
 ```
 
+This is the normal day-to-day update path for a shared pack that tracks a branch.
+
 ## Use a pack for one command
 
 Use `--pack` when you want a one-off command and do not want to modify global or project config:
@@ -70,6 +71,8 @@ Use `--pack` when you want a one-off command and do not want to modify global or
 ```bash
 linkar run scrna_prep \
   --pack github:IZKF-Genomics/izkf_pack \
+  --input-h5ad /data/study/raw_counts.h5ad \
+  --organism human \
   --binding default \
   --verbose
 ```
@@ -115,6 +118,44 @@ linkar config pack use izkf_pack
 linkar config pack use izkf_pack_local
 ```
 
+## Save a pack in a project
+
+Use project-level pack config when the project should carry its own pack choice:
+
+```bash
+linkar project init --name example_project
+cd example_project
+
+linkar pack add github:IZKF-Genomics/izkf_pack --id izkf_pack --binding default
+linkar pack show
+linkar pack list
+```
+
+Update the project-configured pack:
+
+```bash
+linkar pack update izkf_pack
+linkar pack list --format yaml
+```
+
+Use this when a project should stay explicit about its pack source instead of relying on each
+user's personal global config.
+
+## The versioning rule
+
+Linkar treats the resolved Git revision as the pack version source of truth. Do not add a separate
+pack-level version number to `linkar_pack.yaml` unless your site has a compatibility contract that
+really needs it.
+
+Use:
+
+- branches when users should be able to fast-forward to new work
+- Git tags for human-readable release points
+- commit SHAs for exact provenance
+
+`linkar config pack list --format yaml`, `linkar pack list --format yaml`, and run metadata record
+the resolved commit revision.
+
 ## Pin a pack for reproducible work
 
 For day-to-day internal work, an unpinned ref or branch is convenient:
@@ -137,26 +178,6 @@ linkar config pack add \
 ```
 
 Tags are just named Git revisions. Linkar still records the resolved commit SHA.
-
-## Save a pack in a project
-
-Use project-level pack config when the project should carry its own pack choice:
-
-```bash
-linkar project init --name example_project
-cd example_project
-
-linkar pack add github:IZKF-Genomics/izkf_pack --id izkf_pack --binding default
-linkar pack show
-linkar pack list
-```
-
-Update the project-configured pack:
-
-```bash
-linkar pack update izkf_pack
-linkar pack list --format yaml
-```
 
 Pin a formal project to a release tag:
 

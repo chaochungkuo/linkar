@@ -19,7 +19,12 @@ A new project with no project-local packs can still use your global configured p
 This is the most explicit path:
 
 ```bash
-linkar run simple_echo --pack ./examples/packs/basic --param name=Linkar
+linkar run scrna_prep \
+  --pack github:IZKF-Genomics/izkf_pack \
+  --input-h5ad /data/study/raw_counts.h5ad \
+  --organism human \
+  --binding default \
+  --verbose
 ```
 
 It is useful when:
@@ -35,9 +40,9 @@ Add the pack to the project when that project should carry its own pack selectio
 ```bash
 linkar project init --name study
 cd study
-linkar pack add ../examples/packs/basic --id basic
+linkar pack add github:IZKF-Genomics/izkf_pack --id izkf_pack --binding default
 linkar templates
-linkar run simple_echo --name Linkar
+linkar run scrna_prep --input-h5ad /data/study/raw_counts.h5ad --organism human
 ```
 
 Now the project remembers the pack, so later runs are shorter and the pack choice is saved with the
@@ -54,7 +59,7 @@ Use this when:
 Global packs are personal defaults and are often enough on their own:
 
 ```bash
-linkar config pack add ./examples/packs/basic --id basic
+linkar config pack add github:IZKF-Genomics/izkf_pack --id izkf_pack
 linkar templates
 ```
 

@@ -98,7 +98,8 @@ Use this once local packs are already clear.
 
 What this example teaches:
 
-- `git+` or GitHub-style pack references
+- GitHub-style pack references such as `github:ORG/repo`
+- lower-level `git+` references for advanced cases
 - local caching of remote assets
 - revision-aware provenance for remote packs
 

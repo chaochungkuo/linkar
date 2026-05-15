@@ -5,8 +5,8 @@ import SiteFooter from "../components/SiteFooter.astro";
 ---
 
 <BaseLayout
-  title="Linkar | Reusable Analysis Resources For Humans And Machines"
-  description="Linkar helps teams turn scripts, CLI tools, notebooks, and analysis steps into reusable templates and bindings, with a short CLI for humans and a local API for machines."
+  title="Linkar | Git-backed Analysis Packs For Humans And Machines"
+  description="Linkar helps teams publish scripts, CLI tools, notebooks, and analysis steps as Git-backed packs with traceable local runs for humans, scripts, and agents."
 >
   <div class="page-shell">
     <SiteHeader />
@@ -15,15 +15,25 @@ import SiteFooter from "../components/SiteFooter.astro";
       <section class="section">
         <div class="section-heading">
           <p class="eyebrow">How It Works</p>
-          <h2>Three building blocks.</h2>
+          <h2>Four building blocks.</h2>
           <p class="section-copy">
-            Every Linkar project is built from templates, bindings, and a project directory.
-            Each piece has a single job. Together they make analysis work reusable, inspectable,
-            and safe to update through Git-backed packs.
+            Every Linkar project combines packs, templates, bindings, and a local project directory.
+            Each piece has a single job. Together they make analysis work shareable, inspectable,
+            and safe to update through Git.
           </p>
         </div>
 
-        <div class="card-grid three-up">
+        <div class="card-grid two-up">
+          <article class="feature-card">
+            <h3>Packs</h3>
+            <p>
+              Git-backed repositories that distribute reusable templates, bindings, helper code,
+              and documentation. The resolved Git revision is the pack version.
+            </p>
+            <pre class="feature-snippet"><code>$ linkar config pack add github:ORG/site_pack --id site_pack
+$ linkar config pack update site_pack
+$ linkar config pack list --format yaml</code></pre>
+          </article>
           <article class="feature-card">
             <h3>Templates</h3>
             <p>
@@ -87,13 +97,16 @@ outputs:
               Template params become flags. The active project is discovered automatically.
               Common paths stay short.
             </p>
-            <pre><code>linkar config author set --name "Your Name"
+            <pre><code>linkar config pack add github:IZKF-Genomics/izkf_pack --id izkf_pack
+linkar config author set --name "Your Name"
 linkar project init --name study
 cd study
-linkar pack add ../examples/packs/chaining --id chaining
-linkar run produce_message --message "hello"
-linkar run consume_message
-linkar inspect run consume_message_001</code></pre>
+linkar run scrna_prep \
+  --input-h5ad /data/study/raw_counts.h5ad \
+  --organism human \
+  --binding default \
+  --verbose
+linkar inspect run scrna_prep_001</code></pre>
           </article>
 
           <article class="interface-card">
@@ -125,11 +138,11 @@ linkar mcp serve</code></pre>
       <section class="section">
         <div class="section-heading">
           <p class="eyebrow">Documentation</p>
-          <h2>Concepts, tutorials, then examples.</h2>
+          <h2>Choose the path that matches your job.</h2>
           <p class="section-copy">
-            Read the concepts first to understand the model. Use the tutorials to do real work
-            step by step. Browse the bundled examples when you want the smallest runnable pack
-            for a specific pattern.
+            Users start by installing a shared pack and running a template. Template authors move
+            from a local pack to a GitHub repository. Automation users use the same runtime through
+            the API or MCP server.
           </p>
         </div>
 
@@ -149,7 +162,7 @@ linkar mcp serve</code></pre>
         </div>
 
         <div class="hero-actions section-top-gap">
-          <a class="button button-primary" href={`${import.meta.env.BASE_URL}tutorials/managing-git-backed-packs/`}>Manage Git-backed packs</a>
+          <a class="button button-primary" href={`${import.meta.env.BASE_URL}tutorials/getting-started/`}>Get started</a>
           <a class="button button-secondary" href="https://github.com/chaochungkuo/linkar" target="_blank" rel="noopener noreferrer">View on GitHub</a>
         </div>
       </section>
