@@ -2773,6 +2773,7 @@ def test_project_git_pack_revision_lock_controls_template_resolution(tmp_path: P
 set -euo pipefail
 printf 'Locked v1, %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/wave.txt"
 """,
+        version="1.2.3",
     )
     git_url = f"git+{create_git_repo(pack_root)}"
     linkar_home = tmp_path / "linkar_home_project_lock"
@@ -2804,6 +2805,18 @@ printf 'Locked v1, %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/wave.txt"
 
     run_script = template / "run.sh"
     run_script.write_text(run_script.read_text().replace("Locked v1", "Locked v2"))
+    template_yaml = template / "linkar_template.yaml"
+    template_yaml.write_text(template_yaml.read_text().replace("version: 1.2.3", "version: 1.2.4"))
+    make_template(
+        pack_root / "templates",
+        "git_locked_new",
+        "  name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'New, %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/new.txt"
+""",
+        version="0.1.0",
+    )
     run_git("add", ".", cwd=pack_root)
     run_git("commit", "-m", "update locked pack", cwd=pack_root)
 
@@ -2836,6 +2849,27 @@ printf 'Locked v1, %s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/wave.txt"
     assert status_payload[0]["source_revision"] != locked_revision
     project_data = yaml.safe_load((project_dir / "project.yaml").read_text())
     assert project_data["packs"][0]["revision"] == locked_revision
+
+    status_with_templates = run_cli(
+        "pack",
+        "status",
+        "--templates",
+        "--check-remote",
+        "--format",
+        "yaml",
+        cwd=project_dir,
+        env_extra=env,
+    )
+    assert status_with_templates.returncode == 0, status_with_templates.stderr
+    status_payload = yaml.safe_load(status_with_templates.stdout)
+    assert status_payload[0]["status"] == "update_available"
+    templates = {template["id"]: template for template in status_payload[0]["templates"]}
+    assert templates["git_locked_wave"]["locked_version"] == "1.2.3"
+    assert templates["git_locked_wave"]["latest_version"] == "1.2.4"
+    assert templates["git_locked_wave"]["status"] == "changed"
+    assert templates["git_locked_new"]["locked_version"] is None
+    assert templates["git_locked_new"]["latest_version"] == "0.1.0"
+    assert templates["git_locked_new"]["status"] == "added"
 
     updated = run_cli("pack", "update", "locked", "--format", "yaml", cwd=project_dir, env_extra=env)
     assert updated.returncode == 0, updated.stderr

@@ -3,10 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from linkar.assets import is_remote_asset_ref, update_remote_asset, resolve_asset_ref, resolve_asset_ref_at_revision
+from linkar.assets import ResolvedAsset, is_remote_asset_ref, update_remote_asset, resolve_asset_ref, resolve_asset_ref_at_revision
 from linkar.errors import ProjectValidationError
 from linkar.runtime.models import PackEntry, Project
-from linkar.runtime.shared import derive_pack_id, load_yaml, pack_entry_to_data, project_file, save_yaml
+from linkar.runtime.shared import derive_pack_id, find_template_spec_path, load_yaml, pack_entry_to_data, project_file, save_yaml
 
 
 def missing_project_error(action: str = "This command") -> ProjectValidationError:
@@ -167,10 +167,72 @@ def _project_pack_raw_entry(project: Project, entry: PackEntry) -> dict[str, Any
     return None
 
 
+def _templates_for_asset(asset: ResolvedAsset) -> list[dict[str, Any]]:
+    templates_dir = asset.root / "templates"
+    if not templates_dir.exists():
+        return []
+    templates: list[dict[str, Any]] = []
+    for child in sorted(templates_dir.iterdir()):
+        spec_path = find_template_spec_path(child)
+        if not child.is_dir() or spec_path is None:
+            continue
+        spec = load_yaml(spec_path)
+        templates.append(
+            {
+                "id": spec.get("id") or child.name,
+                "version": spec.get("version"),
+                "description": spec.get("description"),
+                "required_inputs": [
+                    name
+                    for name, raw_spec in (spec.get("params") or {}).items()
+                    if isinstance(raw_spec, dict) and raw_spec.get("required")
+                ],
+                "expected_outputs": list((spec.get("outputs") or {}).keys()) or ["results_dir"],
+            }
+        )
+    return templates
+
+
+def _compare_template_versions(
+    locked_templates: list[dict[str, Any]],
+    source_templates: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    locked_by_id = {str(template.get("id")): template for template in locked_templates if template.get("id")}
+    source_by_id = {str(template.get("id")): template for template in source_templates if template.get("id")}
+    compared: list[dict[str, Any]] = []
+    for template_id in sorted(set(locked_by_id) | set(source_by_id)):
+        locked = locked_by_id.get(template_id)
+        source = source_by_id.get(template_id)
+        locked_version = locked.get("version") if locked else None
+        source_version = source.get("version") if source else None
+        if locked is None:
+            status = "added"
+        elif source is None:
+            status = "removed"
+        elif locked_version != source_version:
+            status = "changed"
+        else:
+            status = "unchanged"
+        template = source or locked or {}
+        compared.append(
+            {
+                "id": template_id,
+                "locked_version": locked_version,
+                "latest_version": source_version,
+                "status": status,
+                "description": template.get("description"),
+                "required_inputs": template.get("required_inputs") or [],
+                "expected_outputs": template.get("expected_outputs") or [],
+            }
+        )
+    return compared
+
+
 def project_pack_status(
     *,
     project: str | Path | Project | None = None,
     check_remote: bool = False,
+    include_templates: bool = False,
 ) -> list[dict[str, Any]]:
     if isinstance(project, (str, Path)):
         project_obj = load_project(project)
@@ -183,7 +245,8 @@ def project_pack_status(
 
     active = project_obj.data.get("active_pack")
     statuses: list[dict[str, Any]] = []
-    for entry in project_pack_entries(project_obj):
+    entries = project_pack_entries(project_obj)
+    for entry in entries:
         raw_entry = _project_pack_raw_entry(project_obj, entry)
         locked_revision = entry.locked_revision
         if isinstance(raw_entry, dict):
@@ -204,6 +267,7 @@ def project_pack_status(
                 if isinstance(after, str) and after:
                     remote_revision = after
                     source_revision = after
+                    source_asset = resolve_asset_ref(entry.asset.ref)
 
         comparison_revision = remote_revision or source_revision
         if not remote:
@@ -215,20 +279,37 @@ def project_pack_status(
         else:
             status = "current"
 
-        statuses.append(
-            {
-                "id": entry.id,
-                "ref": entry.asset.ref,
-                "binding": entry.binding,
-                "active": active == entry.id or (active is None and len(project_obj.data.get("packs", [])) == 1),
-                "remote": remote,
-                "locked_revision": locked_revision,
-                "source_revision": source_revision,
-                "remote_revision": remote_revision,
-                "checked_remote": checked_remote,
-                "status": status,
-            }
-        )
+        payload = {
+            "id": entry.id,
+            "ref": entry.asset.ref,
+            "binding": entry.binding,
+            "active": active == entry.id or (active is None and len(project_obj.data.get("packs", [])) == 1),
+            "remote": remote,
+            "locked_revision": locked_revision,
+            "source_revision": source_revision,
+            "remote_revision": remote_revision,
+            "checked_remote": checked_remote,
+            "status": status,
+        }
+        if include_templates:
+            locked_templates = _templates_for_asset(entry.asset)
+            if remote and (source_revision != entry.asset.revision):
+                source_templates = _templates_for_asset(source_asset)
+                payload["templates"] = _compare_template_versions(locked_templates, source_templates)
+            else:
+                payload["templates"] = [
+                    {
+                        "id": template.get("id"),
+                        "locked_version": template.get("version"),
+                        "latest_version": template.get("version"),
+                        "status": "unchanged",
+                        "description": template.get("description"),
+                        "required_inputs": template.get("required_inputs") or [],
+                        "expected_outputs": template.get("expected_outputs") or [],
+                    }
+                    for template in locked_templates
+                ]
+        statuses.append(payload)
     return statuses
 
 

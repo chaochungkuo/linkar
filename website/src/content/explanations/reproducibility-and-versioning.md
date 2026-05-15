@@ -53,6 +53,9 @@ state used by the project until `linkar pack update` moves it forward.
 Use `linkar pack status --check-remote` when you want to compare the project lock with the latest
 remote state. Status checks do not move the project lock; update remains explicit.
 
+Use `linkar pack status --templates --check-remote` when you also want to compare locked versus
+latest template versions and see which templates would be added, removed, or changed by an update.
+
 ## What Linkar does not control
 
 Linkar does not automatically pin:

@@ -144,6 +144,17 @@ linkar pack status --check-remote
 This may fetch remote Git refs into Linkar's local asset cache, but it does not change
 `project.yaml`.
 
+Include the templates exposed by each configured pack:
+
+```bash
+linkar pack status --templates --check-remote
+```
+
+With `--templates`, Linkar compares the templates in the locked project revision with the templates
+in the latest checked source revision. The output marks templates as `unchanged`, `changed`,
+`added`, or `removed`, and shows both the locked and latest template versions when available. This
+is useful as an update preview before you move the project lock.
+
 `linkar run ...` and `linkar render ...` also show a one-line reminder when they notice that the
 remote pack has moved ahead. The command still uses the locked project revision.
 

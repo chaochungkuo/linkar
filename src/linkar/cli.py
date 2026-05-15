@@ -349,6 +349,12 @@ def pack_list_command(project: str | None, output_format: str, ui: CliUI) -> Non
     help="Fetch remote refs before comparing the project lock with the latest cached source revision.",
 )
 @click.option(
+    "--templates",
+    "include_templates",
+    is_flag=True,
+    help="Include templates exposed by each configured project pack.",
+)
+@click.option(
     "--project",
     type=click.Path(path_type=str, dir_okay=True, file_okay=True),
     help="Project directory or project.yaml path. Defaults to the current directory.",
@@ -365,12 +371,13 @@ def pack_list_command(project: str | None, output_format: str, ui: CliUI) -> Non
 @handle_linkar_errors
 def pack_status_command(
     check_remote: bool,
+    include_templates: bool,
     project: str | None,
     output_format: str,
     ui: CliUI,
 ) -> None:
     """Show project pack locks and whether updates are known locally or after a remote check."""
-    statuses = project_pack_status(project=project, check_remote=check_remote)
+    statuses = project_pack_status(project=project, check_remote=check_remote, include_templates=include_templates)
     if output_format == "rich":
         ui.print_pack_status(statuses)
         return

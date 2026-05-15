@@ -810,6 +810,12 @@ class CliUI:
                 self.plain_print(
                     f"{active}\t{status.get('id', '-')}\t{status.get('status', '-')}\t{locked}\t{source}\t{remote}\t{status.get('ref', '-')}"
                 )
+                for template in status.get("templates") or []:
+                    locked_version = template.get("locked_version") or "-"
+                    latest_version = template.get("latest_version") or "-"
+                    self.plain_print(
+                        f"  TEMPLATE\t{template.get('id', '-')}\t{locked_version}\t{latest_version}\t{template.get('status', '-')}"
+                    )
             return
         table = Table(box=box.SIMPLE_HEAVY, header_style="accent")
         table.add_column("Active")
@@ -839,6 +845,28 @@ class CliUI:
             row.append(self._project_value_text(str(status.get("ref") or "-")))
             table.add_row(*row)
         self._print_tabled_panel(table, title="[info]Pack Status[/info]")
+        if any(status.get("templates") for status in statuses):
+            template_table = Table(box=box.SIMPLE_HEAVY, header_style="accent")
+            template_table.add_column("Pack")
+            template_table.add_column("Template")
+            template_table.add_column("Locked", style="value")
+            template_table.add_column("Latest", style="value")
+            template_table.add_column("Status", style="value", no_wrap=True)
+            template_table.add_column("Required Inputs", style="value")
+            template_table.add_column("Outputs", style="value")
+            for status in statuses:
+                pack_id = str(status.get("id") or "-")
+                for template in status.get("templates") or []:
+                    template_table.add_row(
+                        pack_id,
+                        str(template.get("id") or "-"),
+                        str(template.get("locked_version") or "-"),
+                        str(template.get("latest_version") or "-"),
+                        str(template.get("status") or "-"),
+                        ", ".join(template.get("required_inputs") or []) or "-",
+                        ", ".join(template.get("expected_outputs") or []) or "-",
+                    )
+            self._print_tabled_panel(template_table, title="[info]Pack Templates[/info]")
 
     def print_pack_update_hint(self, statuses: list[dict[str, Any]]) -> None:
         stale = [status for status in statuses if status.get("status") == "update_available"]

@@ -50,6 +50,9 @@ project. For Git-backed packs, `project.yaml` also stores the resolved revision;
 can check whether the lock is current, and `linkar pack update` is the explicit action that moves
 that project lock forward.
 
+Use `linkar pack status --templates --check-remote` when you want to preview which template versions
+would change before updating.
+
 Use this when:
 
 - the project should stay portable without relying on your personal config
