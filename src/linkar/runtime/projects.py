@@ -3,10 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from linkar import __version__
 from linkar.assets import ResolvedAsset, is_remote_asset_ref, update_remote_asset, resolve_asset_ref, resolve_asset_ref_at_revision
 from linkar.errors import ProjectValidationError
 from linkar.runtime.models import PackEntry, Project
 from linkar.runtime.shared import derive_pack_id, find_template_spec_path, load_yaml, pack_entry_to_data, project_file, save_yaml
+
+
+PROJECT_SCHEMA_VERSION = 1
 
 
 def missing_project_error(action: str = "This command") -> ProjectValidationError:
@@ -34,6 +38,20 @@ def load_project(path: str | Path) -> Project:
     active_pack = data.get("active_pack")
     if active_pack is not None and not isinstance(active_pack, str):
         raise ProjectValidationError("project.yaml field 'active_pack' must be a string")
+    linkar_metadata = data.get("linkar")
+    if linkar_metadata is not None:
+        if not isinstance(linkar_metadata, dict):
+            raise ProjectValidationError("project.yaml field 'linkar' must be a mapping")
+        schema_version = linkar_metadata.get("schema_version")
+        if schema_version is not None and not isinstance(schema_version, int):
+            raise ProjectValidationError("project.yaml field 'linkar.schema_version' must be an integer")
+        if schema_version is not None and schema_version > PROJECT_SCHEMA_VERSION:
+            raise ProjectValidationError(
+                "project.yaml was created with a newer Linkar project schema. Please upgrade Linkar."
+            )
+        created_with = linkar_metadata.get("created_with")
+        if created_with is not None and not isinstance(created_with, str):
+            raise ProjectValidationError("project.yaml field 'linkar.created_with' must be a string")
     author = data.get("author")
     if author is not None:
         if not isinstance(author, dict):
@@ -58,6 +76,10 @@ def init_project(
         raise ProjectValidationError(f"Project already exists: {file_path}")
     data = {
         "id": project_id or root.name,
+        "linkar": {
+            "schema_version": PROJECT_SCHEMA_VERSION,
+            "created_with": __version__,
+        },
         "active_pack": None,
         "packs": [],
         "templates": [],

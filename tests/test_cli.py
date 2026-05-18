@@ -145,6 +145,7 @@ def test_project_init(tmp_path: Path) -> None:
 
     data = yaml.safe_load((target / "project.yaml").read_text())
     assert data["id"] == "project_001"
+    assert data["linkar"] == {"schema_version": 1, "created_with": __version__}
     assert data["active_pack"] is None
     assert data["packs"] == []
     assert data["templates"] == []
@@ -3469,6 +3470,46 @@ def test_print_runs_and_packs_render_rich_panels(monkeypatch: pytest.MonkeyPatch
     assert "default" in rendered
     assert "0.1.0" in rendered
     assert "/home/ckuo/github/izkf_pack" in rendered
+
+
+def test_print_pack_status_templates_keeps_terminal_table_compact(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    ui = CliUI()
+    ui.console = Console(record=True, force_terminal=True, width=120, theme=THEME)
+    ui.error_console = Console(record=True, force_terminal=True, width=120, theme=THEME)
+
+    ui.print_pack_status(
+        [
+            {
+                "id": "izkf_pack",
+                "ref": "github:IZKF-Genomics/izkf_pack",
+                "status": "update_available",
+                "locked_revision": "a" * 40,
+                "source_revision": "b" * 40,
+                "checked_remote": True,
+                "active": True,
+                "templates": [
+                    {
+                        "id": "scrna_prep",
+                        "locked_version": "0.1.0",
+                        "latest_version": "0.2.0",
+                        "status": "changed",
+                        "required_inputs": ["input_h5ad"],
+                        "expected_outputs": ["results_dir"],
+                    }
+                ],
+            }
+        ]
+    )
+
+    rendered = ui.console.export_text()
+    assert "Pack Templates" in rendered
+    assert "Locked" in rendered
+    assert "Latest" in rendered
+    assert "changed" in rendered
+    assert "Required Inputs" not in rendered
+    assert "Outputs" not in rendered
+    assert "input_h5ad" not in rendered
 
 
 def test_print_templates_render_rich_summary_and_group_panels(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -51,7 +51,7 @@ linkar inspect run scrna_prep_001
 This gives you:
 
 - a normal project directory
-- `project.yaml`
+- `project.yaml` with project schema and creator Linkar version metadata
 - a globally configured GitHub pack cached under Linkar's asset directory
 - reused author metadata from your global Linkar config
 - a stable project-root directory such as `./scrna_prep`

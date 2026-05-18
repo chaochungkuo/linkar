@@ -852,19 +852,23 @@ class CliUI:
             template_table.add_column("Locked", style="value")
             template_table.add_column("Latest", style="value")
             template_table.add_column("Status", style="value", no_wrap=True)
-            template_table.add_column("Required Inputs", style="value")
-            template_table.add_column("Outputs", style="value")
             for status in statuses:
                 pack_id = str(status.get("id") or "-")
                 for template in status.get("templates") or []:
+                    template_status = str(template.get("status") or "-")
+                    latest_style = "ok" if template_status == "unchanged" else "warn"
+                    status_style = {
+                        "unchanged": "ok",
+                        "changed": "warn",
+                        "added": "accent",
+                        "removed": "error",
+                    }.get(template_status, "value")
                     template_table.add_row(
                         pack_id,
                         str(template.get("id") or "-"),
                         str(template.get("locked_version") or "-"),
-                        str(template.get("latest_version") or "-"),
-                        str(template.get("status") or "-"),
-                        ", ".join(template.get("required_inputs") or []) or "-",
-                        ", ".join(template.get("expected_outputs") or []) or "-",
+                        Text(str(template.get("latest_version") or "-"), style=latest_style),
+                        Text(template_status, style=status_style),
                     )
             self._print_tabled_panel(template_table, title="[info]Pack Templates[/info]")
 

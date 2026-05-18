@@ -29,6 +29,7 @@ cd study
 ```
 
 At this point the project ledger exists, but it contains no recorded runs yet.
+New projects also record the project schema version and the Linkar version that created the ledger.
 
 ## Step 2: attach packs
 

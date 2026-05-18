@@ -39,6 +39,46 @@ def test_load_project_rejects_non_list_pack_field(tmp_path: Path) -> None:
         load_project(project_dir)
 
 
+def test_load_project_allows_old_projects_without_linkar_metadata(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    (project_dir / "project.yaml").write_text(
+        "id: demo\nactive_pack: null\npacks: []\ntemplates: []\n"
+    )
+
+    project = load_project(project_dir)
+
+    assert project.data["id"] == "demo"
+
+
+def test_load_project_rejects_invalid_linkar_metadata(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    (project_dir / "project.yaml").write_text(
+        "id: demo\nlinkar: bad\nactive_pack: null\npacks: []\ntemplates: []\n"
+    )
+
+    with pytest.raises(ProjectValidationError, match="project.yaml field 'linkar' must be a mapping"):
+        load_project(project_dir)
+
+
+def test_load_project_rejects_newer_project_schema(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    (project_dir / "project.yaml").write_text(
+        "id: demo\n"
+        "linkar:\n"
+        "  schema_version: 999\n"
+        "  created_with: 99.0.0\n"
+        "active_pack: null\n"
+        "packs: []\n"
+        "templates: []\n"
+    )
+
+    with pytest.raises(ProjectValidationError, match="newer Linkar project schema"):
+        load_project(project_dir)
+
+
 def test_get_active_pack_entry_uses_active_pack_or_single_pack(tmp_path: Path) -> None:
     pack_one = tmp_path / "pack_one"
     pack_two = tmp_path / "pack_two"

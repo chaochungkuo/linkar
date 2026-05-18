@@ -14,6 +14,7 @@ storage and provenance details.
 `project.yaml` records:
 
 - project id
+- Linkar project metadata, including the project schema version and the Linkar version that created it
 - optional author metadata
 - attached packs
 - active pack
