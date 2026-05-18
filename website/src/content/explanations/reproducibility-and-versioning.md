@@ -56,6 +56,24 @@ remote state. Status checks do not move the project lock; update remains explici
 Use `linkar pack status --templates --check-remote` when you also want to compare locked versus
 latest template versions and see which templates would be added, removed, or changed by an update.
 
+When `linkar run ...` or `linkar render ...` sees that a locked project pack has a newer remote
+revision, it prints a one-line reminder to run `linkar pack update`. That reminder is intentionally
+non-blocking: reproducible execution still uses the locked revision recorded in `project.yaml`.
+
+## Project file compatibility
+
+New projects include Linkar metadata in `project.yaml`:
+
+```yaml
+linkar:
+  schema_version: 1
+  created_with: 0.7.0
+```
+
+`created_with` records the Linkar version that created the project file. `schema_version` is the
+project metadata schema version, not the pack version and not the template version. Older projects
+without this block still load normally.
+
 ## What Linkar does not control
 
 Linkar does not automatically pin:

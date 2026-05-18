@@ -46,8 +46,8 @@ linkar inspect run scrna_prep_001
 
 ## Update a GitHub pack
 
-Remote packs are cached under `~/.linkar/assets/` or `$LINKAR_HOME/assets`. Linkar does not fetch on
-every command. Updates are explicit so users control when a pack changes.
+Remote packs are cached under `~/.linkar/assets/` or `$LINKAR_HOME/assets`. Updates are explicit so
+users control when a pack changes.
 
 ```bash
 linkar config pack update izkf_pack
@@ -135,6 +135,26 @@ linkar pack status
 `linkar pack add` writes the resolved Git revision into `project.yaml`. Later project runs use that
 locked revision, even if the cached branch or the upstream GitHub repository has moved.
 
+A project with a Git-backed pack looks like this:
+
+```yaml
+id: example_project
+linkar:
+  schema_version: 1
+  created_with: 0.7.0
+active_pack: izkf_pack
+packs:
+  - id: izkf_pack
+    ref: github:IZKF-Genomics/izkf_pack
+    revision: 6463e5d47a6880285672deb2af95908854ed63e6
+    binding: default
+templates: []
+```
+
+`ref` is the update source. `revision` is the exact pack state used by the project.
+`linkar.created_with` records the Linkar version that created the project file, and
+`linkar.schema_version` lets future Linkar versions detect incompatible project metadata.
+
 Check whether the project lock is current with the latest remote state:
 
 ```bash
@@ -152,11 +172,19 @@ linkar pack status --templates --check-remote
 
 With `--templates`, Linkar compares the templates in the locked project revision with the templates
 in the latest checked source revision. The output marks templates as `unchanged`, `changed`,
-`added`, or `removed`, and shows both the locked and latest template versions when available. This
-is useful as an update preview before you move the project lock.
+`added`, or `removed`, and shows both the locked and latest template versions when available. The
+template table stays intentionally compact: it reports pack, template, locked version, latest
+version, and status. This is useful as an update preview before you move the project lock.
 
 `linkar run ...` and `linkar render ...` also show a one-line reminder when they notice that the
-remote pack has moved ahead. The command still uses the locked project revision.
+remote pack has moved ahead:
+
+```text
+Pack update available: izkf_pack (locked 6463e5d47a68, latest 9b20db6c1f0a). Run: linkar pack update izkf_pack
+```
+
+The reminder is advisory. It does not pause the command and it does not move `project.yaml`. The
+command still uses the locked project revision.
 
 Update the project-configured pack when you want the project lock to move forward:
 

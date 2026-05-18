@@ -53,6 +53,9 @@ that project lock forward.
 Use `linkar pack status --templates --check-remote` when you want to preview which template versions
 would change before updating.
 
+When `linkar run ...` or `linkar render ...` notices that a locked project pack has moved upstream,
+it prints a short update reminder but continues with the locked revision.
+
 Use this when:
 
 - the project should stay portable without relying on your personal config
