@@ -519,7 +519,61 @@ def _print_completion_script(shell: str) -> None:
     cls = get_completion_class(shell)
     if cls is None:
         raise click.ClickException(f"Unsupported shell for completion: {shell}")
-    click.echo(cls(app, {}, "linkar", "_LINKAR_COMPLETE").source())
+    completion = cls(app, {}, "linkar", "_LINKAR_COMPLETE")
+    if shell == "fish":
+        click.echo(_fish_completion_source(completion))
+        return
+    click.echo(completion.source())
+
+
+def _fish_completion_source(completion: click.shell_completion.ShellComplete) -> str:
+    variables = completion.source_vars()
+    return """function %(complete_func)s;
+    set -l response (env %(complete_var)s=fish_complete COMP_WORDS=(commandline -cp) COMP_CWORD=(commandline -t) %(prog_name)s | string collect);
+    set -l lines (string split \\n -- "$response");
+    set -l index 1;
+
+    while test $index -le (count $lines);
+        set -l line "$lines[$index]";
+        set index (math $index + 1);
+        set -l type;
+        set -l value;
+        set -l description "_";
+
+        if string match --quiet "*,*" -- "$line";
+            set -l fields (string split --max 1 \t -- "$line");
+            set -l metadata (string split --max 1 "," -- "$fields[1]");
+            set type "$metadata[1]";
+            set value "$metadata[2]";
+            if test (count $fields) -gt 1;
+                set description "$fields[2]";
+            end;
+        else;
+            set type "$line";
+            set value "$lines[$index]";
+            set index (math $index + 1);
+            set description "$lines[$index]";
+            set index (math $index + 1);
+        end;
+        set value (string replace --all "\\n" " " -- "$value");
+        set description (string replace --all "\\n" " " -- "$description");
+
+        if test "$type" = "dir";
+            __fish_complete_directories "$value";
+        else if test "$type" = "file";
+            __fish_complete_path "$value";
+        else if test "$type" = "plain";
+            if test "$description" != "_";
+                printf "%%s\\t%%s\\n" "$value" "$description";
+            else;
+                printf "%%s\\n" "$value";
+            end;
+        end;
+    end;
+end;
+
+complete --no-files --command %(prog_name)s --arguments "(%(complete_func)s)";
+""" % variables
 
 
 def _default_completion_install_target(shell: str, rc_file: str | None = None) -> tuple[Path, str]:

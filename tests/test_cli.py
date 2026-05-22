@@ -172,6 +172,56 @@ def test_completion_fish_prints_completion_script(tmp_path: Path) -> None:
     assert completed.returncode == 0, completed.stderr
     assert "_LINKAR_COMPLETE" in completed.stdout
     assert "complete --no-files --command linkar" in completed.stdout
+    assert "string collect" in completed.stdout
+    assert "for completion in $response" not in completed.stdout
+
+
+def test_completion_fish_script_completes_without_executing_records(tmp_path: Path) -> None:
+    if shutil.which("fish") is None:
+        pytest.skip("fish is not installed")
+
+    completion_script = tmp_path / "linkar.fish"
+    generated = run_cli("completion", "fish", cwd=tmp_path)
+    assert generated.returncode == 0, generated.stderr
+    completion_script.write_text(generated.stdout, encoding="utf-8")
+
+    shim_dir = tmp_path / "bin"
+    shim_dir.mkdir()
+    shim = shim_dir / "linkar"
+    shim.write_text(
+        "#!/bin/sh\n"
+        'if [ "$_LINKAR_COMPLETE" = "fish_complete" ]; then\n'
+        "  printf '%s\\n' 'plain' '--project-id' 'project_id desc\\nwith detail' 'plain' '--help' '_'\n"
+        "  exit 0\n"
+        "fi\n"
+        "exit 1\n",
+        encoding="utf-8",
+    )
+    shim.chmod(0o755)
+
+    env = os.environ.copy()
+    env["PATH"] = f"{shim_dir}{os.pathsep}{env['PATH']}"
+    completed = subprocess.run(
+        [
+            "fish",
+            "-c",
+            (
+                'function commandline; if test "$argv[1]" = "-cp"; '
+                'echo "linkar run demo --p"; else; echo "--p"; end; end; '
+                f"source {completion_script}; _linkar_completion"
+            ),
+        ],
+        cwd=tmp_path,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert "command not found" not in completed.stderr.lower()
+    assert "--project-id\tproject_id desc with detail" in completed.stdout
+    assert "--help" in completed.stdout
 
 
 def test_completion_install_bash_writes_user_completion_file(tmp_path: Path) -> None:
