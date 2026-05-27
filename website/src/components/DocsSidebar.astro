@@ -1,5 +1,6 @@
 ---
 import { docsNav, withBase } from "../lib/docsNav";
+import LogoMark from "./LogoMark.astro";
 
 interface Props {
   currentPath: string;
@@ -7,21 +8,40 @@ interface Props {
 
 const { currentPath } = Astro.props;
 const base = import.meta.env.BASE_URL;
+const searchUrl = `${base}search.json`;
 
 function isActive(href: string) {
   const fullHref = withBase(base, href);
   return currentPath === fullHref;
 }
+
+function isGroupActive(group: { items: { href: string }[] }) {
+  return group.items.some((item) => isActive(item.href));
+}
 ---
 
 <aside class="docs-sidebar" aria-label="Documentation navigation">
   <a class="docs-brand" href={base}>
-    <span class="docs-brand-mark">lk</span>
+    <LogoMark className="docs-brand-mark" />
     <span>
       <strong>linkar</strong>
       <small>documentation</small>
     </span>
   </a>
+
+  <div class="docs-search" data-docs-search data-search-url={searchUrl}>
+    <label class="docs-search-label" for="docs-search-input">Search docs</label>
+    <input
+      id="docs-search-input"
+      class="docs-search-input"
+      type="search"
+      placeholder="Search docs..."
+      autocomplete="off"
+      spellcheck="false"
+      data-search-input
+    />
+    <div class="docs-search-results" data-search-results hidden></div>
+  </div>
 
   <nav class="docs-nav">
     <section class="docs-nav-group">
@@ -39,42 +59,23 @@ function isActive(href: string) {
       >
         Documentation index
       </a>
-      <a
-        class:list={["docs-nav-link", currentPath === `${base}tutorials/` && "is-active"]}
-        href={`${base}tutorials/`}
-        aria-current={currentPath === `${base}tutorials/` ? "page" : undefined}
-      >
-        Tutorials
-      </a>
-      <a
-        class:list={["docs-nav-link", currentPath === `${base}explanations/` && "is-active"]}
-        href={`${base}explanations/`}
-        aria-current={currentPath === `${base}explanations/` ? "page" : undefined}
-      >
-        Concepts
-      </a>
-      <a
-        class:list={["docs-nav-link", currentPath === `${base}examples/` && "is-active"]}
-        href={`${base}examples/`}
-        aria-current={currentPath === `${base}examples/` ? "page" : undefined}
-      >
-        Examples
-      </a>
     </section>
 
     {docsNav.map((group) => (
-      <section class="docs-nav-group">
-        <p class="docs-nav-heading">{group.title}</p>
-        {group.items.map((item) => (
-          <a
-            class:list={["docs-nav-link", isActive(item.href) && "is-active"]}
-            href={withBase(base, item.href)}
-            aria-current={isActive(item.href) ? "page" : undefined}
-          >
-            {item.title}
-          </a>
-        ))}
-      </section>
+      <details class="docs-nav-group" open={isGroupActive(group)}>
+        <summary class="docs-nav-heading">{group.title}</summary>
+        <div class="docs-nav-group-links">
+          {group.items.map((item) => (
+            <a
+              class:list={["docs-nav-link", isActive(item.href) && "is-active"]}
+              href={withBase(base, item.href)}
+              aria-current={isActive(item.href) ? "page" : undefined}
+            >
+              {item.title}
+            </a>
+          ))}
+        </div>
+      </details>
     ))}
   </nav>
 
@@ -104,6 +105,108 @@ function isActive(href: string) {
         root.dataset.theme = nextTheme;
         localStorage.setItem(storageKey, nextTheme);
         applyLabel();
+      });
+    })();
+  </script>
+
+  <script is:inline>
+    (() => {
+      const root = document.querySelector("[data-docs-search]");
+      if (!root) return;
+
+      const input = root.querySelector("[data-search-input]");
+      const results = root.querySelector("[data-search-results]");
+      const searchUrl = root.getAttribute("data-search-url");
+      let indexPromise = null;
+
+      const normalize = (value) => value.toLowerCase().replace(/\s+/g, " ").trim();
+      const escapeHtml = (value) =>
+        value.replace(/[&<>"']/g, (char) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        })[char]);
+
+      const loadIndex = () => {
+        if (!indexPromise) {
+          indexPromise = fetch(searchUrl).then((response) => {
+            if (!response.ok) throw new Error("Search index unavailable");
+            return response.json();
+          });
+        }
+        return indexPromise;
+      };
+
+      const scoreItem = (item, terms) => {
+        const title = normalize(item.title);
+        const description = normalize(item.description);
+        const content = normalize(item.content || "");
+        let score = 0;
+        for (const term of terms) {
+          if (title.includes(term)) score += 8;
+          if (description.includes(term)) score += 4;
+          if (content.includes(term)) score += 1;
+        }
+        return score;
+      };
+
+      const renderResults = (items) => {
+        if (!items.length) {
+          results.innerHTML = '<p class="docs-search-empty">No matches</p>';
+          results.hidden = false;
+          return;
+        }
+        results.innerHTML = items
+          .slice(0, 6)
+          .map((item) => `
+            <a class="docs-search-result" href="${escapeHtml(item.href)}">
+              <span>${escapeHtml(item.section)}</span>
+              <strong>${escapeHtml(item.title)}</strong>
+              <small>${escapeHtml(item.description)}</small>
+            </a>
+          `)
+          .join("");
+        results.hidden = false;
+      };
+
+      const runSearch = async () => {
+        const query = normalize(input.value);
+        if (query.length < 2) {
+          results.hidden = true;
+          results.innerHTML = "";
+          return;
+        }
+        const terms = query.split(" ").filter(Boolean);
+        try {
+          const index = await loadIndex();
+          const matches = index
+            .map((item) => ({ item, score: scoreItem(item, terms) }))
+            .filter((match) => match.score > 0)
+            .sort((a, b) => b.score - a.score || a.item.title.localeCompare(b.item.title))
+            .map((match) => match.item);
+          renderResults(matches);
+        } catch {
+          results.innerHTML = '<p class="docs-search-empty">Search unavailable</p>';
+          results.hidden = false;
+        }
+      };
+
+      input.addEventListener("input", runSearch);
+      input.addEventListener("focus", runSearch);
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          input.value = "";
+          results.hidden = true;
+          results.innerHTML = "";
+          input.blur();
+        }
+      });
+      document.addEventListener("click", (event) => {
+        if (!root.contains(event.target)) {
+          results.hidden = true;
+        }
       });
     })();
   </script>

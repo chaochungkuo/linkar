@@ -1,4 +1,6 @@
 ---
+import LogoMark from "./LogoMark.astro";
+
 const base = import.meta.env.BASE_URL;
 ---
 
@@ -6,7 +8,7 @@ const base = import.meta.env.BASE_URL;
   <div class="footer-inner">
     <div class="footer-brand">
       <a class="brand footer-brand-link" href={base}>
-        <span class="brand-mark">lk</span>
+        <LogoMark className="brand-mark" />
         <span class="brand-word">linkar</span>
       </a>
       <p class="footer-tagline">Reusable analysis templates for humans and machines.</p>

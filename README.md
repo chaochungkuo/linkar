@@ -23,6 +23,23 @@ New template and pack contracts should use:
 
 Linkar still accepts the legacy filenames `template.yaml` and `binding.yaml` for backward compatibility.
 
+## Documentation
+
+The documentation site is published at <https://chaochungkuo.github.io/linkar/>.
+
+Use it as the primary technical reference when you want the newest guides and command examples:
+
+- [Getting started](https://chaochungkuo.github.io/linkar/tutorials/getting-started/)
+- [Project lifecycle](https://chaochungkuo.github.io/linkar/explanations/project-lifecycle/)
+- [Template runtime contract](https://chaochungkuo.github.io/linkar/explanations/template-runtime-contract/)
+- [CLI reference](https://chaochungkuo.github.io/linkar/explanations/cli-reference/)
+- [Local API reference](https://chaochungkuo.github.io/linkar/explanations/local-api-reference/)
+
+The site is organized as a documentation-first interface rather than a marketing page. Its sidebar
+groups pages by task area: Start, Projects, Templates, Automation, and Reference. It also includes a
+client-side search box backed by a static `search.json` index, so it works on GitHub Pages without a
+server.
+
 ## Quickstart
 
 Install Linkar as a CLI tool first.
@@ -110,7 +127,8 @@ Typical project lifecycle:
 8. `linkar project latest TEMPLATE_ID` when you want the newest active recorded run
 9. `linkar project prune` when duplicate-path history accumulates
 
-For a fuller walkthrough, see the website explanation `Project lifecycle`.
+For a fuller walkthrough, see the website explanation
+[Project lifecycle](https://chaochungkuo.github.io/linkar/explanations/project-lifecycle/).
 
 If you accumulate older duplicate run entries for the same visible project path, use:
 
@@ -188,7 +206,8 @@ linkar run scrna_prep ...
 linkar config pack update izkf_pack
 ```
 
-For the full command guide, see the website tutorial `Managing Git-backed packs`.
+For the full command guide, see the website tutorial
+[Managing Git-backed packs](https://chaochungkuo.github.io/linkar/tutorials/managing-git-backed-packs/).
 
 Use `linkar run TEMPLATE ...` when you want the generic path-or-pack execution interface.
 
@@ -378,7 +397,9 @@ The basic pack is for didactic templates. Real domain templates should live in a
 
 ## Website
 
-The demo/docs site now lives in `website/` and is built with Astro for GitHub Pages.
+The documentation site lives in `website/` and is built with Astro for GitHub Pages. It uses a
+single docs layout with a left sidebar, an inline SVG logo component, and a static client-side
+search index generated at `/search.json`.
 
 Use Node 22 there:
 
@@ -386,6 +407,12 @@ Use Node 22 there:
 cd website
 npm install
 npm run dev
+```
+
+Build the production site locally with:
+
+```bash
+npm run build
 ```
 
 The GitHub Pages workflow is in `.github/workflows/deploy-pages.yml`.

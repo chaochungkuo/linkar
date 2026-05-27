@@ -12,9 +12,14 @@ export type DocsNavGroup = {
 
 export const docsNav: DocsNavGroup[] = [
   {
-    title: "User Guide",
-    description: "Install Linkar, configure packs, create projects, and run shared templates.",
+    title: "Start",
+    description: "Understand the model, install Linkar, configure packs, and run the first template.",
     items: [
+      {
+        title: "Why Linkar",
+        href: "explanations/why-linkar/",
+        description: "The problem Linkar solves and the constraints it optimizes for.",
+      },
       {
         title: "Quickstart",
         href: "tutorials/getting-started/",
@@ -30,6 +35,12 @@ export const docsNav: DocsNavGroup[] = [
         href: "tutorials/managing-git-backed-packs/",
         description: "Update remote packs and switch between local and GitHub-backed sources.",
       },
+    ],
+  },
+  {
+    title: "Projects",
+    description: "Understand project state, runs, metadata, cleanup, and reproducibility.",
+    items: [
       {
         title: "Project lifecycle",
         href: "explanations/project-lifecycle/",
@@ -40,10 +51,20 @@ export const docsNav: DocsNavGroup[] = [
         href: "explanations/project-runs-and-metadata/",
         description: "What lives in `project.yaml` and under `.linkar/`.",
       },
+      {
+        title: "Pack and project model",
+        href: "explanations/pack-and-project-model/",
+        description: "Why reusable assets and local work live in separate places.",
+      },
+      {
+        title: "Reproducibility and versioning",
+        href: "explanations/reproducibility-and-versioning/",
+        description: "Pack revisions, run metadata, and update policy.",
+      },
     ],
   },
   {
-    title: "Template Authoring",
+    title: "Templates",
     description: "Write template contracts, resolve params, test locally, and wrap external tools.",
     items: [
       {
@@ -76,43 +97,17 @@ export const docsNav: DocsNavGroup[] = [
         href: "tutorials/wrapping-external-pipelines/",
         description: "Turn external CLI workflows into inspectable Linkar templates.",
       },
-    ],
-  },
-  {
-    title: "Concepts",
-    description: "Build the mental model behind packs, projects, bindings, and reproducibility.",
-    items: [
-      {
-        title: "Why Linkar",
-        href: "explanations/why-linkar/",
-        description: "The problem Linkar solves and the constraints it optimizes for.",
-      },
-      {
-        title: "Pack and project model",
-        href: "explanations/pack-and-project-model/",
-        description: "Why reusable assets and local work live in separate places.",
-      },
       {
         title: "Build a real pack",
         href: "tutorials/build-a-real-pack/",
         description: "Create a useful pack with templates and bindings.",
       },
-      {
-        title: "Reproducibility and versioning",
-        href: "explanations/reproducibility-and-versioning/",
-        description: "Pack revisions, run metadata, and update policy.",
-      },
     ],
   },
   {
-    title: "Reference",
-    description: "Lookup material for APIs, interfaces, and advanced integrations.",
+    title: "Automation",
+    description: "Use Linkar from local services, agents, and site-specific discovery layers.",
     items: [
-      {
-        title: "CLI reference",
-        href: "explanations/cli-reference/",
-        description: "Commands, subcommands, common examples, and structured output support.",
-      },
       {
         title: "CLI, API, and MCP interfaces",
         href: "explanations/interfaces-and-automation/",
@@ -136,9 +131,14 @@ export const docsNav: DocsNavGroup[] = [
     ],
   },
   {
-    title: "Examples",
-    description: "Bundled packs and walkthroughs for learning concrete patterns.",
+    title: "Reference",
+    description: "Lookup material for commands, API surfaces, examples, and advanced details.",
     items: [
+      {
+        title: "CLI reference",
+        href: "explanations/cli-reference/",
+        description: "Commands, subcommands, common examples, and structured output support.",
+      },
       {
         title: "Example pack progression",
         href: "tutorials/example-pack-progression/",
