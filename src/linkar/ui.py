@@ -312,7 +312,7 @@ class CliUI:
         if not self.rich_enabled:
             self.plain_print(f"Cleanup candidates: {len(items)} item(s), {self._format_bytes(result.get('bytes', 0))}")
             for item in items:
-                self.plain_print(f"{item.get('template', '')}\t{item.get('rule', {}).get('type', 'any')}\t{item.get('path', '')}")
+                self.plain_print(f"{item.get('template', '')}\t{item.get('rule', {}).get('type', 'any')}\t{item.get('display_path') or item.get('path', '')}")
             return
         summary = Text()
         summary.append("Items", style="label")
@@ -345,7 +345,7 @@ class CliUI:
                 str(item.get("template", "")),
                 str(rule.get("type", "any")),
                 self._format_bytes(item.get("bytes", 0)),
-                str(item.get("path", "")),
+                str(item.get("display_path") or item.get("path", "")),
             )
         self._print_tabled_panel(table, title="[warn]Cleanup Candidates[/warn]", border_style="warn")
 

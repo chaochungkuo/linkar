@@ -1416,6 +1416,7 @@ printf 'keep\n' > results/keep.txt
     dry_payload = json.loads(dry_run.stdout)
     assert dry_payload["dry_run"] is True
     assert dry_payload["count"] == 3
+    assert {item["display_path"] for item in dry_payload["items"]} == {".nextflow.log", ".pixi", "work"}
     assert (rendered_dir / ".pixi").is_dir()
 
     cleaned = run_cli("clean", ".", "--yes", "--format", "json", cwd=rendered_dir)
@@ -1456,8 +1457,10 @@ printf 'keep\n' > results/keep.txt
     cleaned = run_cli("clean", ".", cwd=rendered_dir, input_text="y\n")
     assert cleaned.returncode == 0, cleaned.stderr
     assert "Cleanup candidates: 2 item(s)" in cleaned.stdout
-    assert str(rendered_dir / ".pixi") in cleaned.stdout
-    assert str(rendered_dir / ".nextflow.log") in cleaned.stdout
+    assert ".pixi" in cleaned.stdout
+    assert ".nextflow.log" in cleaned.stdout
+    assert str(rendered_dir / ".pixi") not in cleaned.stdout
+    assert str(rendered_dir / ".nextflow.log") not in cleaned.stdout
     assert "Remove these cleanup item(s)?" in cleaned.stdout
     assert "2 item(s) removed" in cleaned.stdout
     assert not (rendered_dir / ".pixi").exists()
@@ -1494,6 +1497,7 @@ printf 'keep\n' > results/keep.txt
     assert cleaned.returncode == 0, cleaned.stderr
     payload = json.loads(cleaned.stdout)
     assert payload["count"] == 1
+    assert payload["items"][0]["display_path"] == "disposable"
     assert payload["templates"][0]["rules_source"] == "recorded template"
     assert not (rendered_dir / "disposable").exists()
     assert (rendered_dir / "results" / "keep.txt").is_file()
@@ -1533,6 +1537,10 @@ printf 'ok\n' > results/ok.txt
     assert cleaned.returncode == 0, cleaned.stderr
     payload = json.loads(cleaned.stdout)
     assert payload["count"] == 2
+    assert {item["display_path"] for item in payload["items"]} == {
+        "project_cleanup_template/.pixi",
+        "project_cleanup_template/__pycache__",
+    }
     assert payload["templates"][0]["template"] == "project_cleanup_template"
     assert not (outdir / ".pixi").exists()
     assert not (outdir / "__pycache__").exists()

@@ -30,6 +30,8 @@ def clean_project_artifacts(
     target_path = Path(target).resolve()
     targets = resolve_cleanup_targets(target_path)
     items = planned_cleanup_items(targets)
+    for item in items:
+        item["display_path"] = display_cleanup_path(Path(item["path"]), target_path)
     removed_items: list[dict[str, Any]] = []
     for item in items:
         if not dry_run:
@@ -181,6 +183,13 @@ def planned_cleanup_items(targets: list[CleanupTarget]) -> list[dict[str, Any]]:
                     }
                 )
     return items
+
+
+def display_cleanup_path(path: Path, target: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(target.resolve()))
+    except ValueError:
+        return path.name or str(path)
 
 
 def matched_cleanup_paths(root: Path, rule: dict[str, Any]) -> list[Path]:
