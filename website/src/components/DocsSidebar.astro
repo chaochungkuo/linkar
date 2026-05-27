@@ -1,0 +1,110 @@
+---
+import { docsNav, withBase } from "../lib/docsNav";
+
+interface Props {
+  currentPath: string;
+}
+
+const { currentPath } = Astro.props;
+const base = import.meta.env.BASE_URL;
+
+function isActive(href: string) {
+  const fullHref = withBase(base, href);
+  return currentPath === fullHref;
+}
+---
+
+<aside class="docs-sidebar" aria-label="Documentation navigation">
+  <a class="docs-brand" href={base}>
+    <span class="docs-brand-mark">lk</span>
+    <span>
+      <strong>linkar</strong>
+      <small>documentation</small>
+    </span>
+  </a>
+
+  <nav class="docs-nav">
+    <section class="docs-nav-group">
+      <a
+        class:list={["docs-nav-link", currentPath === base && "is-active"]}
+        href={base}
+        aria-current={currentPath === base ? "page" : undefined}
+      >
+        Overview
+      </a>
+      <a
+        class:list={["docs-nav-link", currentPath === `${base}docs/` && "is-active"]}
+        href={`${base}docs/`}
+        aria-current={currentPath === `${base}docs/` ? "page" : undefined}
+      >
+        Documentation index
+      </a>
+      <a
+        class:list={["docs-nav-link", currentPath === `${base}tutorials/` && "is-active"]}
+        href={`${base}tutorials/`}
+        aria-current={currentPath === `${base}tutorials/` ? "page" : undefined}
+      >
+        Tutorials
+      </a>
+      <a
+        class:list={["docs-nav-link", currentPath === `${base}explanations/` && "is-active"]}
+        href={`${base}explanations/`}
+        aria-current={currentPath === `${base}explanations/` ? "page" : undefined}
+      >
+        Concepts
+      </a>
+      <a
+        class:list={["docs-nav-link", currentPath === `${base}examples/` && "is-active"]}
+        href={`${base}examples/`}
+        aria-current={currentPath === `${base}examples/` ? "page" : undefined}
+      >
+        Examples
+      </a>
+    </section>
+
+    {docsNav.map((group) => (
+      <section class="docs-nav-group">
+        <p class="docs-nav-heading">{group.title}</p>
+        {group.items.map((item) => (
+          <a
+            class:list={["docs-nav-link", isActive(item.href) && "is-active"]}
+            href={withBase(base, item.href)}
+            aria-current={isActive(item.href) ? "page" : undefined}
+          >
+            {item.title}
+          </a>
+        ))}
+      </section>
+    ))}
+  </nav>
+
+  <div class="docs-sidebar-footer">
+    <a href="https://github.com/chaochungkuo/linkar" target="_blank" rel="noopener noreferrer">GitHub</a>
+    <button class="theme-toggle docs-theme-toggle" type="button" aria-label="Toggle color theme" data-theme-toggle>
+      Theme
+    </button>
+  </div>
+
+  <script is:inline>
+    (() => {
+      const storageKey = "linkar-theme";
+      const root = document.documentElement;
+      const button = document.querySelector("[data-theme-toggle]");
+      if (!button) return;
+
+      const applyLabel = () => {
+        const theme = root.dataset.theme === "dark" ? "dark" : "light";
+        button.textContent = theme === "dark" ? "Light" : "Dark";
+        button.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
+      };
+
+      applyLabel();
+      button.addEventListener("click", () => {
+        const nextTheme = root.dataset.theme === "dark" ? "light" : "dark";
+        root.dataset.theme = nextTheme;
+        localStorage.setItem(storageKey, nextTheme);
+        applyLabel();
+      });
+    })();
+  </script>
+</aside>

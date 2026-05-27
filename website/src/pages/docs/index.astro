@@ -1,61 +1,62 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import SiteNav from "../../components/SiteNav.astro";
-import SiteFooter from "../../components/SiteFooter.astro";
+import DocsSidebar from "../../components/DocsSidebar.astro";
 import { docsNav, withBase } from "../../lib/docsNav";
 
 const base = import.meta.env.BASE_URL;
+const pathname = Astro.url.pathname;
 ---
 
 <BaseLayout title="Docs | Linkar" description="Technical documentation for using, authoring, automating, and integrating Linkar packs and templates.">
-  <div class="page-shell">
-    <SiteNav />
-    <main class="docs-index">
-      <section class="docs-index-intro">
-        <p class="eyebrow">Documentation</p>
-        <h1>Technical docs for Linkar.</h1>
-        <p class="lede">
-          Use this page as the map. Start with a project, learn the runtime model, then jump into
-          authoring, automation, and reference material when you need details.
-        </p>
-      </section>
+  <div class="docs-page-shell">
+    <DocsSidebar currentPath={pathname} />
+    <main class="docs-shell">
+      <article class="docs-content prose docs-index">
+        <section class="docs-index-intro" id="documentation-index">
+          <p class="eyebrow">Documentation</p>
+          <h1>Technical documentation</h1>
+          <p class="lede">
+            Use this page as the map. Start with a project, learn the runtime model, then jump into
+            authoring, automation, and reference material when you need details.
+          </p>
+        </section>
 
-      <section class="docs-quickstart" aria-label="Recommended starting points">
-        <a class="docs-quickstart-link" href={`${base}tutorials/getting-started/`}>
-          <span>New user</span>
-          <strong>Getting started</strong>
-        </a>
-        <a class="docs-quickstart-link" href={`${base}explanations/template-runtime-contract/`}>
-          <span>Template author</span>
-          <strong>Runtime contract</strong>
-        </a>
-        <a class="docs-quickstart-link" href={`${base}explanations/local-api-reference/`}>
-          <span>Automation</span>
-          <strong>Local API reference</strong>
-        </a>
-      </section>
+        <section class="docs-quickstart" aria-label="Recommended starting points">
+          <a class="docs-quickstart-link" href={`${base}tutorials/getting-started/`}>
+            <span>New user</span>
+            <strong>Getting started</strong>
+          </a>
+          <a class="docs-quickstart-link" href={`${base}explanations/template-runtime-contract/`}>
+            <span>Template author</span>
+            <strong>Runtime contract</strong>
+          </a>
+          <a class="docs-quickstart-link" href={`${base}explanations/local-api-reference/`}>
+            <span>Automation</span>
+            <strong>Local API reference</strong>
+          </a>
+        </section>
 
-      <div class="docs-index-grid">
-        {docsNav.map((group) => (
-          <section class="docs-index-group">
-            <div class="docs-index-group-head">
-              <h2>{group.title}</h2>
-              <p>{group.description}</p>
-            </div>
-            <ul class="docs-link-list">
-              {group.items.map((item) => (
-                <li>
-                  <a href={withBase(base, item.href)}>
-                    <span>{item.title}</span>
-                    <small>{item.description}</small>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
-      </div>
+        <div class="docs-index-grid">
+          {docsNav.map((group) => (
+            <section class="docs-index-group">
+              <div class="docs-index-group-head">
+                <h2>{group.title}</h2>
+                <p>{group.description}</p>
+              </div>
+              <ul class="docs-link-list">
+                {group.items.map((item) => (
+                  <li>
+                    <a href={withBase(base, item.href)}>
+                      <span>{item.title}</span>
+                      <small>{item.description}</small>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      </article>
     </main>
-    <SiteFooter />
   </div>
 </BaseLayout>

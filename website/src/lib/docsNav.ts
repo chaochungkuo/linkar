@@ -12,11 +12,11 @@ export type DocsNavGroup = {
 
 export const docsNav: DocsNavGroup[] = [
   {
-    title: "Getting Started",
-    description: "Install Linkar, create a project, and run your first shared pack.",
+    title: "User Guide",
+    description: "Install Linkar, configure packs, create projects, and run shared templates.",
     items: [
       {
-        title: "Getting started",
+        title: "Quickstart",
         href: "tutorials/getting-started/",
         description: "Install Linkar, initialize a project, run a template, and inspect outputs.",
       },
@@ -26,15 +26,61 @@ export const docsNav: DocsNavGroup[] = [
         description: "Understand global packs, project packs, and explicit pack references.",
       },
       {
-        title: "Managing Git-backed packs",
+        title: "Git-backed packs",
         href: "tutorials/managing-git-backed-packs/",
         description: "Update remote packs and switch between local and GitHub-backed sources.",
+      },
+      {
+        title: "Project lifecycle",
+        href: "explanations/project-lifecycle/",
+        description: "Render, run, collect, clean, inspect, and prune in context.",
+      },
+      {
+        title: "Project runs and metadata",
+        href: "explanations/project-runs-and-metadata/",
+        description: "What lives in `project.yaml` and under `.linkar/`.",
+      },
+    ],
+  },
+  {
+    title: "Template Authoring",
+    description: "Write template contracts, resolve params, test locally, and wrap external tools.",
+    items: [
+      {
+        title: "Template runtime contract",
+        href: "explanations/template-runtime-contract/",
+        description: "The `linkar_template.yaml` contract and render/run behavior.",
+      },
+      {
+        title: "Params, bindings, and resolution",
+        href: "explanations/params-bindings-and-resolution/",
+        description: "How explicit params, defaults, and pack bindings interact.",
+      },
+      {
+        title: "Authoring script.sh templates",
+        href: "tutorials/authoring-script-sh/",
+        description: "Use shell entrypoints when local orchestration is still simple.",
+      },
+      {
+        title: "Python entrypoints",
+        href: "tutorials/python-entry-and-runtime-metadata/",
+        description: "Move complex template logic into Python while keeping run scripts small.",
+      },
+      {
+        title: "Testing templates",
+        href: "tutorials/testing-basic-templates/",
+        description: "Test template behavior and output contracts locally.",
+      },
+      {
+        title: "Wrapping external pipelines",
+        href: "tutorials/wrapping-external-pipelines/",
+        description: "Turn external CLI workflows into inspectable Linkar templates.",
       },
     ],
   },
   {
     title: "Concepts",
-    description: "Build the mental model: packs, projects, templates, bindings, and provenance.",
+    description: "Build the mental model behind packs, projects, bindings, and reproducibility.",
     items: [
       {
         title: "Why Linkar",
@@ -47,24 +93,9 @@ export const docsNav: DocsNavGroup[] = [
         description: "Why reusable assets and local work live in separate places.",
       },
       {
-        title: "Template runtime contract",
-        href: "explanations/template-runtime-contract/",
-        description: "The `linkar_template.yaml` contract and render/run behavior.",
-      },
-      {
-        title: "Params, bindings, and resolution",
-        href: "explanations/params-bindings-and-resolution/",
-        description: "How explicit params, defaults, and pack bindings interact.",
-      },
-      {
-        title: "Project lifecycle",
-        href: "explanations/project-lifecycle/",
-        description: "Render, run, collect, clean, inspect, and prune in context.",
-      },
-      {
-        title: "Project runs and metadata",
-        href: "explanations/project-runs-and-metadata/",
-        description: "What lives in `project.yaml` and under `.linkar/`.",
+        title: "Build a real pack",
+        href: "tutorials/build-a-real-pack/",
+        description: "Create a useful pack with templates and bindings.",
       },
       {
         title: "Reproducibility and versioning",
@@ -74,45 +105,14 @@ export const docsNav: DocsNavGroup[] = [
     ],
   },
   {
-    title: "Guides",
-    description: "Practical authoring and automation workflows.",
-    items: [
-      {
-        title: "Build a real pack",
-        href: "tutorials/build-a-real-pack/",
-        description: "Create a useful pack with templates and bindings.",
-      },
-      {
-        title: "Authoring script.sh templates",
-        href: "tutorials/authoring-script-sh/",
-        description: "Use shell entrypoints when local orchestration is still simple.",
-      },
-      {
-        title: "Python entry and runtime metadata",
-        href: "tutorials/python-entry-and-runtime-metadata/",
-        description: "Move complex template logic into Python while keeping run scripts small.",
-      },
-      {
-        title: "Testing basic templates",
-        href: "tutorials/testing-basic-templates/",
-        description: "Test template behavior and output contracts locally.",
-      },
-      {
-        title: "Wrapping external pipelines",
-        href: "tutorials/wrapping-external-pipelines/",
-        description: "Turn external CLI workflows into inspectable Linkar templates.",
-      },
-      {
-        title: "Using Linkar from agents",
-        href: "tutorials/using-linkar-from-agents/",
-        description: "Use the CLI, API, and MCP server from automation clients.",
-      },
-    ],
-  },
-  {
     title: "Reference",
     description: "Lookup material for APIs, interfaces, and advanced integrations.",
     items: [
+      {
+        title: "CLI reference",
+        href: "explanations/cli-reference/",
+        description: "Commands, subcommands, common examples, and structured output support.",
+      },
       {
         title: "CLI, API, and MCP interfaces",
         href: "explanations/interfaces-and-automation/",
@@ -124,10 +124,21 @@ export const docsNav: DocsNavGroup[] = [
         description: "HTTP endpoints and response conventions.",
       },
       {
+        title: "Using Linkar from agents",
+        href: "tutorials/using-linkar-from-agents/",
+        description: "Use the CLI, API, and MCP server from automation clients.",
+      },
+      {
         title: "Discovery layers and site packs",
         href: "explanations/discovery-layers-and-site-packs/",
         description: "How site-specific lookup logic belongs in packs.",
       },
+    ],
+  },
+  {
+    title: "Examples",
+    description: "Bundled packs and walkthroughs for learning concrete patterns.",
+    items: [
       {
         title: "Example pack progression",
         href: "tutorials/example-pack-progression/",

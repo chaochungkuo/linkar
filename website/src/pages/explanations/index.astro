@@ -1,12 +1,12 @@
 ---
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import SiteNav from "../../components/SiteNav.astro";
-import SiteFooter from "../../components/SiteFooter.astro";
+import DocsSidebar from "../../components/DocsSidebar.astro";
 
 const explanations = (await getCollection("explanations")).sort((a, b) => a.data.order - b.data.order);
 const explanationHref = (slug: string) => `${import.meta.env.BASE_URL}explanations/${slug}/`;
 const bySlug = new Map(explanations.map((entry) => [entry.slug, entry]));
+const pathname = Astro.url.pathname;
 const route = [
   "why-linkar",
   "pack-and-project-model",
@@ -43,64 +43,65 @@ const groups = [
 ---
 
 <BaseLayout title="Concepts | Linkar" description="Understand the core ideas behind Linkar: reusable templates, reusable bindings, portable packs, readable projects, and human-plus-machine interfaces.">
-  <div class="page-shell">
-    <SiteNav />
-    <main class="section-page">
-      <section class="page-hero">
-        <p class="eyebrow">Concepts</p>
-        <h1 class="page-title">Conceptual reference.</h1>
-        <p class="lede page-lede">
-          These pages explain the runtime model behind Linkar. Use them when you need the why and
-          the boundaries behind a command or template contract.
-        </p>
-      </section>
+  <div class="docs-page-shell">
+    <DocsSidebar currentPath={pathname} />
+    <main class="docs-shell">
+      <article class="docs-content prose docs-index">
+        <section class="docs-index-intro">
+          <p class="eyebrow">Concepts</p>
+          <h1 class="page-title">Conceptual reference.</h1>
+          <p class="lede page-lede">
+            These pages explain the runtime model behind Linkar. Use them when you need the why and
+            the boundaries behind a command or template contract.
+          </p>
+        </section>
 
-      <section class="section page-section-tight">
-        <div class="section-heading">
-          <p class="eyebrow">Recommended Route</p>
-          <h2>Build the mental model in this order.</h2>
-        </div>
-        <div class="route-strip">
-          {route.map((slug, index) => {
-            const entry = bySlug.get(slug);
-            if (!entry) return null;
-            return (
-              <a class="route-step" href={explanationHref(slug)}>
-                <span class="route-number">{index + 1}</span>
-                <span>{entry.data.title}</span>
-              </a>
-            );
-          })}
-        </div>
-      </section>
+        <section class="docs-section">
+          <div class="section-heading">
+            <p class="eyebrow">Recommended Route</p>
+            <h2>Build the mental model in this order.</h2>
+          </div>
+          <div class="route-strip">
+            {route.map((slug, index) => {
+              const entry = bySlug.get(slug);
+              if (!entry) return null;
+              return (
+                <a class="route-step" href={explanationHref(slug)}>
+                  <span class="route-number">{index + 1}</span>
+                  <span>{entry.data.title}</span>
+                </a>
+              );
+            })}
+          </div>
+        </section>
 
-      <section class="section page-section-tight">
-        <div class="docs-index-grid">
-          {groups.map((group) => (
-            <section class="docs-index-group">
-              <div class="docs-index-group-head">
-                <h2>{group.title}</h2>
-                <p>{group.description}</p>
-              </div>
-              <ul class="docs-link-list">
-                {group.slugs.map((slug) => {
-                  const entry = bySlug.get(slug);
-                  if (!entry) return null;
-                  return (
-                    <li>
-                      <a href={explanationHref(slug)}>
-                        <span>{entry.data.title}</span>
-                        <small>{entry.data.description}</small>
-                      </a>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          ))}
-        </div>
-      </section>
+        <section class="docs-section">
+          <div class="docs-index-grid">
+            {groups.map((group) => (
+              <section class="docs-index-group">
+                <div class="docs-index-group-head">
+                  <h2>{group.title}</h2>
+                  <p>{group.description}</p>
+                </div>
+                <ul class="docs-link-list">
+                  {group.slugs.map((slug) => {
+                    const entry = bySlug.get(slug);
+                    if (!entry) return null;
+                    return (
+                      <li>
+                        <a href={explanationHref(slug)}>
+                          <span>{entry.data.title}</span>
+                          <small>{entry.data.description}</small>
+                        </a>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
+        </section>
+      </article>
     </main>
-    <SiteFooter />
   </div>
 </BaseLayout>

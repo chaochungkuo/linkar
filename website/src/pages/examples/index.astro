@@ -1,9 +1,9 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import SiteNav from "../../components/SiteNav.astro";
-import SiteFooter from "../../components/SiteFooter.astro";
+import DocsSidebar from "../../components/DocsSidebar.astro";
 
 const base = import.meta.env.BASE_URL;
+const pathname = Astro.url.pathname;
 type ShowItem = string | { label: string; code: true };
 
 const examples = [
@@ -28,7 +28,9 @@ const examples = [
     pattern: "Template output reuse",
     href: `${base}tutorials/example-pack-progression/#2-learn-pack-level-chaining-with-chaining`,
     useWhen: "One template is clear and you want to remove repeated manual path wiring.",
-    shows: ["Pack-level default binding from one template's output into another template's input"] satisfies ShowItem[],
+    shows: [
+      "Pack-level default binding from one template's output into another template's input",
+    ] satisfies ShowItem[],
   },
   {
     example: "binding_overrides",
@@ -49,54 +51,59 @@ const examples = [
     pattern: "GitHub-backed distribution",
     href: `${base}tutorials/example-pack-progression/#5-learn-remote-pack-references-with-remote`,
     useWhen: "Local packs are clear and you want revision-aware GitHub pack usage.",
-    shows: ["Remote pack references", "cached assets", "provenance from resolved revisions"] satisfies ShowItem[],
+    shows: [
+      "Remote pack references",
+      "cached assets",
+      "provenance from resolved revisions",
+    ] satisfies ShowItem[],
   },
 ];
 ---
 
 <BaseLayout title="Examples | Linkar" description="Choose the right bundled Linkar example pack based on what you want to learn: basic template authoring, chaining, binding overrides, pack selection, or remote packs.">
-  <div class="page-shell">
-    <SiteNav />
-    <main class="section-page">
-      <section class="page-hero">
-        <p class="eyebrow">Examples</p>
-        <h1 class="page-title">Bundled packs you can read and run.</h1>
-        <p class="lede page-lede">
-          Use this cookbook when you know the pattern you want to inspect.
-        </p>
-      </section>
+  <div class="docs-page-shell">
+    <DocsSidebar currentPath={pathname} />
+    <main class="docs-shell">
+      <article class="docs-content prose docs-index">
+        <section class="docs-index-intro">
+          <p class="eyebrow">Examples</p>
+          <h1 class="page-title">Bundled packs you can read and run.</h1>
+          <p class="lede page-lede">
+            Use this cookbook when you know the pattern you want to inspect.
+          </p>
+        </section>
 
-      <section class="section page-section-tight">
-        <div class="reference-table-wrap">
-          <table class="reference-table">
-            <thead>
-              <tr>
-                <th>Example</th>
-                <th>Pattern</th>
-                <th>Use When</th>
-                <th>Shows</th>
-              </tr>
-            </thead>
-            <tbody>
-              {examples.map((item) => (
+        <section class="docs-section">
+          <div class="reference-table-wrap">
+            <table class="reference-table">
+              <thead>
                 <tr>
-                  <td><a href={item.href}>{item.example}</a></td>
-                  <td>{item.pattern}</td>
-                  <td>{item.useWhen}</td>
-                  <td>
-                    <span class="inline-code-list">
-                      {item.shows.map((entry) =>
-                        typeof entry === "string" ? <span>{entry}</span> : <code>{entry.label}</code>
-                      )}
-                    </span>
-                  </td>
+                  <th>Example</th>
+                  <th>Pattern</th>
+                  <th>Use When</th>
+                  <th>Shows</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+              </thead>
+              <tbody>
+                {examples.map((item) => (
+                  <tr>
+                    <td><a href={item.href}>{item.example}</a></td>
+                    <td>{item.pattern}</td>
+                    <td>{item.useWhen}</td>
+                    <td>
+                      <span class="inline-code-list">
+                        {item.shows.map((entry) =>
+                          typeof entry === "string" ? <span>{entry}</span> : <code>{entry.label}</code>
+                        )}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </article>
     </main>
-    <SiteFooter />
   </div>
 </BaseLayout>

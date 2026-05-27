@@ -1,12 +1,12 @@
 ---
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import SiteNav from "../../components/SiteNav.astro";
-import SiteFooter from "../../components/SiteFooter.astro";
+import DocsSidebar from "../../components/DocsSidebar.astro";
 
 const tutorials = (await getCollection("tutorials")).sort((a, b) => a.data.order - b.data.order);
 const tutorialHref = (slug: string) => `${import.meta.env.BASE_URL}tutorials/${slug}/`;
 const bySlug = new Map(tutorials.map((entry) => [entry.slug, entry]));
+const pathname = Astro.url.pathname;
 const route = [
   "getting-started",
   "packs-and-scope",
@@ -42,64 +42,65 @@ const groups = [
 ---
 
 <BaseLayout title="Tutorials | Linkar" description="Step-by-step Linkar guides for starting projects, authoring templates, testing packs, and using Linkar from agents.">
-  <div class="page-shell">
-    <SiteNav />
-    <main class="section-page">
-      <section class="page-hero">
-        <p class="eyebrow">Tutorials</p>
-        <h1 class="page-title">Task-oriented guides.</h1>
-        <p class="lede page-lede">
-          Follow a guide when you want a worked path. Use the docs index when you need reference
-          material or the full runtime model.
-        </p>
-      </section>
+  <div class="docs-page-shell">
+    <DocsSidebar currentPath={pathname} />
+    <main class="docs-shell">
+      <article class="docs-content prose docs-index">
+        <section class="docs-index-intro">
+          <p class="eyebrow">Tutorials</p>
+          <h1 class="page-title">Task-oriented guides.</h1>
+          <p class="lede page-lede">
+            Follow a guide when you want a worked path. Use the docs index when you need reference
+            material or the full runtime model.
+          </p>
+        </section>
 
-      <section class="section page-section-tight">
-        <div class="section-heading">
-          <p class="eyebrow">Start Here</p>
-          <h2>Recommended first pass.</h2>
-        </div>
-        <div class="route-strip">
-          {route.map((slug, index) => {
-            const entry = bySlug.get(slug);
-            if (!entry) return null;
-            return (
-              <a class="route-step" href={tutorialHref(slug)}>
-                <span class="route-number">{index + 1}</span>
-                <span>{entry.data.title}</span>
-              </a>
-            );
-          })}
-        </div>
-      </section>
+        <section class="docs-section">
+          <div class="section-heading">
+            <p class="eyebrow">Start Here</p>
+            <h2>Recommended first pass.</h2>
+          </div>
+          <div class="route-strip">
+            {route.map((slug, index) => {
+              const entry = bySlug.get(slug);
+              if (!entry) return null;
+              return (
+                <a class="route-step" href={tutorialHref(slug)}>
+                  <span class="route-number">{index + 1}</span>
+                  <span>{entry.data.title}</span>
+                </a>
+              );
+            })}
+          </div>
+        </section>
 
-      <section class="section page-section-tight">
-        <div class="docs-index-grid">
-          {groups.map((group) => (
-            <section class="docs-index-group">
-              <div class="docs-index-group-head">
-                <h2>{group.title}</h2>
-                <p>{group.description}</p>
-              </div>
-              <ul class="docs-link-list">
-                {group.slugs.map((slug) => {
-                  const entry = bySlug.get(slug);
-                  if (!entry) return null;
-                  return (
-                    <li>
-                      <a href={tutorialHref(slug)}>
-                        <span>{entry.data.title}</span>
-                        <small>{entry.data.description}</small>
-                      </a>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          ))}
-        </div>
-      </section>
+        <section class="docs-section">
+          <div class="docs-index-grid">
+            {groups.map((group) => (
+              <section class="docs-index-group">
+                <div class="docs-index-group-head">
+                  <h2>{group.title}</h2>
+                  <p>{group.description}</p>
+                </div>
+                <ul class="docs-link-list">
+                  {group.slugs.map((slug) => {
+                    const entry = bySlug.get(slug);
+                    if (!entry) return null;
+                    return (
+                      <li>
+                        <a href={tutorialHref(slug)}>
+                          <span>{entry.data.title}</span>
+                          <small>{entry.data.description}</small>
+                        </a>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
+        </section>
+      </article>
     </main>
-    <SiteFooter />
   </div>
 </BaseLayout>

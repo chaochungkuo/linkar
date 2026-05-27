@@ -1,173 +1,120 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import SiteHeader from "../components/SiteHeader.astro";
-import SiteFooter from "../components/SiteFooter.astro";
+import DocsSidebar from "../components/DocsSidebar.astro";
+
+const base = import.meta.env.BASE_URL;
+const pathname = Astro.url.pathname;
+const toc = [
+  { href: "#overview", label: "Overview" },
+  { href: "#installation", label: "Installation" },
+  { href: "#public-interfaces", label: "Public interfaces" },
+  { href: "#documentation", label: "Documentation" },
+  { href: "#project-model", label: "Project model" },
+];
 ---
 
 <BaseLayout
-  title="Linkar | Git-backed Analysis Packs For Humans And Machines"
-  description="Linkar helps teams publish scripts, CLI tools, notebooks, and analysis steps as Git-backed packs with traceable local runs for humans, scripts, and agents."
+  title="Linkar documentation"
+  description="Documentation for Linkar, a lightweight runtime for reusable analysis templates, Git-backed packs, project metadata, and automation interfaces."
 >
-  <div class="page-shell">
-    <SiteHeader />
+  <div class="docs-page-shell">
+    <DocsSidebar currentPath={pathname} />
+    <main class="docs-shell docs-shell-with-toc">
+      <article class="docs-content prose docs-home-content">
+        <p class="docs-badges" aria-label="Project links">
+          <a href="https://github.com/chaochungkuo/linkar" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <a href="https://github.com/chaochungkuo/linkar/issues" target="_blank" rel="noopener noreferrer">Issues</a>
+          <a href={`${base}docs/`}>Docs</a>
+        </p>
 
-    <main>
-      <section class="section">
-        <div class="section-heading">
-          <p class="eyebrow">How It Works</p>
-          <h2>Four building blocks.</h2>
-          <p class="section-copy">
-            Every Linkar project combines packs, templates, bindings, and a local project directory.
-            Each piece has a single job. Together they make analysis work shareable, inspectable,
-            and safe to update through Git.
-          </p>
-        </div>
+        <h1 id="overview">Linkar documentation</h1>
+        <p class="lede article-lede">
+          Linkar is a lightweight runtime for reusable computational templates. It helps teams
+          publish scripts, CLI tools, notebooks, and analysis steps as Git-backed packs with
+          traceable local runs for humans, scripts, and agents.
+        </p>
 
-        <div class="card-grid two-up">
-          <article class="feature-card">
-            <h3>Packs</h3>
-            <p>
-              Git-backed repositories that distribute reusable templates, bindings, helper code,
-              and documentation. The resolved Git revision is the pack version.
-            </p>
-            <pre class="feature-snippet"><code>$ linkar config pack add github:ORG/site_pack --id site_pack
-$ linkar config pack update site_pack
-$ linkar config pack list --format yaml</code></pre>
-          </article>
-          <article class="feature-card">
-            <h3>Templates</h3>
-            <p>
-              Standalone units with explicit params, declared outputs, and a reproducible run
-              command. Each template is testable on its own.
-            </p>
-            <pre class="feature-snippet"><code>id: fastq_stats
-params:
-  input:
-    type: path
-    required: true
-outputs:
-  report:
-    path: stats.txt
-run:
-  command: fastqc "$&#123;param:input&#125;"</code></pre>
-          </article>
-          <article class="feature-card">
-            <h3>Bindings</h3>
-            <p>
-              Encode how outputs from one template become inputs to the next.
-              Write the resolution logic once; reuse it every run.
-            </p>
-            <pre class="feature-snippet"><code># step_a produced output_file
-# binding auto-resolves it
-$ linkar run step_b
-# no manual path wiring needed</code></pre>
-          </article>
-          <article class="feature-card">
-            <h3>Projects</h3>
-            <p>
-              A local directory with stable run aliases, immutable history under
-              <code>.linkar/runs/</code>, and inspectable metadata for every execution.
-            </p>
-            <pre class="feature-snippet"><code>$ linkar inspect run fastqc_001
-instance:  fastqc_001
-status:    completed
-outputs:
-  report: ./fastqc/stats.txt</code></pre>
-          </article>
-        </div>
-      </section>
+        <p>
+          The core idea is deliberately small: packs distribute reusable templates and bindings,
+          projects record local work, and every run leaves readable artifacts on disk. Linkar does
+          not try to become a workflow engine. It provides the contract around shared analysis
+          building blocks.
+        </p>
 
-      <section class="section section-alt">
-        <div class="section-heading">
-          <p class="eyebrow">Interfaces</p>
-          <h2>One runtime, three entry points.</h2>
-          <p class="section-copy">
-            Humans use the CLI. Scripts and agents use the local JSON API or MCP server.
-            All three paths write the same run artifact on disk.
-          </p>
-        </div>
+        <h2 id="installation">Installation</h2>
+        <p>
+          Install Linkar into the environment where you want to manage packs and project runs.
+        </p>
+        <pre><code>pip install linkar</code></pre>
 
-        <div class="interface-grid">
-          <article class="interface-card">
-            <div class="interface-head">
-              <span class="interface-tag">Human</span>
-              <h3>Short CLI</h3>
-            </div>
-            <p>
-              Template params become flags. The active project is discovered automatically.
-              Common paths stay short.
-            </p>
-            <pre><code>linkar config pack add github:IZKF-Genomics/izkf_pack --id izkf_pack
-linkar config author set --name "Your Name"
+        <p>
+          After installation, add a pack and initialize a project:
+        </p>
+        <pre><code>linkar config pack add github:IZKF-Genomics/izkf_pack --id izkf_pack
 linkar project init --name study
-cd study
-linkar run scrna_prep \
-  --input-h5ad /data/study/raw_counts.h5ad \
-  --organism human \
-  --binding default \
-  --verbose
-linkar inspect run scrna_prep_001</code></pre>
-          </article>
+cd study</code></pre>
 
-          <article class="interface-card">
-            <div class="interface-head">
-              <span class="interface-tag">Machine</span>
-              <h3>Local API &amp; MCP</h3>
-            </div>
-            <p>
-              Resolve params, execute templates, and read outputs without shell scraping.
-              Agents can use the MCP server directly.
-            </p>
-            <pre><code>linkar serve --port 8000 --api-token local-dev:read,resolve,execute
+        <h2 id="public-interfaces">Public interfaces</h2>
+        <p>
+          Linkar exposes the same runtime semantics through three stable user-facing interfaces.
+        </p>
 
-# resolve params → get a short-lived token
-POST /v1/templates/&#123;template_id&#125;:resolve
-
-# run with the token
-POST /v1/templates/&#123;template_id&#125;:run
-
-# read outputs by run reference
-GET  /v1/runs/&#123;run_ref&#125;/outputs
-
-# or use the MCP server for agents
-linkar mcp serve</code></pre>
-          </article>
-        </div>
-      </section>
-
-      <section class="section">
-        <div class="section-heading">
-          <p class="eyebrow">Documentation</p>
-          <h2>Choose the path that matches your job.</h2>
-          <p class="section-copy">
-            Users start by installing a shared pack and running a template. Template authors move
-            from a local pack to a GitHub repository. Automation users use the same runtime through
-            the API or MCP server.
-          </p>
-        </div>
-
-        <div class="card-grid three-up">
-          <a class="doc-card" href={`${import.meta.env.BASE_URL}docs/`}>
-            <h3>Docs</h3>
-            <p>Browse guides, concepts, reference pages, and examples from one technical index.</p>
+        <div class="docs-reference-cards">
+          <a href={`${base}explanations/interfaces-and-automation/`}>
+            <strong>CLI</strong>
+            <span>Run, render, collect, inspect, clean, and manage projects from the terminal.</span>
           </a>
-          <a class="tutorial-card tutorial-link" href={`${import.meta.env.BASE_URL}tutorials/`}>
-            <h3>Tutorials</h3>
-            <p>Start a project, manage Git-backed packs, build a pack, and use Linkar step by step.</p>
+          <a href={`${base}explanations/local-api-reference/`}>
+            <strong>Local API</strong>
+            <span>Resolve templates and read run metadata through local HTTP endpoints.</span>
           </a>
-          <a class="doc-card" href={`${import.meta.env.BASE_URL}examples/`}>
-            <h3>Examples</h3>
-            <p>Jump into bundled packs for authoring, bindings, pack selection, and remote use.</p>
+          <a href={`${base}tutorials/using-linkar-from-agents/`}>
+            <strong>MCP</strong>
+            <span>Expose Linkar operations to agent clients without shell scraping.</span>
           </a>
         </div>
 
-        <div class="hero-actions section-top-gap">
-          <a class="button button-primary" href={`${import.meta.env.BASE_URL}docs/`}>Read the docs</a>
-          <a class="button button-secondary" href="https://github.com/chaochungkuo/linkar" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+        <h2 id="documentation">Documentation</h2>
+        <p>
+          Start with the guides if you are learning by doing. Use the conceptual pages when you
+          need the runtime model, project ledger, cleanup contract, or automation boundary.
+        </p>
+
+        <div class="docs-reference-cards">
+          <a href={`${base}tutorials/getting-started/`}>
+            <strong>Installation and first run</strong>
+            <span>Create a project, run a template, and inspect outputs.</span>
+          </a>
+          <a href={`${base}explanations/template-runtime-contract/`}>
+            <strong>Template contract</strong>
+            <span>Understand params, outputs, cleanup rules, tools, and run modes.</span>
+          </a>
+          <a href={`${base}examples/`}>
+            <strong>Examples</strong>
+            <span>Choose a bundled example pack based on the pattern you want to inspect.</span>
+          </a>
         </div>
-      </section>
+
+        <h2 id="project-model">Project model</h2>
+        <p>
+          A Linkar project is a local directory with a project ledger, stable visible run paths,
+          and optional immutable run history. This keeps analysis handoffs readable while still
+          retaining enough metadata for provenance.
+        </p>
+        <pre><code>linkar render demultiplex --outdir ./demultiplex
+bash ./demultiplex/run.sh
+linkar collect ./demultiplex
+linkar clean .</code></pre>
+      </article>
+
+      <aside class="docs-toc" aria-label="On this page">
+        <p class="toc-title">Contents</p>
+        <nav class="toc-nav">
+          {toc.map((item) => (
+            <a class="toc-link" href={item.href}>{item.label}</a>
+          ))}
+        </nav>
+      </aside>
     </main>
-
-    <SiteFooter />
   </div>
 </BaseLayout>

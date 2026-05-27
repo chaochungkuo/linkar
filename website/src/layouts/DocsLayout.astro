@@ -1,8 +1,6 @@
 ---
 import BaseLayout from "./BaseLayout.astro";
-import SiteNav from "../components/SiteNav.astro";
-import SiteFooter from "../components/SiteFooter.astro";
-import { docsNav, withBase } from "../lib/docsNav";
+import DocsSidebar from "../components/DocsSidebar.astro";
 
 interface Heading {
   depth: number;
@@ -20,41 +18,15 @@ interface Props {
 }
 
 const { title, description, sectionLabel, backHref, backLabel, headings = [] } = Astro.props;
-const base = import.meta.env.BASE_URL;
 const pathname = Astro.url.pathname;
 const tocHeadings = headings.filter((heading) => heading.depth === 2 || heading.depth === 3);
 const showToc = tocHeadings.length > 0;
-
-function isActive(href: string) {
-  const fullHref = withBase(base, href);
-  return pathname === fullHref;
-}
 ---
 
 <BaseLayout title={`${title} | Linkar Docs`} description={description}>
-  <div class="page-shell">
-    <SiteNav />
+  <div class="docs-page-shell">
+    <DocsSidebar currentPath={pathname} />
     <main class:list={["docs-shell", showToc && "docs-shell-with-toc"]}>
-      <aside class="docs-sidebar" aria-label="Documentation navigation">
-        <a class="docs-home-link" href={`${base}docs/`}>Docs home</a>
-        <nav class="docs-nav">
-          {docsNav.map((group) => (
-            <section class="docs-nav-group">
-              <p class="docs-nav-heading">{group.title}</p>
-              {group.items.map((item) => (
-                <a
-                  class:list={["docs-nav-link", isActive(item.href) && "is-active"]}
-                  href={withBase(base, item.href)}
-                  aria-current={isActive(item.href) ? "page" : undefined}
-                >
-                  {item.title}
-                </a>
-              ))}
-            </section>
-          ))}
-        </nav>
-      </aside>
-
       <article class="docs-content prose">
         <a class="back-link" href={backHref}>{backLabel}</a>
         <p class="eyebrow">{sectionLabel}</p>
@@ -79,6 +51,5 @@ function isActive(href: string) {
         </aside>
       )}
     </main>
-    <SiteFooter />
   </div>
 </BaseLayout>
