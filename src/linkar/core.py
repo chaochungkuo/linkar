@@ -14,6 +14,7 @@ from linkar.runtime.config import (
     set_active_global_pack,
     update_global_pack,
 )
+from linkar.runtime.cleanup import clean_project_artifacts
 from linkar.runtime.bindings import (
     binding_asset_root,
     load_binding_config,
@@ -90,6 +91,7 @@ __all__ = [
     "binding_asset_root",
     "clear_global_author",
     "clear_project_author",
+    "clean_project_artifacts",
     "collect_run_outputs",
     "collect_outputs",
     "describe_template",

@@ -86,6 +86,7 @@ def make_template(
     version: str | None = None,
     description: str | None = None,
     outputs: str | None = None,
+    cleanup: str | None = None,
     entry_name: str = "run.sh",
     run_mode: str = "direct",
 ) -> Path:
@@ -104,6 +105,7 @@ def make_template(
                 params,
                 "outputs:",
                 outputs or "  results_dir: {}",
+                *(["cleanup:", cleanup] if cleanup is not None else []),
                 "run:",
                 f"  entry: {entry_name}",
                 f"  mode: {run_mode}",
@@ -1362,6 +1364,135 @@ def test_collect_command_updates_outputs_after_manual_run(tmp_path: Path) -> Non
     collect_payload = json.loads(collect_json.stdout)
     assert collect_payload["kind"] == "run_collect"
     assert collect_payload["project_updated"] is False
+
+
+def test_clean_command_removes_template_declared_artifacts_from_template_dir(tmp_path: Path) -> None:
+    template = make_template(
+        tmp_path / "templates",
+        "cleanup_template",
+        "  name:\n    type: str\n    required: true",
+        """#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p .pixi work/subdir results
+printf '%s\n' "${NAME}" > results/name.txt
+printf 'cache\n' > .nextflow.log
+printf 'keep\n' > results/keep.txt
+""",
+        cleanup=(
+            "  - path: .pixi\n"
+            "    type: dir\n"
+            "  - path: work\n"
+            "    type: dir\n"
+            "  - glob: .nextflow.log*\n"
+            "    type: file"
+        ),
+        run_mode="render",
+    )
+
+    rendered = run_cli(
+        "run",
+        str(template),
+        "--param",
+        "name=Cleanup",
+        "--outdir",
+        str(tmp_path / "rendered"),
+        cwd=tmp_path,
+    )
+    assert rendered.returncode == 0, rendered.stderr
+
+    rendered_dir = tmp_path / "rendered"
+    assert (rendered_dir / ".pixi").is_dir()
+    assert (rendered_dir / "work").is_dir()
+    assert (rendered_dir / ".nextflow.log").is_file()
+
+    dry_run = run_cli("clean", ".", "--dry-run", "--format", "json", cwd=rendered_dir)
+    assert dry_run.returncode == 0, dry_run.stderr
+    dry_payload = json.loads(dry_run.stdout)
+    assert dry_payload["dry_run"] is True
+    assert dry_payload["count"] == 3
+    assert (rendered_dir / ".pixi").is_dir()
+
+    cleaned = run_cli("clean", ".", "--yes", "--format", "json", cwd=rendered_dir)
+    assert cleaned.returncode == 0, cleaned.stderr
+    payload = json.loads(cleaned.stdout)
+    assert payload["kind"] == "project_clean"
+    assert payload["count"] == 3
+    assert not (rendered_dir / ".pixi").exists()
+    assert not (rendered_dir / "work").exists()
+    assert not (rendered_dir / ".nextflow.log").exists()
+    assert (rendered_dir / "results" / "keep.txt").is_file()
+
+
+def test_clean_command_removes_template_declared_artifacts_from_project_root(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+    template = make_template(
+        tmp_path / "templates",
+        "project_cleanup_template",
+        "",
+        """#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p .pixi __pycache__ results
+printf 'ok\n' > results/ok.txt
+""",
+        cleanup=(
+            "  - path: .pixi\n"
+            "    type: dir\n"
+            "  - path: __pycache__\n"
+            "    type: dir"
+        ),
+        run_mode="render",
+    )
+
+    completed = run_cli("run", str(template), cwd=project_dir)
+    assert completed.returncode == 0, completed.stderr
+
+    project = yaml.safe_load((project_dir / "project.yaml").read_text())
+    outdir = project_dir / project["templates"][0]["path"]
+    assert (outdir / ".pixi").is_dir()
+    assert (outdir / "__pycache__").is_dir()
+
+    cleaned = run_cli("clean", ".", "--yes", "--format", "json", cwd=project_dir)
+    assert cleaned.returncode == 0, cleaned.stderr
+    payload = json.loads(cleaned.stdout)
+    assert payload["count"] == 2
+    assert payload["templates"][0]["template"] == "project_cleanup_template"
+    assert not (outdir / ".pixi").exists()
+    assert not (outdir / "__pycache__").exists()
+    assert (outdir / "results" / "ok.txt").is_file()
+
+
+def test_template_cleanup_rejects_unsafe_paths(tmp_path: Path) -> None:
+    template = make_template(
+        tmp_path / "templates",
+        "unsafe_cleanup_template",
+        "",
+        "#!/usr/bin/env bash\nset -euo pipefail\n",
+        cleanup="  - path: ../outside\n    type: dir",
+    )
+
+    with pytest.raises(TemplateValidationError, match="safe relative path"):
+        load_template(template)
+
+
+def test_clean_command_rejects_template_root_cleanup(tmp_path: Path) -> None:
+    template = make_template(
+        tmp_path / "templates",
+        "root_cleanup_template",
+        "",
+        "#!/usr/bin/env bash\nset -euo pipefail\nmkdir -p results\n",
+        cleanup="  - path: .\n    type: dir",
+        run_mode="render",
+    )
+
+    rendered = run_cli("run", str(template), "--outdir", str(tmp_path / "rendered"), cwd=tmp_path)
+    assert rendered.returncode == 0, rendered.stderr
+
+    cleaned = run_cli("clean", ".", "--yes", "--format", "json", cwd=tmp_path / "rendered")
+    assert cleaned.returncode != 0
+    assert "cannot target the template root" in cleaned.stderr
+    assert (tmp_path / "rendered").is_dir()
 
 
 def test_collect_command_accepts_unique_template_id(tmp_path: Path) -> None:

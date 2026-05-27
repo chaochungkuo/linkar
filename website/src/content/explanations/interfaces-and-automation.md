@@ -21,6 +21,7 @@ Important commands:
 - `linkar run ...`
 - `linkar render ...`
 - `linkar collect ...`
+- `linkar clean ...`
 - `linkar test ...`
 - `linkar inspect run ...`
 - `linkar project ...`
@@ -35,6 +36,7 @@ Key behavior:
 - `render` always stages only
 - render-mode templates reuse the visible project bundle on `run`; pass `--refresh` to rerender first
 - `collect` records outputs after manual execution
+- `clean` removes template-declared runtime artifacts from a project or rendered template directory
 - `project latest` returns the newest matching recorded run without making you scan full history
 - `project remove-run` can detach or delete recorded runs
 - `project prune` can collapse older duplicate-path history while keeping the newest visible run
@@ -45,7 +47,7 @@ Execution command output contract:
 
 - default human output is rich when a terminal supports it
 - default plain stdout is the primary workspace or run directory path
-- `--format json` and `--format yaml` are the stable structured forms for `run`, `render`, `collect`, and `test`
+- `--format json` and `--format yaml` are the stable structured forms for `run`, `render`, `collect`, `clean`, and `test`
 
 If you want the end-to-end mental model first, read `Project lifecycle` before the more detailed
 runtime pages.

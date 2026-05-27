@@ -28,6 +28,7 @@ from linkar.core import (
     adopt_run_into_project,
     clear_global_author,
     clear_project_author,
+    clean_project_artifacts,
     collect_run_outputs,
     discover_project,
     get_active_global_pack_entry,
@@ -110,6 +111,35 @@ def app(ctx: click.Context) -> None:
 @app.group("pack")
 def pack_group() -> None:
     """Manage packs saved in the active project configuration."""
+
+
+@app.command("clean")
+@click.argument("target", type=click.Path(path_type=str, dir_okay=True, file_okay=True))
+@click.option("--dry-run", is_flag=True, help="Show cleanup candidates without deleting them.")
+@click.option("--yes", is_flag=True, help="Delete cleanup candidates without interactive confirmation.")
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["rich", "json", "yaml"]),
+    default="rich",
+    show_default=True,
+    help="Output format.",
+)
+@handle_linkar_errors
+def clean_command(target: str, dry_run: bool, yes: bool, output_format: str, ui: CliUI) -> None:
+    """Remove template-declared runtime artifacts from a project or rendered template directory."""
+    preview = clean_project_artifacts(target, dry_run=True)
+    if dry_run:
+        ui.print_data(preview, format=output_format)
+        return
+    if preview["count"] and not yes:
+        if not click.confirm(
+            f"Remove {preview['count']} cleanup item(s) from {target}?",
+            default=False,
+        ):
+            raise click.exceptions.Exit(1)
+    result = clean_project_artifacts(target, dry_run=False)
+    ui.print_data(result, format=output_format)
 
 
 @app.group("config")

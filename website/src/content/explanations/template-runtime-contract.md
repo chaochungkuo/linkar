@@ -37,6 +37,7 @@ Top-level fields:
 - `description`
 - `params`
 - `outputs`
+- `cleanup`
 - `tools`
 - `run`
 
@@ -75,6 +76,41 @@ Rules:
 - `path` is resolved relative to `results/`
 - `glob` is also resolved relative to `results/`
 - only existing outputs are recorded
+
+## Cleanup rules
+
+Templates can also declare disposable runtime artifacts:
+
+```yaml
+cleanup:
+  - path: .pixi
+    type: dir
+  - path: work
+    type: dir
+  - path: .nextflow
+    type: dir
+  - glob: ".nextflow.log*"
+    type: file
+```
+
+These rules are consumed by:
+
+```bash
+linkar clean .
+```
+
+`clean` can be run from a project root or from a rendered template directory.
+When run from a project root, Linkar reads `project.yaml`, finds the recorded
+template directories, and applies each template's rules to its own directory.
+When run from a rendered template directory, only that directory is cleaned.
+
+Rules:
+
+- `path` and `glob` are resolved relative to the rendered template directory
+- each rule must declare exactly one of `path` or `glob`
+- `type` can be `dir`, `file`, or `any`
+- absolute paths, `..`, and rules that target the template root are rejected
+- declared outputs and scientific results should not be cleanup targets
 
 ## Tool requirements
 

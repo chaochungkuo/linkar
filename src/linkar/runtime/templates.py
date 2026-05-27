@@ -178,6 +178,35 @@ def load_template(
                 f"Template output '{key}' glob must be a non-empty string in {spec_path}"
             )
 
+    cleanup = data.get("cleanup") or []
+    if not isinstance(cleanup, list):
+        raise TemplateValidationError(f"Template cleanup must be a list in {spec_path}")
+    for index, raw_rule in enumerate(cleanup, start=1):
+        if not isinstance(raw_rule, dict):
+            raise TemplateValidationError(f"Template cleanup rule {index} must be a mapping in {spec_path}")
+        has_path = "path" in raw_rule
+        has_glob = "glob" in raw_rule
+        if has_path == has_glob:
+            raise TemplateValidationError(
+                f"Template cleanup rule {index} must declare exactly one of path or glob in {spec_path}"
+            )
+        value = raw_rule.get("path") if has_path else raw_rule.get("glob")
+        field = "path" if has_path else "glob"
+        if not isinstance(value, str) or not value.strip():
+            raise TemplateValidationError(
+                f"Template cleanup rule {index} {field} must be a non-empty string in {spec_path}"
+            )
+        cleanup_path = Path(value)
+        if cleanup_path.is_absolute() or ".." in cleanup_path.parts:
+            raise TemplateValidationError(
+                f"Template cleanup rule {index} {field} must be a safe relative path in {spec_path}"
+            )
+        cleanup_type = raw_rule.get("type", "any")
+        if cleanup_type not in {"any", "dir", "file"}:
+            raise TemplateValidationError(
+                f"Template cleanup rule {index} type must be one of any, dir, or file in {spec_path}"
+            )
+
     tools = data.get("tools") or {}
     if not isinstance(tools, dict):
         raise TemplateValidationError(f"Template tools must be a mapping in {spec_path}")
@@ -218,6 +247,7 @@ def load_template(
         run_command=command.strip() if isinstance(command, str) else None,
         render_command=render_command.strip() if isinstance(render_command, str) else None,
         run_mode=run.get("mode", "direct"),
+        cleanup=[dict(rule) for rule in cleanup],
         run_verbose_by_default=run_verbose_by_default,
         pack_root=root.parent.parent if root.parent.name == "templates" else None,
         pack_ref=pack_asset.ref if pack_asset is not None else None,

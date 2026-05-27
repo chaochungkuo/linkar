@@ -1782,6 +1782,7 @@ def run_template(
             "params": resolved_params,
             "param_provenance": param_provenance,
             "declared_outputs": declared_outputs_or_default(template.outputs),
+            "cleanup": template.cleanup,
             "outputs": outputs,
             "software": [{"name": "linkar", "version": __version__}],
             "pack": (
@@ -1957,6 +1958,7 @@ def render_template(
             "params": resolved_params,
             "param_provenance": param_provenance,
             "declared_outputs": declared_outputs_or_default(template.outputs),
+            "cleanup": template.cleanup,
             "outputs": outputs,
             "software": [{"name": "linkar", "version": __version__}],
             "pack": (

@@ -21,6 +21,7 @@ class TemplateSpec:
     run_command: str | None
     render_command: str | None
     run_mode: str
+    cleanup: list[dict[str, Any]] = field(default_factory=list)
     run_verbose_by_default: bool = False
     pack_root: Path | None = None
     pack_ref: str | None = None

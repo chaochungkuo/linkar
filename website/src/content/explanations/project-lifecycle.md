@@ -15,9 +15,10 @@ For most project work, the lifecycle is:
 3. `render` when you want an editable bundle
 4. `run` when you want Linkar to execute the template
 5. `collect` after manual execution of a rendered bundle
-6. `inspect run` to review metadata and provenance
-7. `project latest` when you want the newest active recorded run
-8. `project prune` when stale duplicate-path history accumulates
+6. `clean` before export or archive when templates declare disposable runtime artifacts
+7. `inspect run` to review metadata and provenance
+8. `project latest` when you want the newest active recorded run
+9. `project prune` when stale duplicate-path history accumulates
 
 ## Step 1: initialize a project
 
@@ -113,7 +114,24 @@ Accepted run references include:
 - run directory paths
 - `.linkar/meta.json` paths
 
-## Step 6: inspect provenance
+## Step 6: clean runtime artifacts
+
+Use `clean` when you want to remove template-declared disposable runtime
+artifacts before export, archive, or handoff:
+
+```bash
+linkar clean . --dry-run
+linkar clean . --yes
+```
+
+From a project root, `linkar clean .` resolves the recorded template directories
+in `project.yaml` and applies each template's cleanup rules. From a rendered
+template directory, it cleans only that one directory.
+
+Cleanup rules come from the template contract, so Linkar does not hard-code
+domain-specific patterns such as Nextflow `work/` or Pixi `.pixi/`.
+
+## Step 7: inspect provenance
 
 Use `inspect run` to read recorded metadata:
 
@@ -130,7 +148,7 @@ This is the primary way to answer:
 - what outputs were collected
 - what warnings were recorded
 
-## Step 7: ask for the newest active recorded run
+## Step 8: ask for the newest active recorded run
 
 Sometimes you do not want the whole history. You only want the newest recorded run for a template
 or visible path.
@@ -148,7 +166,7 @@ This is useful when:
 - you want the current visible run quickly
 - you want a stable precursor before `inspect run` or export logic
 
-## Step 8: prune stale history
+## Step 9: prune stale history
 
 Over time, rerendering or replacing visible bundles can leave older duplicate-path entries in
 `project.yaml`.
@@ -181,6 +199,7 @@ Use:
 - `render` when you want an editable workspace
 - `run` when Linkar should execute now
 - `collect` when execution happened outside Linkar
+- `clean` when disposable template artifacts would make export or archive too large
 - `inspect run` when you need provenance
 - `project prune` when history has become cluttered
 

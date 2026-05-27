@@ -71,6 +71,7 @@ Command model:
 - `linkar run ...` executes a template
 - `linkar render ...` stages a bundle without executing it
 - `linkar collect RUN_REF` refreshes declared outputs after manual execution
+- `linkar clean .` removes template-declared runtime artifacts from a project or rendered template directory
 - `linkar inspect run RUN_REF` reads recorded metadata
 - `linkar project prune` removes stale duplicate-path history
 
@@ -81,6 +82,21 @@ For execution-style commands such as `run`, `render`, `collect`, and `test`:
 - the default plain stdout is the primary workspace or run directory path
 - use `--format json` or `--format yaml` when you want stable structured output
 
+`clean` is intentionally driven by template metadata, not by Linkar built-ins. A
+template can declare disposable artifacts in `linkar_template.yaml`:
+
+```yaml
+cleanup:
+  - path: .pixi
+    type: dir
+  - glob: ".nextflow.log*"
+    type: file
+```
+
+`linkar clean .` works from either a project root or a rendered template
+directory. Use `--dry-run` to inspect candidates before deleting them and
+`--yes` for non-interactive cleanup.
+
 Typical project lifecycle:
 
 1. `linkar project init --name study`
@@ -88,9 +104,10 @@ Typical project lifecycle:
 3. `linkar render TEMPLATE ...` when you want an editable bundle
 4. `linkar run TEMPLATE ...` when you want Linkar to execute it
 5. `linkar collect RUN_REF` after manual execution of a rendered bundle
-6. `linkar inspect run RUN_REF` to review provenance
-7. `linkar project latest TEMPLATE_ID` when you want the newest active recorded run
-8. `linkar project prune` when duplicate-path history accumulates
+6. `linkar clean . --dry-run` before export or archiving when templates declare disposable runtime artifacts
+7. `linkar inspect run RUN_REF` to review provenance
+8. `linkar project latest TEMPLATE_ID` when you want the newest active recorded run
+9. `linkar project prune` when duplicate-path history accumulates
 
 For a fuller walkthrough, see the website explanation `Project lifecycle`.
 

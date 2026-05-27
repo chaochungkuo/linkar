@@ -40,6 +40,41 @@
         "type": "object"
       }
     },
+    "cleanup": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "required": ["path"],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "type": {
+                "type": "string",
+                "enum": ["any", "dir", "file"]
+              }
+            }
+          },
+          {
+            "required": ["glob"],
+            "properties": {
+              "glob": {
+                "type": "string",
+                "minLength": 1
+              },
+              "type": {
+                "type": "string",
+                "enum": ["any", "dir", "file"]
+              }
+            }
+          }
+        ]
+      }
+    },
     "run": {
       "type": "object",
       "additionalProperties": false,
