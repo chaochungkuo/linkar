@@ -304,6 +304,79 @@ class CliUI:
             )
         )
 
+    def print_clean_preview(self, result: dict[str, Any]) -> None:
+        items = list(result.get("items") or [])
+        if not items:
+            self._print_empty_state("[ok]Cleanup Preview[/ok]", "No cleanup candidates found.", border_style="ok")
+            return
+        if not self.rich_enabled:
+            self.plain_print(f"Cleanup candidates: {len(items)} item(s), {self._format_bytes(result.get('bytes', 0))}")
+            for item in items:
+                self.plain_print(f"{item.get('template', '')}\t{item.get('rule', {}).get('type', 'any')}\t{item.get('path', '')}")
+            return
+        summary = Text()
+        summary.append("Items", style="label")
+        summary.append(": ", style="muted")
+        summary.append(str(len(items)), style="accent")
+        summary.append("\n")
+        summary.append("Estimated Size", style="label")
+        summary.append(": ", style="muted")
+        summary.append(self._format_bytes(result.get("bytes", 0)), style="accent")
+        summary.append("\n")
+        summary.append("Target", style="label")
+        summary.append(": ", style="muted")
+        summary.append(str(result.get("target", "")), style="value")
+        self.console.print(
+            Panel(
+                summary,
+                title="[warn]Cleanup Preview[/warn]",
+                border_style="warn",
+                box=box.ROUNDED,
+            )
+        )
+        table = Table(box=box.SIMPLE_HEAVY, header_style="accent")
+        table.add_column("Template", style="accent", no_wrap=True)
+        table.add_column("Type", style="value", no_wrap=True)
+        table.add_column("Size", style="value", justify="right", no_wrap=True)
+        table.add_column("Path", style="value")
+        for item in items:
+            rule = item.get("rule") if isinstance(item.get("rule"), dict) else {}
+            table.add_row(
+                str(item.get("template", "")),
+                str(rule.get("type", "any")),
+                self._format_bytes(item.get("bytes", 0)),
+                str(item.get("path", "")),
+            )
+        self._print_tabled_panel(table, title="[warn]Cleanup Candidates[/warn]", border_style="warn")
+
+    def print_clean_completed(self, result: dict[str, Any]) -> None:
+        self.print_summary_panel(
+            "[ok]Cleanup Complete[/ok]",
+            [
+                ("Items Removed", result.get("count", 0)),
+                ("Estimated Size", self._format_bytes(result.get("bytes", 0))),
+                ("Target", result.get("target", "")),
+            ],
+            plain_text=f"{result.get('count', 0)} item(s) removed",
+            border_style="ok",
+        )
+
+    @staticmethod
+    def _format_bytes(value: Any) -> str:
+        try:
+            size = float(value)
+        except (TypeError, ValueError):
+            size = 0.0
+        units = ["B", "KiB", "MiB", "GiB", "TiB"]
+        unit = units[0]
+        for unit in units:
+            if size < 1024 or unit == units[-1]:
+                break
+            size /= 1024
+        if unit == "B":
+            return f"{int(size)} {unit}"
+        return f"{size:.1f} {unit}"
+
     def print_test_completed(self, result: dict[str, Any]) -> None:
         outdir = Path(result["outdir"])
         if not self.rich_enabled:

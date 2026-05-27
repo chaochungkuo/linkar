@@ -94,8 +94,9 @@ cleanup:
 ```
 
 `linkar clean .` works from either a project root or a rendered template
-directory. Use `--dry-run` to inspect candidates before deleting them and
-`--yes` for non-interactive cleanup.
+directory. By default it prints the cleanup candidates and asks for terminal
+confirmation before deleting anything. Use `--dry-run` to inspect candidates
+without deleting them and `--yes` for non-interactive cleanup.
 
 Typical project lifecycle:
 

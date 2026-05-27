@@ -103,6 +103,8 @@ linkar clean .
 When run from a project root, Linkar reads `project.yaml`, finds the recorded
 template directories, and applies each template's rules to its own directory.
 When run from a rendered template directory, only that directory is cleaned.
+The default terminal flow previews the matching folders and files before asking
+for confirmation.
 
 Rules:
 

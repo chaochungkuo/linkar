@@ -26,7 +26,12 @@ from linkar.ui import CliUI, THEME
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def run_cli(*args: str, cwd: Path, env_extra: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+def run_cli(
+    *args: str,
+    cwd: Path,
+    env_extra: dict[str, str] | None = None,
+    input_text: str | None = None,
+) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env["PYTHONPATH"] = str(ROOT / "src")
     env.setdefault("LINKAR_HOME", str(cwd / ".linkar-home-test"))
@@ -37,6 +42,7 @@ def run_cli(*args: str, cwd: Path, env_extra: dict[str, str] | None = None) -> s
         cwd=cwd,
         env=env,
         text=True,
+        input=input_text,
         capture_output=True,
         check=False,
     )
@@ -1419,6 +1425,42 @@ printf 'keep\n' > results/keep.txt
     assert payload["count"] == 3
     assert not (rendered_dir / ".pixi").exists()
     assert not (rendered_dir / "work").exists()
+    assert not (rendered_dir / ".nextflow.log").exists()
+    assert (rendered_dir / "results" / "keep.txt").is_file()
+
+
+def test_clean_command_previews_paths_before_interactive_confirmation(tmp_path: Path) -> None:
+    template = make_template(
+        tmp_path / "templates",
+        "interactive_cleanup_template",
+        "",
+        """#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p .pixi results
+printf 'cache\n' > .nextflow.log
+printf 'keep\n' > results/keep.txt
+""",
+        cleanup=(
+            "  - path: .pixi\n"
+            "    type: dir\n"
+            "  - glob: .nextflow.log*\n"
+            "    type: file"
+        ),
+        run_mode="render",
+    )
+
+    rendered = run_cli("run", str(template), "--outdir", str(tmp_path / "rendered"), cwd=tmp_path)
+    assert rendered.returncode == 0, rendered.stderr
+
+    rendered_dir = tmp_path / "rendered"
+    cleaned = run_cli("clean", ".", cwd=rendered_dir, input_text="y\n")
+    assert cleaned.returncode == 0, cleaned.stderr
+    assert "Cleanup candidates: 2 item(s)" in cleaned.stdout
+    assert str(rendered_dir / ".pixi") in cleaned.stdout
+    assert str(rendered_dir / ".nextflow.log") in cleaned.stdout
+    assert "Remove these cleanup item(s)?" in cleaned.stdout
+    assert "2 item(s) removed" in cleaned.stdout
+    assert not (rendered_dir / ".pixi").exists()
     assert not (rendered_dir / ".nextflow.log").exists()
     assert (rendered_dir / "results" / "keep.txt").is_file()
 

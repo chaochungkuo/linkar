@@ -130,16 +130,26 @@ def clean_command(target: str, dry_run: bool, yes: bool, output_format: str, ui:
     """Remove template-declared runtime artifacts from a project or rendered template directory."""
     preview = clean_project_artifacts(target, dry_run=True)
     if dry_run:
-        ui.print_data(preview, format=output_format)
+        if output_format == "rich":
+            ui.print_clean_preview(preview)
+        else:
+            ui.print_data(preview, format=output_format)
         return
     if preview["count"] and not yes:
+        if output_format == "rich":
+            ui.print_clean_preview(preview)
+        else:
+            ui.print_data(preview, format=output_format)
         if not click.confirm(
-            f"Remove {preview['count']} cleanup item(s) from {target}?",
+            "Remove these cleanup item(s)?",
             default=False,
         ):
             raise click.exceptions.Exit(1)
     result = clean_project_artifacts(target, dry_run=False)
-    ui.print_data(result, format=output_format)
+    if output_format == "rich":
+        ui.print_clean_completed(result)
+    else:
+        ui.print_data(result, format=output_format)
 
 
 @app.group("config")

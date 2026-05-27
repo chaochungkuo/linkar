@@ -121,12 +121,15 @@ artifacts before export, archive, or handoff:
 
 ```bash
 linkar clean . --dry-run
-linkar clean . --yes
+linkar clean .
 ```
 
 From a project root, `linkar clean .` resolves the recorded template directories
 in `project.yaml` and applies each template's cleanup rules. From a rendered
 template directory, it cleans only that one directory.
+
+By default, the CLI prints the folders and files that would be removed and asks
+for confirmation in the terminal. Use `--yes` only for non-interactive scripts.
 
 Cleanup rules come from the template contract, so Linkar does not hard-code
 domain-specific patterns such as Nextflow `work/` or Pixi `.pixi/`.
