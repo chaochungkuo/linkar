@@ -4,60 +4,52 @@ import SiteNav from "../../components/SiteNav.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
 
 const base = import.meta.env.BASE_URL;
+type ShowItem = string | { label: string; code: true };
+
 const examples = [
   {
-    title: "First Template",
-    description: "Start with the smallest runnable pack and learn the template contract before adding chaining or remote sources.",
-    cards: [
-      {
-        tag: "Start",
-        title: "Basic",
-        href: `${base}tutorials/testing-basic-templates/`,
-        text: "Start here for the template contract: `run.command`, `run.sh`, `run.py`, declared outputs, `glob` outputs, `tools.required_any`, file inputs, and local tests.",
-      },
-    ],
+    example: "basic",
+    pattern: "Minimal template authoring",
+    href: `${base}tutorials/testing-basic-templates/`,
+    useWhen: "You want the smallest runnable pack before adding bindings or remote sources.",
+    shows: [
+      { label: "run.command", code: true },
+      { label: "run.sh", code: true },
+      { label: "run.py", code: true },
+      "declared outputs",
+      "glob outputs",
+      "tools",
+      "file inputs",
+      "local tests",
+    ] satisfies ShowItem[],
   },
   {
-    title: "Connect Templates",
-    description: "Move here when one template is clear and you want to understand how packs remove repeated manual path wiring.",
-    cards: [
-      {
-        tag: "Bindings",
-        title: "Chaining",
-        href: `${base}tutorials/example-pack-progression/#2-learn-pack-level-chaining-with-chaining`,
-        text: "Open this when you want to see pack-level default binding in action. The key lesson is that template-to-template connection lives in the pack, not in manual operator steps.",
-      },
-      {
-        tag: "Bindings",
-        title: "Binding overrides",
-        href: `${base}tutorials/example-pack-progression/#3-compare-defaults-and-caller-overrides-with-binding_overrides`,
-        text: "Use this when you want to compare three things directly: project history, a pack's default binding, and an explicit override binding passed by the caller.",
-      },
-    ],
+    example: "chaining",
+    pattern: "Template output reuse",
+    href: `${base}tutorials/example-pack-progression/#2-learn-pack-level-chaining-with-chaining`,
+    useWhen: "One template is clear and you want to remove repeated manual path wiring.",
+    shows: ["Pack-level default binding from one template's output into another template's input"] satisfies ShowItem[],
   },
   {
-    title: "Resolve Ambiguity",
-    description: "Use these examples when multiple packs or references could answer the same template request.",
-    cards: [
-      {
-        tag: "Pack Selection",
-        title: "Pack management",
-        href: `${base}tutorials/example-pack-progression/#4-learn-pack-selection-with-pack_management`,
-        text: "Use this when multiple packs expose the same template id and you want to see how active-pack selection and `--pack` keep resolution explicit.",
-      },
-    ],
+    example: "binding_overrides",
+    pattern: "Default versus caller binding",
+    href: `${base}tutorials/example-pack-progression/#3-compare-defaults-and-caller-overrides-with-binding_overrides`,
+    useWhen: "You need to compare project history, pack defaults, and explicit override bindings.",
+    shows: ["How a caller can override a pack's default resolution behavior"] satisfies ShowItem[],
   },
   {
-    title: "Remote Sharing",
-    description: "Finish here when you want to connect the local pack model to GitHub-backed distribution and revision-aware provenance.",
-    cards: [
-      {
-        tag: "Remote",
-        title: "Remote",
-        href: `${base}tutorials/example-pack-progression/#5-learn-remote-pack-references-with-remote`,
-        text: "Use this once local packs are clear and you want to see GitHub-style pack references, cached remote assets, and revision-aware provenance.",
-      },
-    ],
+    example: "pack_management",
+    pattern: "Ambiguous template ids",
+    href: `${base}tutorials/example-pack-progression/#4-learn-pack-selection-with-pack_management`,
+    useWhen: "Multiple packs expose the same template id.",
+    shows: ["Active-pack selection", { label: "--pack", code: true }, "references"] satisfies ShowItem[],
+  },
+  {
+    example: "remote",
+    pattern: "GitHub-backed distribution",
+    href: `${base}tutorials/example-pack-progression/#5-learn-remote-pack-references-with-remote`,
+    useWhen: "Local packs are clear and you want revision-aware GitHub pack usage.",
+    shows: ["Remote pack references", "cached assets", "provenance from resolved revisions"] satisfies ShowItem[],
   },
 ];
 ---
@@ -70,45 +62,40 @@ const examples = [
         <p class="eyebrow">Examples</p>
         <h1 class="page-title">Bundled packs you can read and run.</h1>
         <p class="lede page-lede">
-          Pick the smallest example that answers your question.
+          Use this cookbook when you know the pattern you want to inspect.
         </p>
       </section>
 
       <section class="section page-section-tight">
-        <div class="section-heading">
-          <p class="eyebrow">Recommended Route</p>
-          <h2>Read examples as a progression.</h2>
-        </div>
-        <div class="route-strip">
-          {examples.map((group, index) => (
-            <a class="route-step" href={group.cards[0].href}>
-              <span class="route-number">{index + 1}</span>
-              <span>{group.title}</span>
-            </a>
-          ))}
+        <div class="reference-table-wrap">
+          <table class="reference-table">
+            <thead>
+              <tr>
+                <th>Example</th>
+                <th>Pattern</th>
+                <th>Use When</th>
+                <th>Shows</th>
+              </tr>
+            </thead>
+            <tbody>
+              {examples.map((item) => (
+                <tr>
+                  <td><a href={item.href}>{item.example}</a></td>
+                  <td>{item.pattern}</td>
+                  <td>{item.useWhen}</td>
+                  <td>
+                    <span class="inline-code-list">
+                      {item.shows.map((entry) =>
+                        typeof entry === "string" ? <span>{entry}</span> : <code>{entry.label}</code>
+                      )}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
-
-      {examples.map((group) => (
-        <section class="section page-section-tight">
-          <div class="section-heading">
-            <p class="eyebrow">Examples</p>
-            <h2>{group.title}</h2>
-            <p class="section-copy">{group.description}</p>
-          </div>
-          <div class="card-grid two-up">
-            {group.cards.map((card) => (
-              <a class="doc-card" href={card.href}>
-                <div class="card-tags">
-                  <span class="card-tag">{card.tag}</span>
-                </div>
-                <h3>{card.title}</h3>
-                <p>{card.text}</p>
-              </a>
-            ))}
-          </div>
-        </section>
-      ))}
     </main>
     <SiteFooter />
   </div>

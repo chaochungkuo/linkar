@@ -48,11 +48,10 @@ const groups = [
     <main class="section-page">
       <section class="page-hero">
         <p class="eyebrow">Concepts</p>
-        <h1 class="page-title">The model behind Linkar.</h1>
+        <h1 class="page-title">Conceptual reference.</h1>
         <p class="lede page-lede">
-          Start here if you want to understand what Linkar is for. These pages explain the tension
-          between customization and reuse, the role of templates and bindings, and why packs and
-          projects are intentionally separate.
+          These pages explain the runtime model behind Linkar. Use them when you need the why and
+          the boundaries behind a command or template contract.
         </p>
       </section>
 
@@ -75,30 +74,32 @@ const groups = [
         </div>
       </section>
 
-      {groups.map((group) => (
-        <section class="section page-section-tight">
-          <div class="section-heading">
-            <p class="eyebrow">Concepts</p>
-            <h2>{group.title}</h2>
-            <p class="section-copy">{group.description}</p>
-          </div>
-          <div class="card-grid two-up">
-            {group.slugs.map((slug) => {
-              const entry = bySlug.get(slug);
-              if (!entry) return null;
-              return (
-                <a class="doc-card" href={explanationHref(slug)}>
-                  <div class="card-tags">
-                    <span class="card-tag">{group.title}</span>
-                  </div>
-                  <h3>{entry.data.title}</h3>
-                  <p>{entry.data.description}</p>
-                </a>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+      <section class="section page-section-tight">
+        <div class="docs-index-grid">
+          {groups.map((group) => (
+            <section class="docs-index-group">
+              <div class="docs-index-group-head">
+                <h2>{group.title}</h2>
+                <p>{group.description}</p>
+              </div>
+              <ul class="docs-link-list">
+                {group.slugs.map((slug) => {
+                  const entry = bySlug.get(slug);
+                  if (!entry) return null;
+                  return (
+                    <li>
+                      <a href={explanationHref(slug)}>
+                        <span>{entry.data.title}</span>
+                        <small>{entry.data.description}</small>
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
+      </section>
     </main>
     <SiteFooter />
   </div>

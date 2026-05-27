@@ -1,0 +1,84 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import SiteNav from "../components/SiteNav.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import { docsNav, withBase } from "../lib/docsNav";
+
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  title: string;
+  description: string;
+  sectionLabel: string;
+  backHref: string;
+  backLabel: string;
+  headings?: Heading[];
+}
+
+const { title, description, sectionLabel, backHref, backLabel, headings = [] } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const pathname = Astro.url.pathname;
+const tocHeadings = headings.filter((heading) => heading.depth === 2 || heading.depth === 3);
+const showToc = tocHeadings.length > 0;
+
+function isActive(href: string) {
+  const fullHref = withBase(base, href);
+  return pathname === fullHref;
+}
+---
+
+<BaseLayout title={`${title} | Linkar Docs`} description={description}>
+  <div class="page-shell">
+    <SiteNav />
+    <main class:list={["docs-shell", showToc && "docs-shell-with-toc"]}>
+      <aside class="docs-sidebar" aria-label="Documentation navigation">
+        <a class="docs-home-link" href={`${base}docs/`}>Docs home</a>
+        <nav class="docs-nav">
+          {docsNav.map((group) => (
+            <section class="docs-nav-group">
+              <p class="docs-nav-heading">{group.title}</p>
+              {group.items.map((item) => (
+                <a
+                  class:list={["docs-nav-link", isActive(item.href) && "is-active"]}
+                  href={withBase(base, item.href)}
+                  aria-current={isActive(item.href) ? "page" : undefined}
+                >
+                  {item.title}
+                </a>
+              ))}
+            </section>
+          ))}
+        </nav>
+      </aside>
+
+      <article class="docs-content prose">
+        <a class="back-link" href={backHref}>{backLabel}</a>
+        <p class="eyebrow">{sectionLabel}</p>
+        <h1>{title}</h1>
+        <p class="lede article-lede">{description}</p>
+        <slot />
+      </article>
+
+      {showToc && (
+        <aside class="docs-toc" aria-label="On this page">
+          <p class="toc-title">On this page</p>
+          <nav class="toc-nav">
+            {tocHeadings.map((heading) => (
+              <a
+                class:list={["toc-link", heading.depth === 3 && "toc-link-nested"]}
+                href={`#${heading.slug}`}
+              >
+                {heading.text}
+              </a>
+            ))}
+          </nav>
+        </aside>
+      )}
+    </main>
+    <SiteFooter />
+  </div>
+</BaseLayout>

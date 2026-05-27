@@ -3,12 +3,14 @@ const base = import.meta.env.BASE_URL;
 const pathname = Astro.url.pathname;
 
 const navItems = [
-  { href: `${base}explanations/`, label: "Concepts" },
-  { href: `${base}tutorials/`, label: "Tutorials" },
+  { href: `${base}docs/`, label: "Docs" },
   { href: `${base}examples/`, label: "Examples" },
 ];
 
 function isActive(href: string) {
+  if (href === `${base}docs/`) {
+    return pathname.startsWith(`${base}docs/`) || pathname.startsWith(`${base}tutorials/`) || pathname.startsWith(`${base}explanations/`);
+  }
   if (href === `${base}`) {
     return pathname === href;
   }

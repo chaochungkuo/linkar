@@ -18,7 +18,6 @@ const groups = [
     title: "Use A Shared Pack",
     description: "Start here when you want to install a pack, attach it to local work, and understand pack scope.",
     slugs: ["getting-started", "packs-and-scope", "managing-git-backed-packs"],
-    tag: "User path",
   },
   {
     title: "Author Packs",
@@ -29,7 +28,6 @@ const groups = [
       "python-entry-and-runtime-metadata",
       "testing-basic-templates",
     ],
-    tag: "Authoring",
   },
   {
     title: "Advanced Workflows",
@@ -39,7 +37,6 @@ const groups = [
       "using-linkar-from-agents",
       "example-pack-progression",
     ],
-    tag: "Advanced",
   },
 ];
 ---
@@ -50,17 +47,17 @@ const groups = [
     <main class="section-page">
       <section class="page-hero">
         <p class="eyebrow">Tutorials</p>
-        <h1 class="page-title">Learn Linkar one path at a time.</h1>
+        <h1 class="page-title">Task-oriented guides.</h1>
         <p class="lede page-lede">
-          Start with the shortest GitHub-pack path. Then continue based on the job you need Linkar
-          to do.
+          Follow a guide when you want a worked path. Use the docs index when you need reference
+          material or the full runtime model.
         </p>
       </section>
 
       <section class="section page-section-tight">
         <div class="section-heading">
-          <p class="eyebrow">Recommended Route</p>
-          <h2>One clean first pass through the docs.</h2>
+          <p class="eyebrow">Start Here</p>
+          <h2>Recommended first pass.</h2>
         </div>
         <div class="route-strip">
           {route.map((slug, index) => {
@@ -77,56 +74,31 @@ const groups = [
       </section>
 
       <section class="section page-section-tight">
-        <div class="section-heading">
-          <p class="eyebrow">Choose Your Path</p>
-          <h2>Different roles need different first pages.</h2>
-        </div>
-        <div class="card-grid two-up">
-          <a class="tutorial-card tutorial-link" href={tutorialHref("getting-started")}>
-            <h3>Run a shared pack</h3>
-            <p>Install a GitHub pack, create a project, run a template, and inspect the result.</p>
-            <span class="status-tag">User path</span>
-          </a>
-          <a class="tutorial-card tutorial-link" href={tutorialHref("build-a-real-pack")}>
-            <h3>Author and publish a pack</h3>
-            <p>Build templates and bindings locally, then publish the pack so users can update it.</p>
-            <span class="status-tag">Author path</span>
-          </a>
-          <a class="tutorial-card tutorial-link" href={tutorialHref("managing-git-backed-packs")}>
-            <h3>Manage remote and local packs</h3>
-            <p>Switch between GitHub and local checkouts, update caches, and pin revisions.</p>
-            <span class="status-tag">Maintainer path</span>
-          </a>
-          <a class="tutorial-card tutorial-link" href={tutorialHref("using-linkar-from-agents")}>
-            <h3>Automate through API or MCP</h3>
-            <p>Use the same runtime from scripts, local services, and agent clients.</p>
-            <span class="status-tag">Automation path</span>
-          </a>
+        <div class="docs-index-grid">
+          {groups.map((group) => (
+            <section class="docs-index-group">
+              <div class="docs-index-group-head">
+                <h2>{group.title}</h2>
+                <p>{group.description}</p>
+              </div>
+              <ul class="docs-link-list">
+                {group.slugs.map((slug) => {
+                  const entry = bySlug.get(slug);
+                  if (!entry) return null;
+                  return (
+                    <li>
+                      <a href={tutorialHref(slug)}>
+                        <span>{entry.data.title}</span>
+                        <small>{entry.data.description}</small>
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
         </div>
       </section>
-
-      {groups.map((group) => (
-        <section class="section page-section-tight">
-          <div class="section-heading">
-            <p class="eyebrow">Tutorials</p>
-            <h2>{group.title}</h2>
-            <p class="section-copy">{group.description}</p>
-          </div>
-          <div class="card-grid two-up">
-            {group.slugs.map((slug) => {
-              const entry = bySlug.get(slug);
-              if (!entry) return null;
-              return (
-                <a class="tutorial-card tutorial-link" href={tutorialHref(slug)}>
-                  <h3>{entry.data.title}</h3>
-                  <p>{entry.data.description}</p>
-                  <span class="status-tag">{group.tag}</span>
-                </a>
-              );
-            })}
-          </div>
-        </section>
-      ))}
     </main>
     <SiteFooter />
   </div>
