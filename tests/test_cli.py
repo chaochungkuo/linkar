@@ -1465,6 +1465,40 @@ printf 'keep\n' > results/keep.txt
     assert (rendered_dir / "results" / "keep.txt").is_file()
 
 
+def test_clean_command_falls_back_to_recorded_pack_for_legacy_metadata(tmp_path: Path) -> None:
+    pack_dir = tmp_path / "pack"
+    template = make_template(
+        pack_dir / "templates",
+        "legacy_cleanup_template",
+        "",
+        """#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p disposable results
+printf 'keep\n' > results/keep.txt
+""",
+        cleanup="  - path: disposable\n    type: dir",
+        run_mode="render",
+    )
+    (pack_dir / "linkar_pack.yaml").write_text("templates:\n  legacy_cleanup_template: {}\n")
+
+    rendered = run_cli("run", str(template), "--outdir", str(tmp_path / "rendered"), cwd=tmp_path)
+    assert rendered.returncode == 0, rendered.stderr
+    rendered_dir = tmp_path / "rendered"
+    meta_path = rendered_dir / ".linkar" / "meta.json"
+    metadata = json.loads(meta_path.read_text())
+    metadata.pop("cleanup", None)
+    metadata["pack"] = {"ref": str(pack_dir), "revision": None}
+    meta_path.write_text(json.dumps(metadata, indent=2))
+
+    cleaned = run_cli("clean", ".", "--yes", "--format", "json", cwd=rendered_dir)
+    assert cleaned.returncode == 0, cleaned.stderr
+    payload = json.loads(cleaned.stdout)
+    assert payload["count"] == 1
+    assert payload["templates"][0]["rules_source"] == "recorded template"
+    assert not (rendered_dir / "disposable").exists()
+    assert (rendered_dir / "results" / "keep.txt").is_file()
+
+
 def test_clean_command_removes_template_declared_artifacts_from_project_root(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
     init = run_cli("project", "init", str(project_dir), cwd=tmp_path)

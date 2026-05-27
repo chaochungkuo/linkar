@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from linkar.assets import resolve_asset_ref_at_revision
 from linkar.errors import ProjectValidationError
 from linkar.runtime.models import Project
 from linkar.runtime.projects import load_project
@@ -18,6 +19,7 @@ class CleanupTarget:
     root: Path
     meta_path: Path
     rules: list[dict[str, Any]]
+    rules_source: str
 
 
 def clean_project_artifacts(
@@ -43,6 +45,7 @@ def clean_project_artifacts(
                 "root": str(target.root),
                 "meta": str(target.meta_path),
                 "rules": target.rules,
+                "rules_source": target.rules_source,
             }
             for target in targets
         ],
@@ -91,7 +94,13 @@ def cleanup_target_from_meta(meta_path: Path) -> CleanupTarget:
     template_id = metadata.get("template")
     if not isinstance(template_id, str) or not template_id:
         raise ProjectValidationError(f"Run metadata template field is missing in {meta_path}")
-    rules = metadata.get("cleanup") or []
+    rules = metadata.get("cleanup")
+    rules_source = "run metadata"
+    if rules is None:
+        rules = cleanup_rules_from_recorded_template(metadata, source=meta_path)
+        rules_source = "recorded template"
+    if rules is None:
+        rules = []
     if not isinstance(rules, list):
         raise ProjectValidationError(f"Run metadata cleanup field must be a list in {meta_path}")
     return CleanupTarget(
@@ -99,7 +108,31 @@ def cleanup_target_from_meta(meta_path: Path) -> CleanupTarget:
         root=meta_path.parent.parent.resolve(),
         meta_path=meta_path.resolve(),
         rules=[validate_cleanup_rule(rule, source=meta_path) for rule in rules],
+        rules_source=rules_source,
     )
+
+
+def cleanup_rules_from_recorded_template(metadata: dict[str, Any], *, source: Path) -> list[dict[str, Any]] | None:
+    template_id = metadata.get("template")
+    pack = metadata.get("pack")
+    if not isinstance(template_id, str) or not isinstance(pack, dict):
+        return None
+    pack_ref = pack.get("ref")
+    if not isinstance(pack_ref, str) or not pack_ref.strip():
+        return None
+    revision = pack.get("revision")
+    if revision is not None and not isinstance(revision, str):
+        revision = None
+    try:
+        asset = resolve_asset_ref_at_revision(pack_ref, revision)
+        from linkar.runtime.templates import load_template
+
+        template = load_template(template_id, pack_assets=[asset], preferred_pack_ref=asset.ref)
+    except Exception as exc:
+        raise ProjectValidationError(
+            f"Could not load cleanup rules for template '{template_id}' from recorded pack {pack_ref!r} in {source}: {exc}"
+        ) from exc
+    return template.cleanup
 
 
 def validate_cleanup_rule(rule: Any, *, source: Path) -> dict[str, Any]:
