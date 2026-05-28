@@ -111,9 +111,12 @@ cleanup:
 ```
 
 `linkar clean .` works from either a project root or a rendered template
-directory. By default it prints the cleanup candidates and asks for terminal
-confirmation before deleting anything. Use `--dry-run` to inspect candidates
-without deleting them and `--yes` for non-interactive cleanup.
+directory. When a current configured pack contains the same template id, Linkar
+uses that latest cleanup policy rather than staying pinned to the cleanup rules
+recorded when the workspace was rendered. By default it prints the cleanup
+candidates and asks for terminal confirmation before deleting anything. Use
+`--dry-run` to inspect candidates without deleting them and `--yes` for
+non-interactive cleanup.
 
 Typical project lifecycle:
 

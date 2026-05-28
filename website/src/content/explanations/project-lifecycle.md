@@ -128,6 +128,11 @@ From a project root, `linkar clean .` resolves the recorded template directories
 in `project.yaml` and applies each template's cleanup rules. From a rendered
 template directory, it cleans only that one directory.
 
+If a current configured pack contains the same template id, cleanup uses the
+latest cleanup rules from that pack. This lets pack maintainers add newly known
+runtime artifacts, such as workflow cache directories, and clean older rendered
+workspaces without rerendering them.
+
 By default, the CLI prints the folders and files that would be removed and asks
 for confirmation in the terminal. Use `--yes` only for non-interactive scripts.
 
