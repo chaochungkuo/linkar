@@ -164,6 +164,8 @@ prefer `${param:...}`.
 ## What `linkar render` does
 
 `linkar render ...` stages a standalone runnable artifact and stops there.
+If the chosen output directory already contains files, render stops with a clear error; choose a
+different `--outdir` or remove the existing directory before rendering.
 
 Bare template names such as `export` or `nfcore_methylseq` resolve through configured packs first.
 If you want to execute a template from the current filesystem path explicitly, pass `./template_dir`

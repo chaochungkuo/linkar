@@ -526,7 +526,7 @@ def test_render_template_does_not_update_project_history_or_alias(tmp_path: Path
     assert Path(result["history_outdir"]) == (project.root / "render_project_demo").resolve()
 
 
-def test_render_template_rerender_replaces_existing_rendered_project_entry(tmp_path: Path) -> None:
+def test_render_template_rerender_fails_when_output_dir_exists(tmp_path: Path) -> None:
     template_dir = make_template(
         tmp_path / "templates",
         "render_replace_demo",
@@ -551,15 +551,45 @@ def test_render_template_rerender_replaces_existing_rendered_project_entry(tmp_p
     project = load_project(project_path.parent)
 
     first = render_template(template_dir, params={"name": "first"}, project=project)
-    second = render_template(template_dir, params={"name": "second"}, project=project)
+    with pytest.raises(ExecutionError, match="Render output directory already exists and is not empty"):
+        render_template(template_dir, params={"name": "second"}, project=project)
 
     project_after = load_project(project.root)
     assert len(project_after.data["templates"]) == 1
     entry = project_after.data["templates"][0]
     assert entry["state"] == "rendered"
-    assert entry["params"]["name"] == "second"
-    assert entry["instance_id"] == second["instance_id"]
-    assert entry["instance_id"] != first["instance_id"]
+    assert entry["params"]["name"] == "first"
+    assert entry["instance_id"] == first["instance_id"]
+
+
+def test_render_template_explicit_outdir_fails_when_directory_exists(tmp_path: Path) -> None:
+    template_dir = make_template(
+        tmp_path / "templates",
+        "render_existing_outdir_demo",
+        "#!/usr/bin/env bash\nset -euo pipefail\n",
+    )
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: render_existing_outdir_demo",
+                "run:",
+                "  entry: run.sh",
+                "  mode: render",
+                "",
+            ]
+        )
+    )
+    outdir = tmp_path / "rendered"
+    outdir.mkdir()
+    (outdir / "existing.txt").write_text("keep me\n", encoding="utf-8")
+
+    with pytest.raises(ExecutionError) as exc_info:
+        render_template(template_dir, outdir=outdir)
+
+    message = str(exc_info.value)
+    assert "Render output directory already exists and is not empty" in message
+    assert str(outdir) in message
+    assert "Choose a different directory with --outdir" in message
 
 
 def test_run_template_records_failed_project_run_state(tmp_path: Path) -> None:

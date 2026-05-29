@@ -41,7 +41,7 @@ linkar run methods --refresh</code></pre>
   </article>
   <article class="command-card">
     <h3><code>linkar render TEMPLATE</code></h3>
-    <p>Stage a standalone editable bundle without executing it.</p>
+    <p>Stage a standalone editable bundle without executing it. The output directory must be empty or absent.</p>
     <pre><code>linkar render demultiplex --outdir ./demultiplex</code></pre>
   </article>
   <article class="command-card">

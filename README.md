@@ -86,7 +86,7 @@ In project mode, Linkar exposes a stable directory such as `./simple_echo`, writ
 Command model:
 
 - `linkar run ...` executes a template
-- `linkar render ...` stages a bundle without executing it
+- `linkar render ...` stages a bundle without executing it; the target directory must be empty or absent
 - `linkar collect RUN_REF` refreshes declared outputs after manual execution
 - `linkar clean .` removes template-declared runtime artifacts from a project or rendered template directory
 - `linkar inspect run RUN_REF` reads recorded metadata

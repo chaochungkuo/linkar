@@ -592,6 +592,22 @@ def can_reuse_render_bundle(output_dir: Path) -> bool:
     return (output_dir / "run.sh").exists() and (output_dir / ".linkar" / "meta.json").exists()
 
 
+def ensure_render_outdir_is_empty(output_dir: Path) -> None:
+    if not output_dir.exists():
+        return
+    try:
+        has_existing_content = any(output_dir.iterdir())
+    except OSError as exc:
+        raise ExecutionError(f"Cannot inspect render output directory {output_dir}: {exc}") from exc
+    if not has_existing_content:
+        return
+    raise ExecutionError(
+        "Render output directory already exists and is not empty: "
+        f"{output_dir}\n"
+        "Choose a different directory with --outdir, or remove the existing directory before rendering."
+    )
+
+
 def load_existing_render_bundle_context(output_dir: Path) -> tuple[str, dict[str, Any], dict[str, Any], list[dict[str, Any]], str | Path | None]:
     meta_path = output_dir / ".linkar" / "meta.json"
     metadata = json.loads(meta_path.read_text(encoding="utf-8"))
@@ -771,6 +787,8 @@ def prepare_template_execution(
         display_dir = output_dir
 
     ensure_required_tools_available(template)
+    if action == "render":
+        ensure_render_outdir_is_empty(output_dir)
 
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "results").mkdir(exist_ok=True)
