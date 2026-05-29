@@ -236,15 +236,23 @@ def stage_runtime_bundle(
         if not include_template_spec and child.name in {"linkar_template.yaml", "template.yaml"}:
             continue
         destination = output_dir / child.name
-        if child.is_dir():
-            shutil.copytree(
-                child,
-                destination,
-                dirs_exist_ok=True,
-                ignore=shutil.ignore_patterns(*RUNTIME_BUNDLE_EXCLUDES),
-            )
-        else:
-            shutil.copy2(child, destination)
+        try:
+            if child.is_dir():
+                shutil.copytree(
+                    child,
+                    destination,
+                    dirs_exist_ok=True,
+                    ignore=shutil.ignore_patterns(*RUNTIME_BUNDLE_EXCLUDES),
+                )
+            else:
+                shutil.copy2(child, destination)
+        except OSError as exc:
+            raise ExecutionError(
+                "Could not stage template file into the run directory: "
+                f"{child} -> {destination}\n"
+                f"{exc}\n"
+                "Check the output directory permissions, or choose a different directory with --outdir."
+            ) from exc
 
 
 def render_mode_launcher_path(output_dir: Path) -> Path:
@@ -569,7 +577,15 @@ def localize_render_params(
             source_path = Path(value)
             if source_path.is_file():
                 target = localized_render_path(output_dir, key, source_path)
-                shutil.copy2(source_path, target)
+                try:
+                    shutil.copy2(source_path, target)
+                except OSError as exc:
+                    raise ExecutionError(
+                        f"Could not copy bound file parameter '{key}' into the rendered bundle: "
+                        f"{source_path} -> {target}\n"
+                        f"{exc}\n"
+                        "Check the source and output directory permissions, or choose a different directory with --outdir."
+                    ) from exc
                 localized[key] = f"./{target.name}"
         elif param_type == "list[path]" and isinstance(value, list):
             localized_items: list[str] = []
@@ -578,7 +594,15 @@ def localize_render_params(
                 source_path = Path(item)
                 if source_path.is_file():
                     target = localized_render_path(output_dir, key, source_path, index=idx)
-                    shutil.copy2(source_path, target)
+                    try:
+                        shutil.copy2(source_path, target)
+                    except OSError as exc:
+                        raise ExecutionError(
+                            f"Could not copy bound file parameter '{key}' item {idx} into the rendered bundle: "
+                            f"{source_path} -> {target}\n"
+                            f"{exc}\n"
+                            "Check the source and output directory permissions, or choose a different directory with --outdir."
+                        ) from exc
                     localized_items.append(f"./{target.name}")
                     changed = True
                 else:
@@ -790,10 +814,19 @@ def prepare_template_execution(
     if action == "render":
         ensure_render_outdir_is_empty(output_dir)
 
-    output_dir.mkdir(parents=True, exist_ok=True)
-    (output_dir / "results").mkdir(exist_ok=True)
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        (output_dir / "results").mkdir(exist_ok=True)
+    except OSError as exc:
+        raise ExecutionError(
+            f"Cannot create Linkar output directory {output_dir}: {exc}\n"
+            "Check the parent directory permissions, or choose a different directory with --outdir."
+        ) from exc
     linkar_dir = output_dir / ".linkar"
-    linkar_dir.mkdir(exist_ok=True)
+    try:
+        linkar_dir.mkdir(exist_ok=True)
+    except OSError as exc:
+        raise ExecutionError(f"Cannot create Linkar metadata directory {linkar_dir}: {exc}") from exc
 
     env = os.environ.copy()
     for key, value in resolved_params.items():

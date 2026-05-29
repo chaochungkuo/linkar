@@ -20,6 +20,7 @@ from linkar.runtime.runs import (
     determine_outdir,
     determine_render_outdir,
     determine_test_dir,
+    localize_render_params,
     next_instance_id,
     render_mode_launcher_path,
     render_template,
@@ -225,6 +226,73 @@ def test_stage_runtime_bundle_copies_support_files_but_excludes_test_only_files(
     assert not (output_dir / "test.py").exists()
     assert not (output_dir / "testdata").exists()
     assert not (output_dir / ".pixi").exists()
+
+
+def test_stage_runtime_bundle_reports_copy_failures(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    template_dir = make_template(
+        tmp_path / "templates",
+        "copy_fail_demo",
+        "#!/usr/bin/env bash\nset -euo pipefail\n",
+    )
+    (template_dir / "support.txt").write_text("support\n", encoding="utf-8")
+    template = load_template(template_dir)
+    output_dir = tmp_path / "run"
+    output_dir.mkdir()
+
+    def fail_copy2(src: Path, dst: Path) -> None:
+        raise PermissionError("permission denied for test")
+
+    monkeypatch.setattr("linkar.runtime.runs.shutil.copy2", fail_copy2)
+
+    with pytest.raises(ExecutionError) as exc_info:
+        stage_runtime_bundle(template, output_dir)
+
+    message = str(exc_info.value)
+    assert "Could not stage template file into the run directory" in message
+    assert "permission denied for test" in message
+    assert "--outdir" in message
+
+
+def test_localize_render_params_reports_bound_file_copy_failures(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    template_dir = make_template(
+        tmp_path / "templates",
+        "localize_fail_demo",
+        "#!/usr/bin/env bash\nset -euo pipefail\n",
+    )
+    spec_path = template_dir / "linkar_template.yaml"
+    spec_path.write_text(
+        spec_path.read_text(encoding="utf-8").replace(
+            "  name:\n    type: str\n    required: true",
+            "  samplesheet:\n    type: path\n    required: true",
+        ),
+        encoding="utf-8",
+    )
+    source_file = tmp_path / "samplesheet.csv"
+    source_file.write_text("sample\n", encoding="utf-8")
+    template = load_template(template_dir)
+    output_dir = tmp_path / "rendered"
+    output_dir.mkdir()
+
+    def fail_copy2(src: Path, dst: Path) -> None:
+        raise PermissionError("cannot preserve metadata")
+
+    monkeypatch.setattr("linkar.runtime.runs.shutil.copy2", fail_copy2)
+
+    with pytest.raises(ExecutionError) as exc_info:
+        localize_render_params(
+            template,
+            {"samplesheet": str(source_file)},
+            {"samplesheet": {"source": "binding"}},
+            output_dir,
+        )
+
+    message = str(exc_info.value)
+    assert "Could not copy bound file parameter 'samplesheet'" in message
+    assert "cannot preserve metadata" in message
+    assert "--outdir" in message
 
 
 def test_render_shell_wrapper_detection_only_applies_to_script_sh_entries(tmp_path: Path) -> None:

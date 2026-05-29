@@ -12,8 +12,13 @@ import pytest
 import yaml
 from rich.console import Console
 
+try:
+    import rich_click as click
+except ImportError:
+    import click
+
 from linkar import __version__
-from linkar.cli_support.common import help_for_param
+from linkar.cli_support.common import handle_linkar_errors, help_for_param
 from linkar.core import load_project, load_template, resolve_project_assets, run_template
 from linkar.errors import (
     AssetResolutionError,
@@ -72,6 +77,22 @@ def skip_if_known_pixi_runtime_panic(completed: subprocess.CompletedProcess[str]
     stderr = runtime.get("stderr", "")
     if "Attempted to create a NULL object" in stderr or "the operation was cancelled" in stderr:
         pytest.skip("pixi runtime panicked in this macOS sandbox environment")
+
+
+def test_handle_linkar_errors_reports_filesystem_errors_without_traceback(capsys: pytest.CaptureFixture[str]) -> None:
+    @handle_linkar_errors
+    def command(*, ui: CliUI) -> None:
+        raise PermissionError("operation not permitted")
+
+    with pytest.raises(click.exceptions.Exit) as exc_info:
+        command()
+
+    assert exc_info.value.exit_code == 1
+    captured = capsys.readouterr()
+    assert "Filesystem error" in captured.err
+    assert "operation not permitted" in captured.err
+    assert "render output directories are empty or absent" in captured.err
+    assert "Traceback" not in captured.err
 
 
 def create_git_repo(path: Path) -> str:
@@ -1332,6 +1353,34 @@ printf '%s\n' "${NAME}" > "${LINKAR_RESULTS_DIR}/name.txt"
     assert not (rendered_dir / "linkar-run.sh").exists()
     assert not (rendered_dir / "linkar_template.yaml").exists()
     assert not (rendered_dir / "results" / "name.txt").exists()
+
+
+def test_render_command_reports_existing_output_directory_without_traceback(tmp_path: Path) -> None:
+    template = make_template(
+        tmp_path / "templates",
+        "render_existing_cli",
+        "  name:\n    type: str\n    required: true",
+        "#!/usr/bin/env bash\nset -euo pipefail\n",
+    )
+    rendered_dir = tmp_path / "rendered"
+    rendered_dir.mkdir()
+    (rendered_dir / "old-file.txt").write_text("existing\n", encoding="utf-8")
+
+    completed = run_cli(
+        "render",
+        str(template),
+        "--param",
+        "name=Rendered",
+        "--outdir",
+        str(rendered_dir),
+        cwd=tmp_path,
+    )
+
+    assert completed.returncode == 1
+    assert "Render output directory already exists and is not empty" in completed.stderr
+    assert str(rendered_dir) in completed.stderr
+    assert "Choose a different directory with --outdir" in completed.stderr
+    assert "Traceback" not in completed.stderr
 
 
 def test_collect_command_updates_outputs_after_manual_run(tmp_path: Path) -> None:

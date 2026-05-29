@@ -238,6 +238,13 @@ def handle_linkar_errors(fn):
         except LinkarError as exc:
             ui.print_error(str(exc))
             raise click.exceptions.Exit(1) from exc
+        except OSError as exc:
+            ui.print_error(
+                f"Filesystem error: {exc}\n"
+                "Check that the paths exist, permissions allow Linkar to read/write them, "
+                "and render output directories are empty or absent."
+            )
+            raise click.exceptions.Exit(1) from exc
 
     return update_wrapper(wrapper, fn)
 
