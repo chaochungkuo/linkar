@@ -1479,6 +1479,35 @@ printf 'keep\n' > results/keep.txt
     assert (rendered_dir / "results" / "keep.txt").is_file()
 
 
+def test_clean_command_defaults_to_current_directory(tmp_path: Path) -> None:
+    template = make_template(
+        tmp_path / "templates",
+        "default_clean_target_template",
+        "",
+        """#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p .pixi results
+printf 'keep\n' > results/keep.txt
+""",
+        cleanup="  - path: .pixi\n    type: dir",
+        run_mode="render",
+    )
+
+    rendered = run_cli("run", str(template), "--outdir", str(tmp_path / "rendered"), cwd=tmp_path)
+    assert rendered.returncode == 0, rendered.stderr
+
+    rendered_dir = tmp_path / "rendered"
+    assert (rendered_dir / ".pixi").is_dir()
+
+    cleaned = run_cli("clean", "--yes", "--format", "json", cwd=rendered_dir)
+    assert cleaned.returncode == 0, cleaned.stderr
+    payload = json.loads(cleaned.stdout)
+    assert payload["count"] == 1
+    assert payload["items"][0]["display_path"] == ".pixi"
+    assert not (rendered_dir / ".pixi").exists()
+    assert (rendered_dir / "results" / "keep.txt").is_file()
+
+
 def test_clean_command_previews_paths_before_interactive_confirmation(tmp_path: Path) -> None:
     template = make_template(
         tmp_path / "templates",

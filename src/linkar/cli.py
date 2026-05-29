@@ -114,7 +114,12 @@ def pack_group() -> None:
 
 
 @app.command("clean")
-@click.argument("target", type=click.Path(path_type=str, dir_okay=True, file_okay=True))
+@click.argument(
+    "target",
+    required=False,
+    default=".",
+    type=click.Path(path_type=str, dir_okay=True, file_okay=True),
+)
 @click.option("--dry-run", is_flag=True, help="Show cleanup candidates without deleting them.")
 @click.option("--yes", is_flag=True, help="Delete cleanup candidates without interactive confirmation.")
 @click.option(

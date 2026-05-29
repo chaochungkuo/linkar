@@ -51,10 +51,10 @@ linkar run methods --refresh</code></pre>
 linkar collect fastqc_001 --format yaml</code></pre>
   </article>
   <article class="command-card">
-    <h3><code>linkar clean TARGET</code></h3>
-    <p>Remove template-declared disposable runtime artifacts from a project or rendered template directory, using the latest configured pack cleanup rules when available.</p>
-    <pre><code>linkar clean . --dry-run
-linkar clean .
+    <h3><code>linkar clean [TARGET]</code></h3>
+    <p>Remove template-declared disposable runtime artifacts from a project or rendered template directory, using the latest configured pack cleanup rules when available. When TARGET is omitted, Linkar cleans the current directory.</p>
+    <pre><code>linkar clean --dry-run
+linkar clean
 linkar clean ./demultiplex --yes</code></pre>
   </article>
   <article class="command-card">

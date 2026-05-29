@@ -88,7 +88,7 @@ Command model:
 - `linkar run ...` executes a template
 - `linkar render ...` stages a bundle without executing it; the target directory must be empty or absent
 - `linkar collect RUN_REF` refreshes declared outputs after manual execution
-- `linkar clean .` removes template-declared runtime artifacts from a project or rendered template directory
+- `linkar clean` removes template-declared runtime artifacts from the current project or rendered template directory
 - `linkar inspect run RUN_REF` reads recorded metadata
 - `linkar project prune` removes stale duplicate-path history
 
@@ -110,7 +110,7 @@ cleanup:
     type: file
 ```
 
-`linkar clean .` works from either a project root or a rendered template
+`linkar clean` works from either a project root or a rendered template
 directory. When a current configured pack contains the same template id, Linkar
 uses that latest cleanup policy rather than staying pinned to the cleanup rules
 recorded when the workspace was rendered. By default it prints the cleanup
@@ -125,7 +125,7 @@ Typical project lifecycle:
 3. `linkar render TEMPLATE ...` when you want an editable bundle
 4. `linkar run TEMPLATE ...` when you want Linkar to execute it
 5. `linkar collect RUN_REF` after manual execution of a rendered bundle
-6. `linkar clean . --dry-run` before export or archiving when templates declare disposable runtime artifacts
+6. `linkar clean --dry-run` before export or archiving when templates declare disposable runtime artifacts
 7. `linkar inspect run RUN_REF` to review provenance
 8. `linkar project latest TEMPLATE_ID` when you want the newest active recorded run
 9. `linkar project prune` when duplicate-path history accumulates
