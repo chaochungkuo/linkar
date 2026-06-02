@@ -55,8 +55,8 @@ This gives you:
 - a globally configured GitHub pack cached under Linkar's asset directory
 - reused author metadata from your global Linkar config
 - a stable project-root directory such as `./scrna_prep`
-- immutable run history under `.linkar/runs/`
-- `.linkar/runs/<instance_id>/.linkar/meta.json` for provenance
+- Linkar metadata under `.linkar/`
+- the current release may also keep historical run metadata under `.linkar/runs/`
 - recorded pack ref and resolved Git revision metadata
 - the option to render a standalone artifact with `linkar render ...`
 
@@ -70,12 +70,17 @@ linkar project author set --name "Project Owner" --email "owner@example.org"
 
 ## What happens after `linkar run`
 
-In project mode, Linkar now separates:
+In project mode, Linkar currently separates:
 
 - the stable project-facing alias, such as `./scrna_prep`
 - the immutable recorded run under `.linkar/runs/scrna_prep_001`
 
 That means the project root stays readable while the real history remains preserved.
+
+The planned project UX is simpler for day-to-day work: one template id should have one active
+workspace by default. Rerendering `scrna_prep` should refresh `./scrna_prep` and update the existing
+`project.yaml` entry after confirmation, while extra history is created only when explicitly
+requested.
 
 ## Typical next commands
 

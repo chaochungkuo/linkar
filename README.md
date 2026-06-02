@@ -81,16 +81,16 @@ If you already have an ad hoc Linkar run and want to start a project around it:
 linkar project init --name study --adopt /path/to/existing_run
 ```
 
-In project mode, Linkar exposes a stable directory such as `./simple_echo`, writes results under `results/`, and keeps immutable run history plus metadata under `.linkar/runs/<instance_id>/`. Rendered bundles created inside a project are also recorded in `project.yaml` with `state: rendered`, while executed runs are recorded with execution state such as `completed` or `failed`. For templates whose declared `run.mode` is `render`, `linkar run` inside a project executes directly in the visible project directory instead of creating a `.linkar/runs/...` history path. By default it runs the current rendered bundle if one already exists; use `linkar run TEMPLATE --refresh` to rerender first.
+In project mode, Linkar exposes a stable directory such as `./simple_echo` and writes user-facing outputs under `results/`. The current implementation can also keep historical run metadata under `.linkar/runs/<instance_id>/`, but the intended next project model is simpler: one project plus one template id should have one active visible workspace by default. Rerendering the same template should update that workspace and its `project.yaml` entry unless the user explicitly asks for a new instance or history. For templates whose declared `run.mode` is `render`, `linkar run` inside a project already executes directly in the visible project directory instead of creating a `.linkar/runs/...` history path. By default it runs the current rendered bundle if one already exists; use `linkar run TEMPLATE --refresh` to rerender first.
 
 Command model:
 
 - `linkar run ...` executes a template
-- `linkar render ...` stages a bundle without executing it; the target directory must be empty or absent
+- `linkar render ...` stages a bundle without executing it; current releases require an empty or absent target directory, while the planned UX will confirm and refresh the active workspace by default
 - `linkar collect RUN_REF` refreshes declared outputs after manual execution
 - `linkar clean` removes template-declared runtime artifacts from the current project or rendered template directory
 - `linkar inspect run RUN_REF` reads recorded metadata
-- `linkar project prune` removes stale duplicate-path history
+- `linkar project prune` removes stale duplicate-path history, mostly for older projects or explicit multi-instance work
 
 `RUN_REF` accepts an instance id such as `fastqc_001`, a unique template id within the project such as `fastqc`, a run directory path, or a `.linkar/meta.json` path.
 
@@ -129,6 +129,17 @@ Typical project lifecycle:
 7. `linkar inspect run RUN_REF` to review provenance
 8. `linkar project latest TEMPLATE_ID` when you want the newest active recorded run
 9. `linkar project prune` when duplicate-path history accumulates
+
+Planned active-workspace behavior:
+
+- `linkar render TEMPLATE` updates `<project>/<template_id>` by default
+- rerendering asks for confirmation before overwriting an existing workspace
+- `--yes` accepts that confirmation in scripts
+- `--fresh` recreates the active workspace after confirmation
+- `--new-instance` explicitly records another instance
+- explicit temporary `--outdir` renders do not silently become the canonical project entry
+
+The design note for this change is in `docs/dev/active-workspace-model.md`.
 
 For a fuller walkthrough, see the website explanation
 [Project lifecycle](https://chaochungkuo.github.io/linkar/explanations/project-lifecycle/).

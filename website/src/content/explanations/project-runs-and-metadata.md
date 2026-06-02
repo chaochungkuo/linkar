@@ -34,7 +34,7 @@ A recorded run entry usually contains:
 - optional `binding`
 - optional `adopted`
 
-## Stable path versus immutable history
+## Stable path versus active workspace
 
 For `linkar run ...` inside a project, Linkar separates:
 
@@ -43,6 +43,11 @@ For `linkar run ...` inside a project, Linkar separates:
 
 The stable path is for humans and downstream local usage.
 The history path is for provenance and reproducibility.
+
+The planned project model makes the stable path the default source of truth. For normal project
+usage, a template id should have one active workspace and one active `project.yaml` entry. Hidden
+history remains available for explicit multi-instance work, but it should not be created merely
+because the user rerendered the same template.
 
 Render-mode templates are the exception. When a template declares `run.mode: render` and you execute
 it with `linkar run` inside a project, Linkar runs it directly in the visible project directory such
@@ -68,6 +73,13 @@ study/
 That artifact is intentionally editable and runnable on its own.
 When render happens inside a project, Linkar also records that artifact in `project.yaml` with
 `state: rendered`.
+
+The planned render behavior is:
+
+- rerendering the same template id refreshes the active workspace after confirmation
+- params and outputs overwrite the existing active entry
+- `--new-instance` is required to intentionally add another entry for the same template id
+- external or temporary `--outdir` renders do not silently become canonical project entries
 
 That means the project ledger can now track:
 

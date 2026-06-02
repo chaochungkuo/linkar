@@ -20,6 +20,13 @@ For most project work, the lifecycle is:
 8. `project latest` when you want the newest active recorded run
 9. `project prune` when stale duplicate-path history accumulates
 
+The planned default for project work is an active-workspace model:
+
+- one project plus one template id has one active visible workspace
+- rerendering refreshes that workspace after confirmation
+- extra instances and historical entries are opt-in
+- temporary render directories are not silently registered as the canonical project entry
+
 ## Step 1: initialize a project
 
 Create a new project directory with `project.yaml`:
@@ -62,6 +69,11 @@ This is especially useful when:
 - a user wants to inspect the exact command before running it
 
 Rendered bundles are recorded in `project.yaml` with `state: rendered`.
+
+In the planned active-workspace model, rendering the same template id again will update the existing
+visible workspace and replace that template's active `project.yaml` entry by default. The CLI should
+ask before overwriting a non-empty workspace. Use `--new-instance` when you intentionally want a
+second project entry for the same template.
 
 ## Step 4: run a template
 
@@ -178,6 +190,10 @@ This is useful when:
 
 Over time, rerendering or replacing visible bundles can leave older duplicate-path entries in
 `project.yaml`.
+
+This is current-release cleanup behavior. After the active-workspace model is implemented, prune
+will mostly be a migration and explicit-history tool rather than something needed during ordinary
+rerendering.
 
 Use:
 
