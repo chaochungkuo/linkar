@@ -1197,6 +1197,13 @@ def templates_command(pack: tuple[str, ...], project: str | None, output_format:
     show_default=False,
 )
 @click.option(
+    "--state",
+    type=click.Choice(["rendered", "completed", "failed"]),
+    default="completed",
+    show_default=True,
+    help="State recorded after collecting a manually executed run.",
+)
+@click.option(
     "--format",
     "output_format",
     type=click.Choice(["rich", "json", "yaml"]),
@@ -1205,10 +1212,16 @@ def templates_command(pack: tuple[str, ...], project: str | None, output_format:
     help="Output format.",
 )
 @handle_linkar_errors
-def collect_command(run_ref: str, project: str | None, output_format: str, ui: CliUI) -> None:
-    """Collect declared outputs by run reference and report whether the active project ledger was updated."""
+def collect_command(
+    run_ref: str,
+    project: str | None,
+    state: str,
+    output_format: str,
+    ui: CliUI,
+) -> None:
+    """Collect outputs after manual execution and update the recorded run state."""
     with ui.status("Collecting outputs"):
-        result = collect_run_outputs(run_ref, project=project)
+        result = collect_run_outputs(run_ref, project=project, state=state)
     if output_format == "rich":
         ui.print_collect_completed(result)
         return

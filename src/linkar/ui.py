@@ -285,6 +285,10 @@ class CliUI:
         body.append(": ", style="muted")
         body.append(str(len(result.get("outputs", {}))), style="accent")
         body.append("\n")
+        body.append("State", style="label")
+        body.append(": ", style="muted")
+        body.append(str(result.get("state") or ""), style="accent")
+        body.append("\n")
         body.append("Project", style="label")
         body.append(": ", style="muted")
         if project_path:

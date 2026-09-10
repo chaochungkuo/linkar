@@ -1594,7 +1594,16 @@ def resolve_run_meta_path(run_ref: str | Path, project: str | Path | Project | N
     raise ProjectValidationError(f"Run not found: {run_ref}")
 
 
-def maybe_update_project_outputs(meta_path: Path, outputs: dict[str, Any], project: Project | None) -> bool:
+COLLECT_STATES = {"rendered", "completed", "failed"}
+
+
+def maybe_update_project_outputs(
+    meta_path: Path,
+    outputs: dict[str, Any],
+    project: Project | None,
+    *,
+    state: str,
+) -> bool:
     if project is None:
         return False
     from linkar.runtime.shared import save_yaml
@@ -1605,6 +1614,7 @@ def maybe_update_project_outputs(meta_path: Path, outputs: dict[str, Any], proje
     for entry in templates:
         if entry.get("meta") == relative_meta:
             entry["outputs"] = outputs
+            entry["state"] = state
             changed = True
             break
     if changed:
@@ -1615,7 +1625,12 @@ def maybe_update_project_outputs(meta_path: Path, outputs: dict[str, Any], proje
 def collect_run_outputs(
     run_ref: str | Path,
     project: str | Path | Project | None = None,
+    *,
+    state: str = "completed",
 ) -> dict[str, Any]:
+    if state not in COLLECT_STATES:
+        choices = ", ".join(sorted(COLLECT_STATES))
+        raise ProjectValidationError(f"Invalid collected run state '{state}'. Choose one of: {choices}")
     if isinstance(project, (str, Path)):
         project_obj = load_project(project)
     elif project is None:
@@ -1633,14 +1648,16 @@ def collect_run_outputs(
         outputs = {**contract_outputs, **outputs}
     metadata["outputs"] = outputs
     metadata["collected_at"] = utc_now().isoformat()
+    metadata["state"] = state
     write_json(meta_path, metadata)
-    project_updated = maybe_update_project_outputs(meta_path, outputs, project_obj)
+    project_updated = maybe_update_project_outputs(meta_path, outputs, project_obj, state=state)
     return {
         "kind": "run_collect",
         "run_ref": str(run_ref),
         "outdir": str(outdir),
         "meta": str(meta_path),
         "outputs": outputs,
+        "state": state,
         "project_updated": project_updated,
         "project_path": str(project_obj.root) if project_obj is not None else "",
     }

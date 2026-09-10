@@ -1436,12 +1436,22 @@ def test_collect_command_updates_outputs_after_manual_run(tmp_path: Path) -> Non
 
     meta = json.loads((rendered_dir / ".linkar" / "meta.json").read_text())
     assert meta["outputs"]["greeting_file"] == str((rendered_dir / "results" / "greeting.txt").resolve())
+    assert meta["state"] == "completed"
     assert collect.stdout.strip() == str(rendered_dir)
 
-    collect_json = run_cli("collect", str(rendered_dir), "--format", "json", cwd=tmp_path)
+    collect_json = run_cli(
+        "collect",
+        str(rendered_dir),
+        "--state",
+        "failed",
+        "--format",
+        "json",
+        cwd=tmp_path,
+    )
     assert collect_json.returncode == 0, collect_json.stderr
     collect_payload = json.loads(collect_json.stdout)
     assert collect_payload["kind"] == "run_collect"
+    assert collect_payload["state"] == "failed"
     assert collect_payload["project_updated"] is False
 
 
@@ -1762,7 +1772,12 @@ def test_collect_command_accepts_unique_template_id(tmp_path: Path) -> None:
     assert collected_json.returncode == 0, collected_json.stderr
     collected_payload = json.loads(collected_json.stdout)
     assert collected_payload["kind"] == "run_collect"
+    assert collected_payload["state"] == "completed"
     assert collected_payload["project_updated"] is True
+    project_data = yaml.safe_load((project_dir / "project.yaml").read_text())
+    assert project_data["templates"][0]["state"] == "completed"
+    meta = json.loads((outdir / ".linkar" / "meta.json").read_text())
+    assert meta["state"] == "completed"
 
 
 def test_run_and_render_commands_support_structured_output_formats(tmp_path: Path) -> None:

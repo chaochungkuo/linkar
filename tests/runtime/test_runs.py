@@ -1207,6 +1207,8 @@ def test_collect_run_outputs_updates_rendered_meta_after_manual_execution(tmp_pa
 
     assert result["outputs"]["report_file"] == str((outdir / "results" / "report.txt").resolve())
     assert meta["outputs"]["report_file"] == str((outdir / "results" / "report.txt").resolve())
+    assert result["state"] == "completed"
+    assert meta["state"] == "completed"
     assert "collected_at" in meta
 
 
@@ -1250,6 +1252,7 @@ def test_collect_run_outputs_merges_template_outputs_contract(tmp_path: Path) ->
     assert result["outputs"]["demux_fastq_files"] == [str(fastq.resolve())]
     assert result["outputs"]["multiqc_report"] == str(report.resolve())
     assert refreshed["outputs"] == result["outputs"]
+    assert refreshed["state"] == "completed"
 
 
 def test_load_template_parses_tool_requirements(tmp_path: Path) -> None:

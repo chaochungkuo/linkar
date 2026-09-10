@@ -155,6 +155,9 @@ This updates:
 - `.linkar/meta.json`
 - `project.yaml` outputs when the artifact belongs to a project
 
+The default recorded state is `completed`. Pass `--state failed` for an unsuccessful manual run or
+`--state rendered` when you only want to refresh the staged bundle's outputs.
+
 `collect` refreshes declared outputs for a registered run. It does not create an unrelated project
 entry from scratch; registration happens during `render`, `run`, or explicit adoption.
 

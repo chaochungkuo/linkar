@@ -113,6 +113,10 @@ linkar collect ./demultiplex
 - `.linkar/meta.json`
 - `project.yaml` when the run belongs to the active project
 
+It records the manually executed run as `completed` by default. If the manual command failed, use
+`linkar collect RUN_REF --state failed`; use `--state rendered` when collecting without asserting
+that execution finished.
+
 The CLI now tells you whether the active project ledger was updated or left unchanged, so it is
 easier to distinguish:
 

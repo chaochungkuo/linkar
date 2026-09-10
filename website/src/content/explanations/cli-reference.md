@@ -46,8 +46,9 @@ linkar run methods --refresh</code></pre>
   </article>
   <article class="command-card">
     <h3><code>linkar collect RUN_REF</code></h3>
-    <p>Refresh declared outputs after manual execution.</p>
+    <p>Refresh declared outputs after manual execution and record the resulting run state.</p>
     <pre><code>linkar collect ./demultiplex
+linkar collect fastqc_001 --state failed
 linkar collect fastqc_001 --format yaml</code></pre>
   </article>
   <article class="command-card">

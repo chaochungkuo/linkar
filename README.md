@@ -88,7 +88,7 @@ Command model:
 
 - `linkar run ...` executes a template
 - `linkar render ...` stages a bundle without executing it; current releases require an empty or absent target directory, while the planned UX will confirm and refresh the active workspace by default
-- `linkar collect RUN_REF` refreshes declared outputs after manual execution
+- `linkar collect RUN_REF` refreshes declared outputs after manual execution and records the run as completed; use `--state failed` or `--state rendered` when appropriate
 - `linkar clean` removes template-declared runtime artifacts from the current project or rendered template directory
 - `linkar pack validate REF` checks template contracts and cross-template binding references before a pack is used
 - `linkar inspect run RUN_REF` reads recorded metadata
