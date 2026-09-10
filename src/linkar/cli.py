@@ -804,7 +804,7 @@ def completion_install_fish_command(yes: bool, rc_file: str | None) -> None:
     "adopt_runs",
     multiple=True,
     type=click.Path(path_type=str, dir_okay=True, file_okay=True),
-    help="Existing Linkar run directory or .linkar/meta.json to import into the new project. Repeat to adopt more than one run.",
+    help="Existing Linkar run directory or metadata JSON file to import into the new project. Legacy .linkar/meta.json files are supported. Repeat to adopt more than one run.",
     show_default=False,
 )
 @handle_linkar_errors

@@ -66,13 +66,40 @@ def resolve_cleanup_targets(target: Path) -> list[CleanupTarget]:
         return resolve_project_cleanup_targets(project)
 
     meta_path = target / ".linkar" / "meta.json" if target.is_dir() else target
-    if meta_path.name == "meta.json" and meta_path.exists():
+    if meta_path.exists() and meta_path.is_file():
         cleanup_target = cleanup_target_from_meta(meta_path, project=discover_parent_project(meta_path))
         return [cleanup_target] if cleanup_target.rules else []
 
+    if target.is_dir():
+        project = discover_parent_project(target)
+        if project is not None:
+            registered_meta = registered_meta_for_workspace(target, project)
+            if registered_meta is not None and registered_meta.exists():
+                cleanup_target = cleanup_target_from_meta(registered_meta, project=project)
+                return [cleanup_target] if cleanup_target.rules else []
+
     raise ProjectValidationError(
-        "Cleanup requires a Linkar project directory, project.yaml, rendered template directory, or .linkar/meta.json."
+        "Cleanup requires a Linkar project directory, project.yaml, rendered template directory, or run metadata JSON file."
     )
+
+
+def registered_meta_for_workspace(target: Path, project: Project) -> Path | None:
+    resolved_target = target.resolve()
+    for entry in reversed(project.data.get("templates", [])):
+        workspace_value = entry.get("history_path") or entry.get("path")
+        meta_value = entry.get("meta")
+        if not isinstance(workspace_value, str) or not isinstance(meta_value, str):
+            continue
+        workspace = Path(workspace_value).expanduser()
+        if not workspace.is_absolute():
+            workspace = project.root / workspace
+        if workspace.resolve() != resolved_target:
+            continue
+        meta_path = Path(meta_value).expanduser()
+        if not meta_path.is_absolute():
+            meta_path = project.root / meta_path
+        return meta_path.resolve()
+    return None
 
 
 def resolve_project_cleanup_targets(project: Project) -> list[CleanupTarget]:
@@ -122,13 +149,39 @@ def cleanup_target_from_meta(meta_path: Path, *, project: Project | None = None)
         rules = []
     if not isinstance(rules, list):
         raise ProjectValidationError(f"Run metadata cleanup field must be a list in {meta_path}")
+    root = cleanup_workspace(metadata, meta_path, project)
     return CleanupTarget(
         template_id=template_id,
-        root=meta_path.parent.parent.resolve(),
+        root=root,
         meta_path=meta_path.resolve(),
         rules=[validate_cleanup_rule(rule, source=meta_path) for rule in rules],
         rules_source=rules_source,
     )
+
+
+def cleanup_workspace(metadata: dict[str, Any], meta_path: Path, project: Project | None) -> Path:
+    workspace = metadata.get("workspace")
+    if isinstance(workspace, str) and workspace.strip():
+        workspace_path = Path(workspace).expanduser()
+        if workspace_path.is_absolute():
+            return workspace_path.resolve()
+        is_project_record = meta_path.parent.name == "meta" and meta_path.parent.parent.name == ".linkar"
+        if workspace == "." and not is_project_record:
+            return meta_path.parent.parent.resolve()
+        if project is not None:
+            return (project.root / workspace_path).resolve()
+    if project is not None:
+        relative_meta = os.path.relpath(meta_path, project.root)
+        for entry in project.data.get("templates", []):
+            if entry.get("meta") != relative_meta:
+                continue
+            history_value = entry.get("history_path") or entry.get("path")
+            if isinstance(history_value, str) and history_value.strip():
+                history_path = Path(history_value).expanduser()
+                if not history_path.is_absolute():
+                    history_path = project.root / history_path
+                return history_path.resolve()
+    return meta_path.parent.parent.resolve()
 
 
 def cleanup_rules_from_latest_configured_template(

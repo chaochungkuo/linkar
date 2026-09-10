@@ -679,7 +679,8 @@ def test_run_template_records_failed_project_run_state(tmp_path: Path) -> None:
     entry = project_after.data["templates"][0]
     assert entry["id"] == "run_fail_demo"
     assert entry["state"] == "failed"
-    runtime = json.loads((project.root / entry["meta"]).with_name("runtime.json").read_text(encoding="utf-8"))
+    runtime_path = project.root / ".linkar" / "runtime" / f"{entry['instance_id']}.json"
+    runtime = json.loads(runtime_path.read_text(encoding="utf-8"))
     assert runtime["success"] is False
 
 

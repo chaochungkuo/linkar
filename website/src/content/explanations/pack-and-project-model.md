@@ -54,6 +54,7 @@ It records:
 - which runs happened locally
 - where stable run aliases point
 - where immutable run history lives under `.linkar/runs/`
+- where centralized metadata and runtime records live under `.linkar/meta/` and `.linkar/runtime/`
 
 It should stay readable on disk. Linkar should not turn the project into a hidden database or a
 workflow-definition language.
@@ -103,9 +104,16 @@ study/
     runs/
       fastqc_001/
       multiqc_001/
+    meta/
+      fastqc_001.json
+      multiqc_001.json
+    runtime/
+      fastqc_001.json
+      multiqc_001.json
 ```
 
-The pack tells Linkar what can be run. The project tells Linkar what was run locally.
+The pack tells Linkar what can be run. The project tells Linkar what was run locally. This keeps
+one hidden Linkar directory at the project root instead of adding a nested `.linkar/` to each run.
 
 ## Where site-specific discovery belongs
 

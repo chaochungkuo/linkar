@@ -56,7 +56,7 @@ This gives you:
 - reused author metadata from your global Linkar config
 - a stable project-root directory such as `./scrna_prep`
 - Linkar metadata under `.linkar/`
-- the current release may also keep historical run metadata under `.linkar/runs/`
+- project run metadata under `.linkar/meta/` and execution records under `.linkar/runtime/`
 - recorded pack ref and resolved Git revision metadata
 - the option to render a standalone artifact with `linkar render ...`
 
@@ -73,9 +73,10 @@ linkar project author set --name "Project Owner" --email "owner@example.org"
 In project mode, Linkar currently separates:
 
 - the stable project-facing alias, such as `./scrna_prep`
-- the immutable recorded run under `.linkar/runs/scrna_prep_001`
+- the immutable recorded run workspace under `.linkar/runs/scrna_prep_001`
 
-That means the project root stays readable while the real history remains preserved.
+That means the project root stays readable while the real history remains preserved. The workspace
+does not contain another `.linkar/`; its records live in the single project-root `.linkar/`.
 
 The planned project UX is simpler for day-to-day work: one template id should have one active
 workspace by default. Rerendering `scrna_prep` should refresh `./scrna_prep` and update the existing

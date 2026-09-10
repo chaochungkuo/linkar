@@ -110,7 +110,7 @@ linkar collect ./demultiplex
 
 `collect` updates declared outputs in:
 
-- `.linkar/meta.json`
+- the registered metadata JSON (`.linkar/meta/<instance_id>.json` in a project)
 - `project.yaml` when the run belongs to the active project
 
 It records the manually executed run as `completed` by default. If the manual command failed, use
@@ -128,7 +128,7 @@ Accepted run references include:
 - instance ids such as `fastqc_001`
 - unique template ids when unambiguous in the project
 - run directory paths
-- `.linkar/meta.json` paths
+- project-central or legacy metadata JSON paths
 
 ## Step 6: clean runtime artifacts
 

@@ -119,7 +119,7 @@ For run-oriented endpoints, `run_ref` can be:
 - an instance id such as `fastqc_001`
 - a unique template id within the project such as `fastqc`
 - a run directory path
-- a `.linkar/meta.json` path
+- a project-central or legacy run metadata JSON path
 
 Legacy unversioned routes still exist for backward compatibility, but new clients should prefer `/v1/...`.
 

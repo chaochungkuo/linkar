@@ -197,7 +197,7 @@ Run behavior:
 - for `run.mode: render` inside a project, executes directly in the visible project directory such as `./export`
 - executes the template
 - collects declared outputs
-- writes `.linkar/meta.json` and `.linkar/runtime.json`
+- writes project-central `.linkar/meta/<instance_id>.json` and `.linkar/runtime/<instance_id>.json` records, or portable `.linkar/meta.json` and `.linkar/runtime.json` records outside a project
 - appends a run record to `project.yaml` with `state: completed` or `state: failed`
 - updates the stable project alias such as `./fastqc` when a separate history run directory exists
 
@@ -223,5 +223,5 @@ You can collect outputs afterward with:
 linkar collect /path/to/rendered_dir
 ```
 
-That updates `.linkar/meta.json` and, when the rendered artifact belongs to a project, also updates
+That updates the run's registered metadata JSON and, when the rendered artifact belongs to a project, also updates
 its recorded outputs in `project.yaml`.

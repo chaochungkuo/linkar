@@ -630,8 +630,33 @@ def localize_render_params(
     return localized
 
 
-def can_reuse_render_bundle(output_dir: Path) -> bool:
-    return (output_dir / "run.sh").exists() and (output_dir / ".linkar" / "meta.json").exists()
+def project_record_paths(project: Project, instance_id: str) -> tuple[Path, Path]:
+    state_dir = project.root / ".linkar"
+    return (
+        state_dir / "meta" / f"{instance_id}.json",
+        state_dir / "runtime" / f"{instance_id}.json",
+    )
+
+
+def run_record_paths(
+    output_dir: Path,
+    project: Project | None,
+    instance_id: str,
+) -> tuple[Path, Path]:
+    if project is not None:
+        return project_record_paths(project, instance_id)
+    state_dir = output_dir / ".linkar"
+    return state_dir / "meta.json", state_dir / "runtime.json"
+
+
+def runtime_path_for_meta(meta_path: Path) -> Path:
+    if meta_path.parent.name == "meta" and meta_path.parent.parent.name == ".linkar":
+        return meta_path.parent.parent / "runtime" / meta_path.name
+    return meta_path.with_name("runtime.json")
+
+
+def can_reuse_render_bundle(output_dir: Path, meta_path: Path | None) -> bool:
+    return (output_dir / "run.sh").exists() and meta_path is not None and meta_path.exists()
 
 
 def ensure_render_outdir_is_empty(output_dir: Path) -> None:
@@ -650,8 +675,7 @@ def ensure_render_outdir_is_empty(output_dir: Path) -> None:
     )
 
 
-def load_existing_render_bundle_context(output_dir: Path) -> tuple[str, dict[str, Any], dict[str, Any], list[dict[str, Any]], str | Path | None]:
-    meta_path = output_dir / ".linkar" / "meta.json"
+def load_existing_render_bundle_context(meta_path: Path) -> tuple[str, dict[str, Any], dict[str, Any], list[dict[str, Any]], str | Path | None]:
     metadata = json.loads(meta_path.read_text(encoding="utf-8"))
     instance_id = metadata.get("instance_id")
     if not isinstance(instance_id, str) or not instance_id:
@@ -662,6 +686,25 @@ def load_existing_render_bundle_context(output_dir: Path) -> tuple[str, dict[str
     binding = metadata.get("binding")
     binding_ref = binding.get("ref") if isinstance(binding, dict) else None
     return instance_id, params, provenance, warnings, binding_ref
+
+
+def project_meta_for_workspace(project: Project, workspace: Path) -> Path | None:
+    resolved_workspace = workspace.resolve()
+    matches = [
+        meta_path
+        for entry in project.data.get("templates", [])
+        if resolved_workspace
+        in {
+            candidate
+            for candidate in (
+                _entry_history_path(project.root, entry),
+                _entry_visible_path(project.root, entry),
+            )
+            if candidate is not None
+        }
+        and (meta_path := _entry_meta_path(project.root, entry)) is not None
+    ]
+    return matches[-1] if matches else None
 
 
 def prepare_template_execution(
@@ -732,8 +775,9 @@ def prepare_template_execution(
         and outdir is None
     ):
         candidate_output_dir = determine_render_outdir(template, project_obj, None, "preview")
+        candidate_meta_path = project_meta_for_workspace(project_obj, candidate_output_dir)
         if (
-            can_reuse_render_bundle(candidate_output_dir)
+            can_reuse_render_bundle(candidate_output_dir, candidate_meta_path)
             and not refresh
             and not params
             and binding_ref is None
@@ -746,19 +790,22 @@ def prepare_template_execution(
         param_provenance: dict[str, Any]
         warnings: list[dict[str, Any]]
         instance_id: str
+        existing_meta_path = project_meta_for_workspace(project_obj, existing_output_dir)
+        if existing_meta_path is None:
+            raise ProjectValidationError(f"Run metadata not found for rendered bundle: {existing_output_dir}")
         (
             instance_id,
             resolved_params,
             param_provenance,
             warnings,
             existing_binding_ref,
-        ) = load_existing_render_bundle_context(existing_output_dir)
+        ) = load_existing_render_bundle_context(existing_meta_path)
         if selected_binding_ref is None and existing_binding_ref is not None:
             selected_binding_ref = existing_binding_ref
         outdir_provenance: dict[str, Any] | None = None
         output_dir = existing_output_dir
         display_dir = output_dir
-        linkar_dir = output_dir / ".linkar"
+        linkar_dir = project_obj.root / ".linkar"
 
         ensure_required_tools_available(template)
 
@@ -840,9 +887,12 @@ def prepare_template_execution(
             f"Cannot create Linkar output directory {output_dir}: {exc}\n"
             "Check the parent directory permissions, or choose a different directory with --outdir."
         ) from exc
-    linkar_dir = output_dir / ".linkar"
+    linkar_dir = project_obj.root / ".linkar" if project_obj is not None else output_dir / ".linkar"
     try:
-        linkar_dir.mkdir(exist_ok=True)
+        linkar_dir.mkdir(parents=True, exist_ok=True)
+        if project_obj is not None:
+            (linkar_dir / "meta").mkdir(exist_ok=True)
+            (linkar_dir / "runtime").mkdir(exist_ok=True)
     except OSError as exc:
         raise ExecutionError(f"Cannot create Linkar metadata directory {linkar_dir}: {exc}") from exc
 
@@ -1140,7 +1190,7 @@ def build_adopted_project_entry(
 
 
 def infer_metadata_state(metadata: dict[str, Any], meta_path: Path) -> str:
-    runtime_path = meta_path.with_name("runtime.json")
+    runtime_path = runtime_path_for_meta(meta_path)
     if runtime_path.exists():
         try:
             runtime = json.loads(runtime_path.read_text(encoding="utf-8"))
@@ -1258,7 +1308,7 @@ def _raise_ambiguous_project_run(run_ref: str | Path, entries: list[dict[str, An
     matching_instances = "; ".join(_describe_project_run_match(entry) for entry in entries)
     raise ProjectValidationError(
         f"Run reference '{run_ref}' is ambiguous in this project. Matching runs: {matching_instances}. "
-        "Use an instance id, a run path, or a .linkar/meta.json path."
+        "Use an instance id, a run path, or a run metadata JSON path."
     )
 
 
@@ -1559,10 +1609,9 @@ def inspect_run(run_ref: str | Path, project: str | Path | Project | None = None
     if ref_path.exists():
         target = ref_path.resolve()
         meta_path = target if target.is_file() else target / ".linkar" / "meta.json"
-        if not meta_path.exists():
-            raise ProjectValidationError(f"Run metadata not found: {meta_path}")
-        with meta_path.open("r", encoding="utf-8") as handle:
-            return json.load(handle)
+        if meta_path.exists():
+            with meta_path.open("r", encoding="utf-8") as handle:
+                return json.load(handle)
 
     project_obj = _load_project_for_runs(project, action="Inspecting a run")
     entry = resolve_project_run(run_ref, project=project_obj)
@@ -1577,18 +1626,24 @@ def inspect_runtime(run_ref: str | Path, project: str | Path | Project | None = 
     ref_path = Path(run_ref)
     if ref_path.exists():
         target = ref_path.resolve()
-        runtime_path = target if target.is_file() else target / ".linkar" / "runtime.json"
-        if not runtime_path.exists():
-            raise ProjectValidationError(f"Run runtime not found: {runtime_path}")
-        with runtime_path.open("r", encoding="utf-8") as handle:
-            return json.load(handle)
+        if target.is_file():
+            runtime_path = (
+                runtime_path_for_meta(target)
+                if target.name == "meta.json" or target.parent.name == "meta"
+                else target
+            )
+        else:
+            runtime_path = target / ".linkar" / "runtime.json"
+        if runtime_path.exists():
+            with runtime_path.open("r", encoding="utf-8") as handle:
+                return json.load(handle)
 
     project_obj = _load_project_for_runs(project, action="Inspecting run runtime")
     entry = resolve_project_run(run_ref, project=project_obj)
     meta_path = _entry_meta_path(project_obj.root, entry)
     if meta_path is None:
         raise ProjectValidationError(f"Run runtime not found: {run_ref}")
-    runtime_path = meta_path.with_name("runtime.json")
+    runtime_path = runtime_path_for_meta(meta_path)
     if not runtime_path.exists():
         raise ProjectValidationError(f"Run runtime not found: {runtime_path}")
     with runtime_path.open("r", encoding="utf-8") as handle:
@@ -1600,9 +1655,8 @@ def resolve_run_meta_path(run_ref: str | Path, project: str | Path | Project | N
     if ref_path.exists():
         target = ref_path.resolve()
         meta_path = target if target.is_file() else target / ".linkar" / "meta.json"
-        if not meta_path.exists():
-            raise ProjectValidationError(f"Run metadata not found: {meta_path}")
-        return meta_path
+        if meta_path.exists():
+            return meta_path
 
     project_obj = _load_project_for_runs(project, action="Resolving run metadata")
     entry = resolve_project_run(run_ref, project=project_obj)
@@ -1610,6 +1664,35 @@ def resolve_run_meta_path(run_ref: str | Path, project: str | Path | Project | N
     if meta_path is not None and meta_path.exists():
         return meta_path
     raise ProjectValidationError(f"Run not found: {run_ref}")
+
+
+def metadata_workspace(
+    metadata: dict[str, Any],
+    meta_path: Path,
+    project: Project | None,
+) -> Path:
+    if project is None and meta_path.parent.name == "meta" and meta_path.parent.parent.name == ".linkar":
+        project_file = meta_path.parent.parent.parent / "project.yaml"
+        if project_file.exists():
+            project = load_project(project_file)
+    workspace = metadata.get("workspace")
+    if isinstance(workspace, str) and workspace.strip():
+        workspace_path = Path(workspace).expanduser()
+        if workspace_path.is_absolute():
+            return workspace_path.resolve()
+        is_project_record = meta_path.parent.name == "meta" and meta_path.parent.parent.name == ".linkar"
+        if workspace == "." and not is_project_record:
+            return meta_path.parent.parent.resolve()
+        if project is not None:
+            return (project.root / workspace_path).resolve()
+    if project is not None:
+        relative_meta = os.path.relpath(meta_path, project.root)
+        for entry in project.data.get("templates", []):
+            if entry.get("meta") == relative_meta:
+                history_path = _entry_history_path(project.root, entry)
+                if history_path is not None:
+                    return history_path
+    return meta_path.parent.parent.resolve()
 
 
 COLLECT_STATES = {"rendered", "completed", "failed"}
@@ -1657,8 +1740,12 @@ def collect_run_outputs(
         project_obj = project
 
     meta_path = resolve_run_meta_path(run_ref, project=project_obj)
-    outdir = meta_path.parent.parent
+    if project_obj is None and meta_path.parent.name == "meta" and meta_path.parent.parent.name == ".linkar":
+        project_file = meta_path.parent.parent.parent / "project.yaml"
+        if project_file.exists():
+            project_obj = load_project(project_file)
     metadata = json.loads(meta_path.read_text(encoding="utf-8"))
+    outdir = metadata_workspace(metadata, meta_path, project_obj)
     declared_outputs = metadata.get("declared_outputs") or {"results_dir": {}}
     outputs = collect_outputs_from_declared(declared_outputs, outdir)
     contract_outputs = load_template_outputs_contract(outdir, metadata)
@@ -1825,7 +1912,7 @@ def run_template(
         refresh=refresh,
     )
 
-    meta_path = linkar_dir / "meta.json"
+    meta_path, runtime_path = run_record_paths(output_dir, project_obj, instance_id)
     if project_obj is not None and template.run_mode == "render" and output_dir == display_dir:
         stale_runs = _stale_duplicate_path_runs(
             project_obj,
@@ -1858,7 +1945,6 @@ def run_template(
         verbose=verbose,
     )
 
-    runtime_path = linkar_dir / "runtime.json"
     write_json(
         runtime_path,
         {
@@ -1906,6 +1992,11 @@ def run_template(
             "run_mode": "run",
             "template_run_mode": template.run_mode,
             "state": state,
+            "workspace": (
+                project_path_reference(output_dir, project_obj.root)
+                if project_obj is not None
+                else "."
+            ),
         },
     )
 
@@ -2028,7 +2119,7 @@ def render_template(
                 stderr=completed.stderr,
             )
 
-    runtime_path = linkar_dir / "runtime.json"
+    meta_path, runtime_path = run_record_paths(output_dir, project_obj, instance_id)
     write_json(
         runtime_path,
         {
@@ -2052,7 +2143,6 @@ def render_template(
 
     outputs = collect_outputs(template, output_dir) if template.render_command is not None else {}
 
-    meta_path = linkar_dir / "meta.json"
     write_json(
         meta_path,
         {
@@ -2082,6 +2172,11 @@ def render_template(
             "run_mode": "render",
             "template_run_mode": template.run_mode,
             "state": "rendered",
+            "workspace": (
+                project_path_reference(output_dir, project_obj.root)
+                if project_obj is not None
+                else "."
+            ),
         },
     )
 

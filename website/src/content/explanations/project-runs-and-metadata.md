@@ -44,6 +44,20 @@ For `linkar run ...` inside a project, Linkar separates:
 The stable path is for humans and downstream local usage.
 The history path is for provenance and reproducibility.
 
+All Linkar-owned project state is kept below the one project-root `.linkar/` directory:
+
+```text
+study/
+  project.yaml
+  fastqc -> .linkar/runs/fastqc_001
+  .linkar/
+    runs/fastqc_001/
+    meta/fastqc_001.json
+    runtime/fastqc_001.json
+```
+
+The run workspace itself has no nested `.linkar/` directory.
+
 The planned project model makes the stable path the default source of truth. For normal project
 usage, a template id should have one active workspace and one active `project.yaml` entry. Hidden
 history remains available for explicit multi-instance work, but it should not be created merely
@@ -67,7 +81,10 @@ study/
   demultiplex/
     run.sh
     samplesheet.csv
-    .linkar/
+    results/
+  .linkar/
+    meta/demultiplex_001.json
+    runtime/demultiplex_001.json
 ```
 
 That artifact is intentionally editable and runnable on its own.
@@ -90,14 +107,14 @@ That means the project ledger can now track:
 The `adopted` flag is provenance, not lifecycle. Use `state` for lifecycle and `adopted: true`
 only when the run was imported into the project index after the fact.
 
-## `.linkar/` inside a run artifact
+## Run metadata and runtime records
 
-The `.linkar/` directory is Linkar’s metadata folder for that artifact.
+For project-managed runs, metadata is centralized below the project-root `.linkar/` directory.
 
 Important files:
 
-- `meta.json`
-- `runtime.json`
+- `.linkar/meta/<instance_id>.json`
+- `.linkar/runtime/<instance_id>.json`
 
 `meta.json` stores:
 
@@ -124,6 +141,10 @@ Important files:
 - warnings
 
 User-facing outputs belong under `results/`, not under `.linkar/`.
+
+Standalone bundles remain portable by storing `.linkar/meta.json` and `.linkar/runtime.json` inside
+the bundle. Existing projects that use that older per-run convention remain readable; no migration
+is required.
 
 ## Adopting existing runs
 
@@ -152,7 +173,7 @@ linkar collect /path/to/rendered_dir
 
 This updates:
 
-- `.linkar/meta.json`
+- the registered metadata JSON file
 - `project.yaml` outputs when the artifact belongs to a project
 
 The default recorded state is `completed`. Pass `--state failed` for an unsuccessful manual run or
@@ -170,7 +191,7 @@ accept:
 - instance ids such as `fastqc_001`
 - unique template ids when they are unambiguous in the project
 - run directory paths
-- `.linkar/meta.json` paths
+- project-central or legacy metadata JSON paths
 
 ## Removing runs from a project
 

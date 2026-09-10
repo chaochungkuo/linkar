@@ -86,7 +86,7 @@ If you already have an ad hoc Linkar run and want to start a project around it:
 linkar project init --name study --adopt /path/to/existing_run
 ```
 
-In project mode, Linkar exposes a stable directory such as `./simple_echo` and writes user-facing outputs under `results/`. The current implementation can also keep historical run metadata under `.linkar/runs/<instance_id>/`, but the intended next project model is simpler: one project plus one template id should have one active visible workspace by default. Rerendering the same template should update that workspace and its `project.yaml` entry unless the user explicitly asks for a new instance or history. For templates whose declared `run.mode` is `render`, `linkar run` inside a project already executes directly in the visible project directory instead of creating a `.linkar/runs/...` history path. By default it runs the current rendered bundle if one already exists; use `linkar run TEMPLATE --refresh` to rerender first.
+In project mode, Linkar exposes a stable directory such as `./simple_echo` and writes user-facing outputs under `results/`. All Linkar-managed state is centralized under the single project-root `.linkar/`: direct-run workspaces live in `.linkar/runs/<instance_id>/`, metadata in `.linkar/meta/<instance_id>.json`, and execution records in `.linkar/runtime/<instance_id>.json`. Visible workspaces do not receive another nested `.linkar/`. For templates whose declared `run.mode` is `render`, `linkar run` executes directly in the visible project directory. By default it runs the current rendered bundle if one already exists; use `linkar run TEMPLATE --refresh` to rerender first. Standalone rendered bundles keep their own `.linkar/meta.json` and `.linkar/runtime.json` so they remain portable, and Linkar continues to read this legacy convention in existing projects.
 
 Command model:
 
@@ -98,7 +98,7 @@ Command model:
 - `linkar inspect run RUN_REF` reads recorded metadata
 - `linkar project prune` removes stale duplicate-path history, mostly for older projects or explicit multi-instance work
 
-`RUN_REF` accepts an instance id such as `fastqc_001`, a unique template id within the project such as `fastqc`, a run directory path, or a `.linkar/meta.json` path.
+`RUN_REF` accepts an instance id such as `fastqc_001`, a unique template id within the project such as `fastqc`, a run directory path, or a metadata JSON path. Both project-central `.linkar/meta/<instance_id>.json` and legacy `.linkar/meta.json` paths are supported.
 
 For execution-style commands such as `run`, `render`, `collect`, and `test`:
 

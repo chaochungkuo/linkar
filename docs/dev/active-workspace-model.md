@@ -32,7 +32,7 @@ Behavior:
 - uses `<project>/<template_id>` as the visible workspace unless an existing
   active entry records another visible path
 - prompts before overwriting a non-empty existing workspace
-- refreshes `.linkar/meta.json`
+- refreshes the project-central `.linkar/meta/<instance_id>.json`
 - updates the existing `project.yaml` entry for that template id
 - does not create a new project entry only because params changed
 
@@ -76,13 +76,16 @@ project entries by default.
 
 Do not remove `.linkar` entirely.
 
-Keep `.linkar` for:
+Keep one project-root `.linkar` for:
 
-- `meta.json`
-- `runtime.json`
+- `meta/<instance_id>.json`
+- `runtime/<instance_id>.json`
 - parameter provenance
 - collected outputs
 - warnings and command metadata
+
+Standalone artifacts keep `.linkar/meta.json` and `.linkar/runtime.json` for portability. Readers
+must continue accepting that layout in existing projects.
 
 But keep hidden history optional:
 

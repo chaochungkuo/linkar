@@ -79,7 +79,7 @@ def test_project_schema_accepts_linkar_generated_fields() -> None:
                     "history_path": ".linkar/runs/analysis_001",
                     "params": {"input": "reads.fastq.gz"},
                     "outputs": {"results_dir": "analysis/results"},
-                    "meta": ".linkar/runs/analysis_001/.linkar/meta.json",
+                    "meta": ".linkar/meta/analysis_001.json",
                     "state": "completed",
                     "adopted": True,
                     "binding": {"ref": "default"},

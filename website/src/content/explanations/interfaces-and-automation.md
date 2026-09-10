@@ -57,7 +57,7 @@ Run references accepted across `collect`, `inspect run`, `project view`, and `pr
 - instance ids such as `fastqc_001`
 - unique template ids within a project such as `fastqc`
 - run directory paths
-- `.linkar/meta.json` paths
+- project-central or legacy run metadata JSON paths
 
 ## Help and shell completion
 

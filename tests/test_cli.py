@@ -19,7 +19,7 @@ except ImportError:
 
 from linkar import __version__
 from linkar.cli_support.common import handle_linkar_errors, help_for_param
-from linkar.core import load_project, load_template, resolve_project_assets, run_template
+from linkar.core import inspect_runtime, load_project, load_template, resolve_project_assets, run_template
 from linkar.errors import (
     AssetResolutionError,
     ProjectValidationError,
@@ -62,6 +62,12 @@ def run_git(*args: str, cwd: Path) -> None:
         check=False,
     )
     assert completed.returncode == 0, completed.stderr
+
+
+def load_project_run_meta(project_dir: Path, index: int = -1) -> dict[str, object]:
+    project = yaml.safe_load((project_dir / "project.yaml").read_text())
+    meta_path = project_dir / project["templates"][index]["meta"]
+    return json.loads(meta_path.read_text())
 
 
 def skip_if_known_pixi_runtime_panic(completed: subprocess.CompletedProcess[str]) -> None:
@@ -821,7 +827,7 @@ def test_project_remove_run_rejects_ambiguous_template_id(tmp_path: Path) -> Non
     assert "state=completed" in removed.stderr
     assert "path=simple_echo" in removed.stderr
     assert "history_path=.linkar/runs/simple_echo_001" in removed.stderr
-    assert ".linkar/meta.json path" in removed.stderr
+    assert "run metadata JSON path" in removed.stderr
 
 
 def test_project_prune_removes_older_duplicate_paths_and_deletes_orphaned_dirs(tmp_path: Path) -> None:
@@ -1694,6 +1700,11 @@ printf 'ok\n' > results/ok.txt
     assert (outdir / ".pixi").is_dir()
     assert (outdir / "__pycache__").is_dir()
 
+    workspace_preview = run_cli("clean", ".", "--dry-run", "--format", "json", cwd=outdir)
+    assert workspace_preview.returncode == 0, workspace_preview.stderr
+    preview_payload = json.loads(workspace_preview.stdout)
+    assert {item["display_path"] for item in preview_payload["items"]} == {".pixi", "__pycache__"}
+
     cleaned = run_cli("clean", ".", "--yes", "--format", "json", cwd=project_dir)
     assert cleaned.returncode == 0, cleaned.stderr
     payload = json.loads(cleaned.stdout)
@@ -1778,7 +1789,7 @@ def test_collect_command_accepts_unique_template_id(tmp_path: Path) -> None:
     assert collected_payload["project_updated"] is True
     project_data = yaml.safe_load((project_dir / "project.yaml").read_text())
     assert project_data["templates"][0]["state"] == "completed"
-    meta = json.loads((outdir / ".linkar" / "meta.json").read_text())
+    meta = load_project_run_meta(project_dir)
     assert meta["state"] == "completed"
 
 
@@ -1839,7 +1850,9 @@ def test_render_in_project_defaults_to_visible_project_template_dir(tmp_path: Pa
     rendered_dir = project_dir / "simple_echo"
     assert completed.stdout.strip() == str(rendered_dir)
     assert (rendered_dir / "run.sh").is_file()
-    assert (rendered_dir / ".linkar" / "meta.json").is_file()
+    assert not (rendered_dir / ".linkar").exists()
+    project = yaml.safe_load((project_dir / "project.yaml").read_text())
+    assert (project_dir / project["templates"][0]["meta"]).is_file()
     assert not (project_dir / ".linkar" / "runs" / "simple_echo_001").exists()
     project = yaml.safe_load((project_dir / "project.yaml").read_text())
     assert len(project["templates"]) == 1
@@ -1919,7 +1932,8 @@ def test_project_run_uses_stable_project_path_and_history_dir(tmp_path: Path) ->
     entry = project["templates"][0]
     assert entry["path"] == "simple_echo"
     assert entry["history_path"] == ".linkar/runs/simple_echo_001"
-    assert entry["meta"] == ".linkar/runs/simple_echo_001/.linkar/meta.json"
+    assert entry["meta"] == ".linkar/meta/simple_echo_001.json"
+    assert not (outdir / ".linkar").exists()
     assert entry["state"] == "completed"
 
 
@@ -1958,7 +1972,8 @@ printf 'done\n' > "${LINKAR_RESULTS_DIR}/done.txt"
     assert entry["id"] == "render_style_export"
     assert entry["path"] == "render_style_export"
     assert entry["history_path"] == "render_style_export"
-    assert entry["meta"] == "render_style_export/.linkar/meta.json"
+    assert entry["meta"] == ".linkar/meta/render_style_export_001.json"
+    assert not (outdir / ".linkar").exists()
     assert entry["state"] == "completed"
 
 
@@ -2949,7 +2964,7 @@ cp "${SOURCE_DIR}/dataset/sample.txt" "${LINKAR_RESULTS_DIR}/consumed.txt"
     assert consume.returncode == 0, consume.stderr
     outdir = Path(consume.stdout.strip())
     assert (outdir / "results" / "consumed.txt").read_text().strip() == "S1"
-    meta = json.loads((outdir / ".linkar" / "meta.json").read_text())
+    meta = load_project_run_meta(project_dir)
     assert meta["param_provenance"]["source_dir"]["source"] == "binding"
     assert meta["param_provenance"]["source_dir"]["binding_source"] == "output"
     assert meta["param_provenance"]["source_dir"]["template"] == "produce_data"
@@ -3094,7 +3109,7 @@ cp "${SOURCE_DIR}/sample.txt" "${LINKAR_RESULTS_DIR}/override.txt"
     assert completed.returncode == 0, completed.stderr
     outdir = Path(completed.stdout.strip())
     assert (outdir / "results" / "override.txt").read_text().strip() == "OVERRIDE"
-    meta = json.loads((outdir / ".linkar" / "meta.json").read_text())
+    meta = load_project_run_meta(project_dir)
     assert meta["param_provenance"]["source_dir"]["binding_source"] == "value"
     assert meta["binding"]["ref"] == str(override_binding.resolve())
 
@@ -3646,7 +3661,7 @@ printf '%s\n' "${files[0]}" > "${LINKAR_RESULTS_DIR}/first.txt"
     consumer_outdir = Path(consumer_run["outdir"])
     assert (consumer_outdir / "results" / "count.txt").read_text().strip() == "2"
     assert (consumer_outdir / "results" / "first.txt").read_text().strip().endswith("a_fastqc.html")
-    meta = json.loads((consumer_outdir / ".linkar" / "meta.json").read_text())
+    meta = load_project_run_meta(project_dir)
     assert meta["param_provenance"]["report_files"]["binding_source"] == "output"
     assert meta["param_provenance"]["report_files"]["output"] == "fastqc_reports"
 
@@ -3703,6 +3718,75 @@ def test_inspect_run_command_returns_metadata_json(tmp_path: Path) -> None:
     metadata_yaml = yaml.safe_load(inspected_yaml.stdout)
     assert metadata_yaml["template"] == "simple_echo"
     assert metadata_yaml["params"]["name"] == "Inspect"
+
+    visible_path = project_dir / "simple_echo"
+    assert not (visible_path / ".linkar").exists()
+    inspected_by_path = run_cli("inspect", "run", str(visible_path), cwd=project_dir)
+    assert inspected_by_path.returncode == 0, inspected_by_path.stderr
+    assert json.loads(inspected_by_path.stdout)["instance_id"] == "simple_echo_001"
+
+    project = yaml.safe_load((project_dir / "project.yaml").read_text())
+    central_meta = project_dir / project["templates"][0]["meta"]
+    collected_by_meta = run_cli("collect", str(central_meta), "--format", "json", cwd=tmp_path)
+    assert collected_by_meta.returncode == 0, collected_by_meta.stderr
+    assert json.loads(collected_by_meta.stdout)["project_updated"] is True
+
+
+def test_legacy_project_run_layout_remains_inspectable_and_collectable(tmp_path: Path) -> None:
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+
+    run_dir = project_dir / "legacy"
+    state_dir = run_dir / ".linkar"
+    results_dir = run_dir / "results"
+    state_dir.mkdir(parents=True)
+    results_dir.mkdir()
+    (results_dir / "answer.txt").write_text("still readable\n")
+    (state_dir / "meta.json").write_text(
+        json.dumps(
+            {
+                "template": "legacy",
+                "template_version": "1.0.0",
+                "instance_id": "legacy_001",
+                "params": {},
+                "declared_outputs": {"results_dir": {}},
+                "outputs": {},
+                "run_mode": "run",
+                "state": "completed",
+            }
+        )
+    )
+    (state_dir / "runtime.json").write_text(json.dumps({"success": True, "returncode": 0}))
+
+    project_file = project_dir / "project.yaml"
+    project = yaml.safe_load(project_file.read_text())
+    project["templates"] = [
+        {
+            "id": "legacy",
+            "instance_id": "legacy_001",
+            "path": "legacy",
+            "history_path": "legacy",
+            "meta": "legacy/.linkar/meta.json",
+            "params": {},
+            "outputs": {},
+            "state": "completed",
+        }
+    ]
+    project_file.write_text(yaml.safe_dump(project, sort_keys=False))
+
+    inspected = run_cli("inspect", "run", "legacy_001", cwd=project_dir)
+    assert inspected.returncode == 0, inspected.stderr
+    assert json.loads(inspected.stdout)["template"] == "legacy"
+
+    runtime = inspect_runtime("legacy_001", project=project_dir)
+    assert runtime["success"] is True
+
+    collected = run_cli("collect", "legacy_001", "--format", "json", cwd=project_dir)
+    assert collected.returncode == 0, collected.stderr
+    payload = json.loads(collected.stdout)
+    assert payload["outdir"] == str(run_dir)
+    assert payload["outputs"]["results_dir"] == str(results_dir)
 
 
 def test_inspect_run_command_accepts_unique_template_id(tmp_path: Path) -> None:

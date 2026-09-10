@@ -118,8 +118,8 @@ return "__EDIT_ME_GENOME__"
 Linkar then:
 
 - shows the warning in CLI output
-- records it in `.linkar/meta.json`
-- records it in `.linkar/runtime.json`
+- records it in the run metadata JSON
+- records it in the run runtime JSON
 
 This is the preferred way to handle “render now, fix later” cases.
 

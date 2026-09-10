@@ -129,7 +129,8 @@ linkar project author clear</code></pre>
 </div>
 
 Accepted run references include instance ids, unique template ids, visible project paths, run
-directory paths, and `.linkar/meta.json` paths when unambiguous.
+directory paths, and metadata JSON paths when unambiguous. Both project-central
+`.linkar/meta/<instance_id>.json` and legacy `.linkar/meta.json` paths are supported.
 
 ## Packs
 
