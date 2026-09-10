@@ -1,6 +1,9 @@
 id: pixi_echo
 version: 0.1.0
 description: Write a greeting text file by running a tiny Python helper through pixi.
+tools:
+  required:
+    - pixi
 params:
   name:
     type: str

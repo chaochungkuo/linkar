@@ -129,7 +129,10 @@ tools:
     - [bcl-convert, bcl_convert]
 ```
 
-This is a preflight check. It is not an environment manager.
+This is a preflight check. It is not an environment manager. When Linkar itself is running inside
+a Pixi environment, it also honors Pixi's `PIXI_EXE` variable and exposes that executable to
+template subprocesses. Nested template-local `pixi run` commands therefore remain available even
+when Pixi did not add its own binary directory to `PATH`.
 
 ## `run.command` versus `run.sh`
 

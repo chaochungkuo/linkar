@@ -1,6 +1,9 @@
 id: pixi_pytest
 version: 0.1.0
 description: Run a tiny pytest suite through pixi and write a JUnit report.
+tools:
+  required:
+    - pixi
 params:
   name:
     type: str

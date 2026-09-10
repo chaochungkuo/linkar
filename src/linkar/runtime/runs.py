@@ -259,10 +259,28 @@ def render_mode_launcher_path(output_dir: Path) -> Path:
     return output_dir / "run.sh"
 
 
+def template_execution_environment() -> dict[str, str]:
+    env = os.environ.copy()
+    pixi_exe = env.get("PIXI_EXE")
+    resolved_pixi = shutil.which(pixi_exe) if pixi_exe else None
+    if resolved_pixi is not None:
+        pixi_bin_dir = str(Path(resolved_pixi).parent)
+        existing_path = env.get("PATH", "")
+        path_entries = existing_path.split(os.pathsep) if existing_path else []
+        if pixi_bin_dir not in path_entries:
+            env["PATH"] = os.pathsep.join([pixi_bin_dir, *path_entries])
+    return env
+
+
 def ensure_required_tools_available(template: TemplateSpec) -> None:
-    missing_required = [tool for tool in template.tools_required if shutil.which(tool) is None]
+    executable_path = template_execution_environment().get("PATH")
+    missing_required = [
+        tool for tool in template.tools_required if shutil.which(tool, path=executable_path) is None
+    ]
     missing_required_any = [
-        group for group in template.tools_required_any if not any(shutil.which(tool) is not None for tool in group)
+        group
+        for group in template.tools_required_any
+        if not any(shutil.which(tool, path=executable_path) is not None for tool in group)
     ]
     if not missing_required and not missing_required_any:
         return
@@ -449,7 +467,7 @@ def execute_optional_render_command(
 ) -> tuple[subprocess.CompletedProcess[str], Any, Any] | None:
     if template.render_command is None:
         return None
-    env = os.environ.copy()
+    env = template_execution_environment()
     env["LINKAR_OUTPUT_DIR"] = "."
     env["LINKAR_RESULTS_DIR"] = "./results"
     env["LINKAR_INSTANCE_ID"] = instance_id
@@ -744,7 +762,7 @@ def prepare_template_execution(
 
         ensure_required_tools_available(template)
 
-        env = os.environ.copy()
+        env = template_execution_environment()
         for key, value in resolved_params.items():
             env[env_key(key)] = format_env_value(value)
         env["LINKAR_OUTPUT_DIR"] = str(output_dir)
@@ -828,7 +846,7 @@ def prepare_template_execution(
     except OSError as exc:
         raise ExecutionError(f"Cannot create Linkar metadata directory {linkar_dir}: {exc}") from exc
 
-    env = os.environ.copy()
+    env = template_execution_environment()
     for key, value in resolved_params.items():
         env[env_key(key)] = format_env_value(value)
     env["LINKAR_OUTPUT_DIR"] = str(output_dir)
@@ -1709,7 +1727,7 @@ def test_template(
     linkar_dir = test_dir / ".linkar"
     linkar_dir.mkdir(exist_ok=True)
 
-    env = os.environ.copy()
+    env = template_execution_environment()
     env["LINKAR_TEMPLATE_DIR"] = str(template.root)
     env["LINKAR_TEMPLATE_ID"] = template.id
     env["LINKAR_TEST_DIR"] = str(test_dir)

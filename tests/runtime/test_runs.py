@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -27,6 +28,7 @@ from linkar.runtime.runs import (
     resolve_declared_output_path,
     ensure_required_tools_available,
     sync_project_alias,
+    template_execution_environment,
     should_exclude_runtime_path,
     should_render_shell_wrapper,
     should_use_pty_for_verbose_output,
@@ -1324,6 +1326,39 @@ def test_ensure_required_tools_available_reports_missing_commands(tmp_path: Path
 
     with pytest.raises(ExecutionError, match="missing required commands: missingcmd; missing any of: tool_a, tool_b"):
         ensure_required_tools_available(template)
+
+
+def test_template_execution_environment_exposes_pixi_exe(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pixi_exe = tmp_path / "pixi-bin" / "pixi"
+    pixi_exe.parent.mkdir()
+    pixi_exe.write_text("#!/usr/bin/env bash\nexit 0\n")
+    pixi_exe.chmod(0o755)
+    monkeypatch.setenv("PATH", str(tmp_path / "empty-bin"))
+    monkeypatch.setenv("PIXI_EXE", str(pixi_exe))
+
+    env = template_execution_environment()
+
+    assert env["PATH"].split(os.pathsep, maxsplit=1)[0] == str(pixi_exe.parent)
+
+    template_dir = make_template(tmp_path / "templates", "pixi_tool", "#!/usr/bin/env bash\n")
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: pixi_tool",
+                "tools:",
+                "  required:",
+                "    - pixi",
+                "run:",
+                "  entry: run.sh",
+                "  mode: direct",
+                "",
+            ]
+        )
+    )
+    ensure_required_tools_available(load_template(template_dir))
 
 
 def test_run_template_checks_required_tools_before_execution(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
