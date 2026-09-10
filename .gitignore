@@ -1,4 +1,5 @@
 .pytest_cache/
+/.linkar/
 __pycache__/
 *.pyc
 .venv/
