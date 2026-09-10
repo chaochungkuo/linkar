@@ -1713,13 +1713,6 @@ def test_template(
         raise TemplateValidationError(
             f"Both test.sh and test.py exist in {template.root}; keep only one test entrypoint"
         )
-    if test_shell.exists():
-        command = [str(test_shell.resolve())]
-    elif test_python.exists():
-        command = [sys.executable, str(test_python.resolve())]
-    else:
-        raise TemplateValidationError(f"test.sh or test.py not found in {template.root}")
-
     test_dir = determine_test_dir(template, project_obj, outdir)
     test_dir.mkdir(parents=True, exist_ok=True)
     results_dir = test_dir / "results"
@@ -1728,6 +1721,31 @@ def test_template(
     linkar_dir.mkdir(exist_ok=True)
 
     env = template_execution_environment()
+    if test_shell.exists():
+        command = [str(test_shell.resolve())]
+    elif test_python.exists():
+        pixi_manifest = template.root / "pixi.toml"
+        if pixi_manifest.exists():
+            pixi_candidate = env.get("PIXI_EXE") or "pixi"
+            pixi_executable = shutil.which(pixi_candidate, path=env.get("PATH"))
+            if pixi_executable is None:
+                raise ExecutionError(
+                    f"pixi is required to test Python template {template.id} because {pixi_manifest} exists"
+                )
+            command = [
+                pixi_executable,
+                "run",
+                "--locked",
+                "--manifest-path",
+                str(pixi_manifest),
+                "python",
+                str(test_python.resolve()),
+            ]
+        else:
+            command = [sys.executable, str(test_python.resolve())]
+    else:
+        raise TemplateValidationError(f"test.sh or test.py not found in {template.root}")
+
     env["LINKAR_TEMPLATE_DIR"] = str(template.root)
     env["LINKAR_TEMPLATE_ID"] = template.id
     env["LINKAR_TEST_DIR"] = str(test_dir)

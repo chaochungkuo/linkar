@@ -2636,6 +2636,43 @@ assert (results_dir / "value.txt").read_text().strip() == "ok"
     assert Path(completed.stdout.strip()).exists()
 
 
+def test_template_test_command_uses_locked_pixi_environment_for_python(tmp_path: Path) -> None:
+    template = make_template(
+        tmp_path / "templates",
+        "pixi_python_tested",
+        "  value:\n    type: str\n    default: ok",
+        """#!/usr/bin/env bash
+set -euo pipefail
+""",
+    )
+    (template / "pixi.toml").write_text("[workspace]\nname = 'pixi-python-tested'\n")
+    (template / "test.py").write_text("print('tested through pixi')\n")
+    pixi_args = tmp_path / "pixi-args.txt"
+    fake_pixi = tmp_path / "pixi"
+    fake_pixi.write_text(
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$@" > "${PIXI_ARGS_FILE}"
+while [[ "$1" != "python" ]]; do shift; done
+shift
+exec python "$@"
+"""
+    )
+    fake_pixi.chmod(0o755)
+
+    completed = run_cli(
+        "test",
+        str(template),
+        cwd=tmp_path,
+        env_extra={"PIXI_EXE": str(fake_pixi), "PIXI_ARGS_FILE": str(pixi_args)},
+    )
+    assert completed.returncode == 0, completed.stderr
+    args = pixi_args.read_text().splitlines()
+    assert args[:4] == ["run", "--locked", "--manifest-path", str(template / "pixi.toml")]
+    assert args[4] == "python"
+    assert args[5] == str(template / "test.py")
+
+
 def test_template_test_command_rejects_multiple_test_entrypoints(tmp_path: Path) -> None:
     template = make_template(
         tmp_path / "templates",

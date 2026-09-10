@@ -25,6 +25,7 @@ This is the normal path because it validates the template through Linkar itself:
 
 - Linkar resolves the template from the pack
 - Linkar chooses `test.sh` or `test.py`
+- when a Python test has a sibling `pixi.toml`, Linkar runs it through that locked Pixi environment
 - Linkar creates a temporary test workspace
 - Linkar records runtime details under `.linkar/tests/...`
 
