@@ -59,14 +59,18 @@ uv tool install git+https://github.com/chaochungkuo/linkar.git
 Then start with the shortest useful flow:
 
 ```bash
+git clone --depth 1 https://github.com/chaochungkuo/linkar.git linkar-examples
+linkar pack validate ./linkar-examples/examples/packs/basic
 linkar config author set --name "Your Name" --email "you@example.org" --organization "IZKF"
 linkar project init --name demo
 cd demo
-linkar pack validate ./examples/packs/basic
-linkar pack add ./examples/packs/basic --id basic
+linkar pack add ../linkar-examples/examples/packs/basic --id basic
 linkar run simple_echo --name Linkar
 linkar inspect run simple_echo_001
 ```
+
+The clone supplies the bundled example pack; installing the Linkar CLI does not place repository
+examples in your current working directory.
 
 If you need to override or inspect author metadata on an existing project after initialization:
 
@@ -304,6 +308,7 @@ V1 conventions:
 - major detail responses expose a `kind` field such as `service`, `project`, `template`, `run`, `run_outputs`, or `run_status`
 - `POST /v1/templates/{template_id}:resolve` returns `param_provenance`, `warnings`, `confirmation`, and a short-lived `resolve_token` when the plan is ready
 - `POST /v1/templates/{template_id}:run` accepts either direct params or a `resolve_token`; when using a `resolve_token`, pass `{"confirm": true}`
+- `POST /v1/runs:collect` accepts an optional `state` of `rendered`, `completed`, or `failed`; the default is `completed`
 
 Typical agent-friendly flow:
 
@@ -360,6 +365,9 @@ High-value MCP tools include:
 - `linkar_inspect_run`
 - `linkar_get_run_outputs`
 - `linkar_get_run_runtime`
+
+`linkar_collect` accepts the same optional `state` values as the CLI and local API, defaulting to
+`completed`.
 
 ## Linkar Repo Development
 
