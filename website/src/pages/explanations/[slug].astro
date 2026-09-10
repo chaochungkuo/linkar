@@ -5,7 +5,7 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
 export async function getStaticPaths() {
   const explanations = await getCollection("explanations");
   return explanations.map((entry) => ({
-    params: { slug: entry.slug },
+    params: { slug: entry.id },
     props: { entry },
   }));
 }
@@ -18,7 +18,7 @@ const referenceSlugs = new Set([
   "local-api-reference",
   "discovery-layers-and-site-packs",
 ]);
-const sectionLabel = referenceSlugs.has(entry.slug) ? "Reference" : "Concept";
+const sectionLabel = referenceSlugs.has(entry.id) ? "Reference" : "Concept";
 ---
 
 <DocsLayout

@@ -5,7 +5,7 @@ import DocsSidebar from "../../components/DocsSidebar.astro";
 
 const explanations = (await getCollection("explanations")).sort((a, b) => a.data.order - b.data.order);
 const explanationHref = (slug: string) => `${import.meta.env.BASE_URL}explanations/${slug}/`;
-const bySlug = new Map(explanations.map((entry) => [entry.slug, entry]));
+const bySlug = new Map(explanations.map((entry) => [entry.id, entry]));
 const pathname = Astro.url.pathname;
 const route = [
   "why-linkar",

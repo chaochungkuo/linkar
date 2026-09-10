@@ -56,7 +56,7 @@ export async function GET() {
   ];
 
   for (const entry of explanations) {
-    const href = `explanations/${entry.slug}/`;
+    const href = `explanations/${entry.id}/`;
     const nav = navByHref.get(href);
     entries.push({
       title: entry.data.title,
@@ -68,7 +68,7 @@ export async function GET() {
   }
 
   for (const entry of tutorials) {
-    const href = `tutorials/${entry.slug}/`;
+    const href = `tutorials/${entry.id}/`;
     const nav = navByHref.get(href);
     entries.push({
       title: entry.data.title,
