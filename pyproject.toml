@@ -17,6 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+  "jsonschema>=4.0",
   "pytest>=8.0",
 ]
 mcp = [

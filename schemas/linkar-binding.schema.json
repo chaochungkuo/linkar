@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://linkar.dev/schemas/linkar-binding.schema.json",
   "title": "Linkar Binding",
+  "description": "Compatibility schema for a standalone binding file. Packs use the same templates mapping in linkar_pack.yaml.",
   "type": "object",
   "additionalProperties": false,
   "required": ["templates"],
@@ -9,33 +10,73 @@
     "templates": {
       "type": "object",
       "additionalProperties": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["params"],
-        "properties": {
-          "params": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["from"],
-              "properties": {
-                "from": {
-                  "type": "string",
-                  "enum": ["output", "function", "value"]
-                },
-                "key": {
-                  "type": "string"
-                },
-                "name": {
-                  "type": "string"
-                },
-                "value": {}
-              }
-            }
+        "$ref": "#/$defs/templateBinding"
+      }
+    }
+  },
+  "$defs": {
+    "templateBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "params": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/bindingRule"}
+        },
+        "outdir": {"$ref": "#/$defs/bindingRule"}
+      }
+    },
+    "bindingRule": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["template"],
+          "properties": {
+            "template": {"type": "string", "minLength": 1},
+            "output": {"type": "string", "minLength": 1}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["function"],
+          "properties": {"function": {"type": "string", "minLength": 1}}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value"],
+          "properties": {"value": {}}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["from"],
+          "properties": {
+            "from": {"const": "output"},
+            "key": {"type": "string", "minLength": 1}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["from", "name"],
+          "properties": {
+            "from": {"const": "function"},
+            "name": {"type": "string", "minLength": 1}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["from", "value"],
+          "properties": {
+            "from": {"const": "value"},
+            "value": {}
           }
         }
-      }
+      ]
     }
   }
 }

@@ -17,6 +17,24 @@
     "description": {
       "type": "string"
     },
+    "tools": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "required": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "required_any": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    },
     "params": {
       "type": "object",
       "additionalProperties": {
@@ -30,14 +48,23 @@
           "required": {
             "type": "boolean"
           },
-          "default": {}
+          "default": {},
+          "description": {
+            "type": "string"
+          }
         }
       }
     },
     "outputs": {
       "type": "object",
       "additionalProperties": {
-        "type": "object"
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "glob": {"type": "string", "minLength": 1}
+        },
+        "not": {"required": ["path", "glob"]}
       }
     },
     "cleanup": {
@@ -45,50 +72,54 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "glob": {"type": "string", "minLength": 1},
+          "type": {"type": "string", "enum": ["any", "dir", "file"]}
+        },
         "oneOf": [
           {
             "required": ["path"],
-            "properties": {
-              "path": {
-                "type": "string",
-                "minLength": 1
-              },
-              "type": {
-                "type": "string",
-                "enum": ["any", "dir", "file"]
-              }
-            }
+            "not": {"required": ["glob"]}
           },
           {
             "required": ["glob"],
-            "properties": {
-              "glob": {
-                "type": "string",
-                "minLength": 1
-              },
-              "type": {
-                "type": "string",
-                "enum": ["any", "dir", "file"]
-              }
-            }
+            "not": {"required": ["path"]}
           }
         ]
+      }
+    },
+    "render": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "command": {"type": "string", "minLength": 1}
       }
     },
     "run": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["entry", "mode"],
       "properties": {
         "entry": {
+          "type": "string",
+          "minLength": 1
+        },
+        "command": {
           "type": "string",
           "minLength": 1
         },
         "mode": {
           "type": "string",
           "enum": ["direct", "render"]
+        },
+        "verbose_by_default": {
+          "type": "boolean"
         }
-      }
+      },
+      "oneOf": [
+        {"required": ["entry"], "not": {"required": ["command"]}},
+        {"required": ["command"], "not": {"required": ["entry"]}}
+      ]
     }
   }
 }

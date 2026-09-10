@@ -4,11 +4,34 @@
   "title": "Linkar Project",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "packs", "templates"],
+  "required": ["id"],
   "properties": {
     "id": {
       "type": "string",
       "minLength": 1
+    },
+    "linkar": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "created_with": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "author": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {"type": "string"},
+        "email": {"type": "string"},
+        "organization": {"type": "string"}
+      }
     },
     "active_pack": {
       "type": ["string", "null"]
@@ -35,6 +58,10 @@
                 "minLength": 1
               },
               "binding": {
+                "type": "string",
+                "minLength": 1
+              },
+              "revision": {
                 "type": "string",
                 "minLength": 1
               }
@@ -65,6 +92,10 @@
             "type": "string",
             "minLength": 1
           },
+          "history_path": {
+            "type": "string",
+            "minLength": 1
+          },
           "params": {
             "type": "object"
           },
@@ -74,6 +105,24 @@
           "meta": {
             "type": "string",
             "minLength": 1
+          },
+          "state": {
+            "type": "string",
+            "enum": ["rendered", "completed", "failed"]
+          },
+          "adopted": {
+            "type": "boolean"
+          },
+          "binding": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["ref"],
+            "properties": {
+              "ref": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
           },
           "pack": {
             "type": "object",

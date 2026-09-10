@@ -3,23 +3,78 @@
   "$id": "https://linkar.dev/schemas/linkar-pack.schema.json",
   "title": "Linkar Pack",
   "type": "object",
-  "additionalProperties": true,
+  "additionalProperties": false,
   "properties": {
     "templates": {
       "type": "object",
       "additionalProperties": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "params": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "object",
-              "additionalProperties": true
-            }
+        "$ref": "#/$defs/templateBinding"
+      }
+    }
+  },
+  "$defs": {
+    "templateBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "params": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/bindingRule"}
+        },
+        "outdir": {"$ref": "#/$defs/bindingRule"}
+      }
+    },
+    "bindingRule": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["template"],
+          "properties": {
+            "template": {"type": "string", "minLength": 1},
+            "output": {"type": "string", "minLength": 1}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["function"],
+          "properties": {"function": {"type": "string", "minLength": 1}}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value"],
+          "properties": {"value": {}}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["from"],
+          "properties": {
+            "from": {"const": "output"},
+            "key": {"type": "string", "minLength": 1}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["from", "name"],
+          "properties": {
+            "from": {"const": "function"},
+            "name": {"type": "string", "minLength": 1}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["from", "value"],
+          "properties": {
+            "from": {"const": "value"},
+            "value": {}
           }
         }
-      }
+      ]
     }
   }
 }
