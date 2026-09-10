@@ -62,6 +62,7 @@ Then start with the shortest useful flow:
 linkar config author set --name "Your Name" --email "you@example.org" --organization "IZKF"
 linkar project init --name demo
 cd demo
+linkar pack validate ./examples/packs/basic
 linkar pack add ./examples/packs/basic --id basic
 linkar run simple_echo --name Linkar
 linkar inspect run simple_echo_001
@@ -89,6 +90,7 @@ Command model:
 - `linkar render ...` stages a bundle without executing it; current releases require an empty or absent target directory, while the planned UX will confirm and refresh the active workspace by default
 - `linkar collect RUN_REF` refreshes declared outputs after manual execution
 - `linkar clean` removes template-declared runtime artifacts from the current project or rendered template directory
+- `linkar pack validate REF` checks template contracts and cross-template binding references before a pack is used
 - `linkar inspect run RUN_REF` reads recorded metadata
 - `linkar project prune` removes stale duplicate-path history, mostly for older projects or explicit multi-instance work
 

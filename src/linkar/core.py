@@ -25,6 +25,7 @@ from linkar.runtime.bindings import (
     resolve_params_detailed,
 )
 from linkar.runtime.models import BindingContext, PackEntry, Project, TemplateSpec
+from linkar.runtime.pack_validation import validate_pack
 from linkar.runtime.projects import (
     add_project_pack,
     clear_project_author,
@@ -154,5 +155,6 @@ __all__ = [
     "update_project_pack",
     "update_global_pack",
     "utc_now",
+    "validate_pack",
     "write_json",
 ]

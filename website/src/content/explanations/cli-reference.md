@@ -141,6 +141,7 @@ defaults.
     <h3>Project packs</h3>
     <p>Saved in <code>project.yaml</code>; use these when a project should carry its pack setup.</p>
     <pre><code>linkar pack add REF --id ID
+linkar pack validate REF
 linkar pack list
 linkar pack use ID
 linkar pack show
@@ -167,10 +168,15 @@ Common examples:
 ```bash
 linkar config pack add github:IZKF-Genomics/izkf_pack --id izkf_pack
 linkar config pack use izkf_pack
+linkar pack validate github:IZKF-Genomics/izkf_pack
 linkar pack add github:IZKF-Genomics/izkf_pack --id izkf_pack --binding default
 linkar pack status
 linkar pack update izkf_pack
 ```
+
+`linkar pack validate REF` checks every template contract and verifies that pack bindings refer to
+existing templates, parameters, outputs, and `functions/NAME.py` resolvers. It exits with status 1
+when it finds an error and supports `--format json` or `--format yaml` for CI.
 
 ## Discovery and automation
 

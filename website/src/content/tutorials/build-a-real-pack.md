@@ -28,6 +28,15 @@ message_pack/
 
 The pack contract lives at the pack root in `linkar_pack.yaml`.
 
+Validate the complete pack before using or publishing it:
+
+```bash
+linkar pack validate .
+```
+
+This checks each template contract plus references from bindings to templates, parameters, outputs,
+and resolver functions.
+
 Each template gets its own directory and should remain runnable and testable on its own.
 
 ## 2. Add a producer template

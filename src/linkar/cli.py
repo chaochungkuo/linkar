@@ -57,6 +57,7 @@ from linkar.core import (
     test_template,
     update_global_pack,
     update_project_pack,
+    validate_pack,
 )
 from linkar.errors import ProjectValidationError
 from linkar.mcp_server import main as serve_mcp
@@ -385,6 +386,44 @@ def pack_list_command(project: str | None, output_format: str, ui: CliUI) -> Non
         ui.print_packs(packs)
         return
     ui.print_data(packs, format=output_format)
+
+
+@pack_group.command("validate")
+@click.argument("ref")
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["rich", "json", "yaml"]),
+    default="rich",
+    show_default=True,
+    help="Output format.",
+)
+@handle_linkar_errors
+def pack_validate_command(ref: str, output_format: str, ui: CliUI) -> None:
+    """Validate templates and cross-template bindings in a pack."""
+    report = validate_pack(ref)
+    if output_format == "rich":
+        ui.print_summary_panel(
+            "[accent]Pack Validation[/accent]",
+            [
+                ("Pack", report["pack_ref"]),
+                ("Templates", report["template_count"]),
+                ("Bindings", report["binding_count"]),
+                ("Status", "valid" if report["valid"] else "invalid"),
+            ],
+            plain_text=(
+                f"Pack: {report['pack_ref']}\n"
+                f"Templates: {report['template_count']}\n"
+                f"Bindings: {report['binding_count']}\n"
+                f"Status: {'valid' if report['valid'] else 'invalid'}"
+            ),
+        )
+        for issue in report["errors"]:
+            ui.print_text(f"ERROR {issue['path']}: {issue['message']} [{issue['code']}]")
+    else:
+        ui.print_data(report, format=output_format)
+    if not report["valid"]:
+        raise click.exceptions.Exit(1)
 
 
 @pack_group.command("status")

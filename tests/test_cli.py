@@ -1072,6 +1072,30 @@ def test_pack_commands_manage_project_configuration(tmp_path: Path) -> None:
     assert project["packs"][0]["id"] == "pack_one"
 
 
+def test_pack_validate_command_supports_machine_readable_output(tmp_path: Path) -> None:
+    valid = run_cli(
+        "pack",
+        "validate",
+        str(ROOT / "examples" / "packs" / "chaining"),
+        "--format",
+        "json",
+        cwd=tmp_path,
+    )
+    assert valid.returncode == 0, valid.stderr
+    assert json.loads(valid.stdout)["valid"] is True
+
+    pack_root = tmp_path / "broken-pack"
+    make_template(pack_root / "templates", "consumer", "  input:\n    type: path", "true")
+    (pack_root / "linkar_pack.yaml").write_text(
+        "templates:\n  consumer:\n    params:\n      missing:\n        function: absent\n"
+    )
+    invalid = run_cli("pack", "validate", str(pack_root), "--format", "json", cwd=tmp_path)
+    assert invalid.returncode == 1
+    report = json.loads(invalid.stdout)
+    assert report["valid"] is False
+    assert {error["code"] for error in report["errors"]} == {"missing_function", "missing_param"}
+
+
 def test_pack_add_without_project_shows_actionable_error(tmp_path: Path) -> None:
     pack_dir = tmp_path / "pack"
     pack_dir.mkdir()
