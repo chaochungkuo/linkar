@@ -1180,6 +1180,7 @@ def test_help_output_is_clean_and_descriptive(tmp_path: Path) -> None:
     assert run_help.returncode == 0, run_help.stderr
     assert "Run templates. Render-mode templates reuse the visible project bundle" in run_help.stdout
     assert "raw" not in run_help.stdout
+    assert "linkar project init --name study" not in run_help.stdout
     assert "╭─ Options" in run_help.stdout
     assert "╭─ Commands" in run_help.stdout
 
@@ -1198,6 +1199,7 @@ def test_help_output_is_clean_and_descriptive(tmp_path: Path) -> None:
     assert project_init_help.returncode == 0, project_init_help.stderr
     assert "use --name to create a new" in project_init_help.stdout.lower()
     assert "directory automatically." in project_init_help.stdout.lower()
+    assert "linkar run simple_echo --pack" not in project_init_help.stdout
     assert "--name" in project_init_help.stdout
     assert "PROJECT_NAME" in project_init_help.stdout
 

@@ -78,27 +78,30 @@ if hasattr(click, "rich_click"):
     click.rich_click.STYLE_OPTION_DEFAULT = "dim"
     click.rich_click.STYLE_REQUIRED_SHORT = "bold red"
     click.rich_click.ERRORS_SUGGESTION = "Use [bold cyan]-h[/bold cyan] or [bold cyan]--help[/bold cyan] for more details."
-    click.rich_click.FOOTER_TEXT = (
-        "Examples:\n"
-        "  linkar project init --name study\n"
-        "  linkar pack add /path/to/project-pack\n"
-        "  linkar run simple_echo --pack ./examples/packs/basic --param name=Linkar\n"
-        "  linkar render demultiplex --outdir ./demux_bundle\n"
-        "  linkar collect ./demux_bundle\n"
-        "  linkar test fastqc\n"
-        "  \n"
-        "  linkar project latest methods\n"
-        "  linkar project prune --dry-run\n"
-        "  \n"
-        "  linkar serve --port 8000 --api-token local-dev:read,resolve,execute\n\n"
-        "  linkar mcp serve\n\n"
-        "Linkar keeps the CLI thin over the same core semantics used by the local API."
-    )
+
+
+ROOT_HELP_EPILOG = (
+    "Examples:\n"
+    "  linkar project init --name study\n"
+    "  linkar pack add /path/to/project-pack\n"
+    "  linkar run simple_echo --pack ./examples/packs/basic --param name=Linkar\n"
+    "  linkar render demultiplex --outdir ./demux_bundle\n"
+    "  linkar collect ./demux_bundle\n"
+    "  linkar test fastqc\n"
+    "  \n"
+    "  linkar project latest methods\n"
+    "  linkar project prune --dry-run\n"
+    "  \n"
+    "  linkar serve --port 8000 --api-token local-dev:read,resolve,execute\n\n"
+    "  linkar mcp serve\n\n"
+    "Linkar keeps the CLI thin over the same core semantics used by the local API."
+)
 
 
 @click.group(
     context_settings={"help_option_names": ["-h", "--help"]},
     invoke_without_command=True,
+    epilog=ROOT_HELP_EPILOG,
 )
 @click.version_option(__version__, prog_name="linkar")
 @click.pass_context
