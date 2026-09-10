@@ -101,12 +101,15 @@ def build_server() -> Any:
             binding_ref=binding_ref,
         )
 
-    @mcp.tool(description="Collect declared outputs for a rendered or manually executed run directory.")
+    @mcp.tool(
+        description="Collect declared outputs and record the run as rendered, completed, or failed."
+    )
     def linkar_collect(
         run_ref: str,
         project: str | None = None,
+        state: str = "completed",
     ) -> dict[str, Any]:
-        return collect_run_outputs_tool(run_ref=run_ref, project=project)
+        return collect_run_outputs_tool(run_ref=run_ref, project=project, state=state)
 
     @mcp.tool(description="Run a template's local test entrypoint through Linkar.")
     def linkar_test(

@@ -469,7 +469,7 @@ def v1_routes_document() -> list[dict[str, object]]:
         {"path": "/v1/templates/{template_id}:render", "method": "POST", "kind": "render_submission", "role": "execute", "description": "Render a runnable template bundle without executing it."},
         {"path": "/v1/templates/{template_id}:test", "method": "POST", "kind": "test_submission", "role": "execute", "description": "Run the template test workflow."},
         {"path": "/v1/runs/{instance_id}", "method": "GET", "kind": "run", "role": "read", "description": "Detailed run metadata and provenance."},
-        {"path": "/v1/runs:collect", "method": "POST", "kind": "run_collect", "role": "execute", "description": "Refresh outputs for a run_ref and report whether the project ledger was updated."},
+        {"path": "/v1/runs:collect", "method": "POST", "kind": "run_collect", "role": "execute", "description": "Refresh outputs for a run_ref, record an optional rendered/completed/failed state, and report whether the project ledger was updated."},
         {"path": "/v1/runs/{instance_id}/outputs", "method": "GET", "kind": "run_outputs", "role": "read", "description": "Collected outputs for a run."},
         {"path": "/v1/runs/{instance_id}/status", "method": "GET", "kind": "run_status", "role": "read", "description": "Compact runtime status for a run."},
         {"path": "/v1/runs/{instance_id}/runtime", "method": "GET", "kind": "run_runtime", "role": "read", "description": "Full recorded runtime metadata for a run."},
@@ -790,6 +790,7 @@ def make_app(*, api_tokens: dict[str, set[str]] | None = None) -> WSGIApp:
                 result = collect_run_outputs(
                     run_ref,
                     project=payload.get("project"),
+                    state=payload.get("state", "completed"),
                 )
                 result["kind"] = "run_collect"
                 return success_response(start_response, result)

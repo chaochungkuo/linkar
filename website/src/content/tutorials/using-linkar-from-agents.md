@@ -220,6 +220,9 @@ The MCP tool surface mirrors the same high-value operations:
 - `linkar_get_run_outputs`
 - `linkar_get_run_runtime`
 
+`linkar_collect` accepts an optional `state` of `rendered`, `completed`, or `failed`, matching the
+CLI and local API. It defaults to `completed`.
+
 This is the cleanest path for Codex-style clients because it exposes small, explicit tools instead
 of forcing shell parsing or a second wrapper layer over the HTTP API.
 

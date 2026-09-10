@@ -468,11 +468,14 @@ def test_server_run_and_inspection_endpoints(tmp_path: Path) -> None:
         app,
         method="POST",
         path="/v1/runs:collect",
-        body=json.dumps({"run_ref": instance_id, "project": str(project_dir)}).encode("utf-8"),
+        body=json.dumps(
+            {"run_ref": instance_id, "project": str(project_dir), "state": "rendered"}
+        ).encode("utf-8"),
     )
     assert status == "200 OK"
     assert collect_payload["data"]["kind"] == "run_collect"
     assert collect_payload["data"]["project_updated"] is True
+    assert collect_payload["data"]["state"] == "rendered"
 
 def test_server_resolve_and_test_endpoints(tmp_path: Path) -> None:
     app = make_app()

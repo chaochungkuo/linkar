@@ -6,6 +6,7 @@ import yaml
 
 from linkar.core import init_project
 from linkar.mcp_tools import (
+    collect_run_outputs_tool,
     describe_template_tool,
     get_run_outputs_tool,
     get_run_runtime_tool,
@@ -61,6 +62,13 @@ def test_mcp_tools_cover_discovery_resolution_and_inspection(tmp_path: Path) -> 
 
     outputs = get_run_outputs_tool(run_ref="simple_echo_001", project=project_dir)
     assert outputs["outputs"]["greeting_file"].endswith("results/greeting.txt")
+
+    collected = collect_run_outputs_tool(
+        run_ref="simple_echo_001",
+        project=project_dir,
+        state="failed",
+    )
+    assert collected["state"] == "failed"
 
     runtime = get_run_runtime_tool(run_ref="simple_echo_001", project=project_dir)
     assert runtime["success"] is True

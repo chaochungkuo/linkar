@@ -97,8 +97,9 @@ def collect_run_outputs_tool(
     *,
     run_ref: str | Path,
     project: str | Path | None = None,
+    state: str = "completed",
 ) -> dict[str, Any]:
-    return collect_run_outputs(run_ref, project=project)
+    return collect_run_outputs(run_ref, project=project, state=state)
 
 
 def test_template_tool(

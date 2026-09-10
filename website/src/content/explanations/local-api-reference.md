@@ -203,8 +203,11 @@ Refresh outputs and learn whether the project ledger changed:
 curl -X POST http://127.0.0.1:8000/v1/runs:collect \
   -H 'Authorization: Bearer local-dev' \
   -H 'Content-Type: application/json' \
-  -d '{"project":"/data/projects/my_project","run_ref":"methods"}'
+  -d '{"project":"/data/projects/my_project","run_ref":"methods","state":"completed"}'
 ```
+
+`state` is optional and defaults to `completed`. Set it to `rendered` when only refreshing a staged
+bundle, or to `failed` after an unsuccessful manual run.
 
 The response includes:
 
