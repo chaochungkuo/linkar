@@ -1,6 +1,6 @@
 ---
 title: Template runtime contract
-description: The `linkar_template.yaml` contract, `run.command` versus `run.sh`, and what render and run do.
+description: The `linkar_template.yaml` contract, `run.command` versus `script.sh`, and what render and run do.
 order: 3
 ---
 
@@ -134,11 +134,11 @@ a Pixi environment, it also honors Pixi's `PIXI_EXE` variable and exposes that e
 template subprocesses. Nested template-local `pixi run` commands therefore remain available even
 when Pixi did not add its own binary directory to `PATH`.
 
-## `run.command` versus `run.sh`
+## `run.command` versus `script.sh`
 
 Use `run.command` for a thin wrapper around one real command.
 
-Use `run.sh` only when the template needs real local logic:
+Use `script.sh` when the template needs real local shell logic:
 
 - branching
 - temp files
@@ -177,7 +177,7 @@ or an absolute path instead of a bare name.
 Render behavior:
 
 - writes one final `run.sh`
-- for `run.entry: run.sh`, renders that script in place as the runnable artifact
+- for `run.entry: script.sh`, wraps the source script in the rendered `run.sh` artifact
 - resolves parameters into the rendered script
 - localizes bound file parameters into the rendered directory when needed
 - writes metadata under `.linkar/`
@@ -203,7 +203,8 @@ Run behavior:
 
 For render-mode templates in a project:
 
-- `linkar render TEMPLATE` refreshes the visible bundle
+- `linkar render TEMPLATE` creates the visible bundle when its target is empty or absent
+- a second `linkar render TEMPLATE` currently stops rather than overwriting a non-empty bundle
 - `linkar run TEMPLATE` runs the current visible bundle if it already exists
 - `linkar run TEMPLATE --refresh` rerenders first, then runs
 - if no visible bundle exists yet, `linkar run TEMPLATE` materializes it once and then executes it

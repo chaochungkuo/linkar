@@ -94,6 +94,7 @@ def test_server_v1_root_and_aliases(tmp_path: Path) -> None:
     assert payload["data"]["conventions"]["collections"]["items_field"] == "items"
     assert any(route["path"] == "/v1/docs" for route in payload["data"]["routes"])
     assert any(route["path"] == "/v1/templates/{template_id}:resolve" for route in payload["data"]["routes"])
+    assert any(route["path"] == "/v1/runs/{run_ref}" for route in payload["data"]["routes"])
 
     status, headers, payload = call_app(app, method="GET", path="/v1/docs")
     assert status == "200 OK"

@@ -77,7 +77,7 @@ This is the right shape for wrappers around tools like:
 - `bcl-convert`
 - `cellranger` subcommands when you only need one stable invocation
 
-## Use `run.sh` or `run.py` when the wrapper starts doing real logic
+## Use `script.sh` or `run.py` when the wrapper starts doing real logic
 
 If you are wrapping a Python-based pipeline or a multi-mode entrypoint, `run.py` is usually better
 than pushing more conditionals into shell.
@@ -123,7 +123,7 @@ For a shell-oriented wrapper with local logic:
 ```text
 demultiplex/
   linkar_template.yaml
-  run.sh
+  script.sh
   test.sh
   testdata/
 ```
@@ -160,12 +160,12 @@ my_pack/
   templates/
     wrapped_pipeline/
       linkar_template.yaml
-      run.sh
+      script.sh
       test.sh
 ```
 
-In this model, `run.sh` is mostly an adapter that calls a pinned checkout, installed binary, or
-existing environment.
+In this model, `script.sh` is mostly an adapter that calls a pinned checkout, installed binary, or
+existing environment. Linkar renders the user-facing `run.sh` into the run directory.
 
 ### 2. Self-contained template bundle
 
@@ -230,7 +230,7 @@ That split mirrors the current codebase:
 - keep output locations deterministic
 - prefer explicit defaults over hidden omission logic
 - prefer `run.command` when one command is enough
-- use `run.sh` for real local shell logic
+- use `script.sh` for real local shell logic
 - use `run.py` once shell stops being clearer
 - let the external tool own the real computation
 

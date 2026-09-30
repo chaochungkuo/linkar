@@ -3,7 +3,7 @@ set -euo pipefail
 
 export NAME="Pixi"
 
-./run.sh
+./script.sh
 
 test -f "greeting.txt"
 grep -q "Hello from pixi, Pixi" "greeting.txt"

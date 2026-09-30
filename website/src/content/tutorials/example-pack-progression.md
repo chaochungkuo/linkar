@@ -29,7 +29,7 @@ linkar test pixi_pytest --pack ./examples/packs/basic
 What you should notice:
 
 - `simple_echo` shows `run.command`
-- `simple_file_input` and `fastq_stats` show `run.sh`
+- `simple_file_input` and `fastq_stats` show template-source `script.sh`
 - `download_test_data` shows `run.py`
 - `glob_reports` shows declared `glob` outputs
 - `portable_python` shows `tools.required_any`
@@ -110,7 +110,7 @@ What this example teaches:
 Use this pack first. It covers:
 
 - the smallest template contract
-- `run.command` vs `run.sh`
+- `run.command` vs `script.sh`
 - `run.py`
 - `linkar run ...` vs `linkar render ...`
 - file inputs

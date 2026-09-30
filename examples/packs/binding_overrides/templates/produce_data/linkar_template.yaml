@@ -10,4 +10,4 @@ outputs:
   dataset_dir:
     path: dataset
 run:
-  entry: run.sh
+  entry: script.sh

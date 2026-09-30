@@ -17,7 +17,7 @@ Suggested order:
 Most templates keep the same shape:
 
 - `linkar_template.yaml`
-- `run.sh`
+- `script.sh` for shell-based template sources
 - `test.sh` or `test.py`
 - optional support files or `testdata/`
 
@@ -25,7 +25,7 @@ The smallest example, `simple_echo`, now uses `run.command` directly in `linkar_
 the pack shows both authoring styles:
 
 - `run.command` for thin one-command wrappers
-- `run.sh` when real script logic is needed
+- `script.sh` when real script logic is needed
 
 Additional examples cover:
 

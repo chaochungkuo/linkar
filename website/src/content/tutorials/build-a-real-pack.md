@@ -97,10 +97,10 @@ outputs:
   transformed_file:
     path: transformed.txt
 run:
-  entry: run.sh
+  entry: script.sh
 ```
 
-Then add `templates/consume_message/run.sh`:
+Then add `templates/consume_message/script.sh`:
 
 ```bash
 #!/usr/bin/env bash
@@ -173,7 +173,7 @@ Then validate through Linkar itself from the pack root or repo root:
 
 ```bash
 linkar test produce_message --pack ./message_pack
-linkar test consume_message --pack ./message_pack --param results_dir=./some/results/dir
+linkar test consume_message --pack ./message_pack
 ```
 
 That follows the current codebase model:

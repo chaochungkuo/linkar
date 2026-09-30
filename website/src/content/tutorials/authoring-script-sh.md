@@ -1,6 +1,6 @@
 ---
 title: Authoring a Template Runtime
-description: Use run.command for thin wrappers and run.sh only when the template needs real script logic.
+description: Use run.command for thin wrappers and script.sh when the template needs real shell logic.
 order: 5
 status: ready
 ---
@@ -10,7 +10,7 @@ Linkar templates should stay small enough to read in one sitting.
 The default decision is:
 
 - use `run.command` for a thin one-command wrapper
-- use `run.sh` when the template needs real shell logic
+- use `script.sh` when the template needs real shell logic
 
 ## Start with the smallest useful contract
 
@@ -40,9 +40,9 @@ run:
     printf 'hello %s\n' "${param:name}" > "${LINKAR_RESULTS_DIR}/greeting_file"
 ```
 
-That is cleaner than creating a `run.sh` whose only job is to forward one command.
+That is cleaner than creating a `script.sh` whose only job is to forward one command.
 
-## How parameters arrive in `run.command` and `run.sh`
+## How parameters arrive in `run.command` and `script.sh`
 
 The preferred authoring style in `run.command` is the explicit placeholder form.
 
@@ -72,9 +72,9 @@ but new templates should prefer `${param:...}` because it is clearer to template
 
 Use explicit defaults in the schema whenever possible. That keeps runtime logic small and readable.
 
-## When `run.sh` is the better tool
+## When `script.sh` is the better tool
 
-Use `run.sh` when the template needs:
+Use `script.sh` when the template needs:
 
 - branching
 - temp files
@@ -87,7 +87,7 @@ Typical shape:
 ```text
 my_template/
   linkar_template.yaml
-  run.sh
+  script.sh
   test.sh   or   test.py
   optional support files...
 ```
@@ -96,7 +96,7 @@ Example:
 
 ```yaml
 run:
-  entry: run.sh
+  entry: script.sh
 ```
 
 ```bash
@@ -130,8 +130,9 @@ run:
 The rendered directory then contains one launcher, not a template-local wrapper plus a second outer
 wrapper.
 
-If your template entry is already `run.sh`, Linkar renders that same script in place and injects
-the resolved runtime environment there. It does not hide the real entrypoint under `.linkar/`.
+For a `run.entry: script.sh` template, Linkar keeps the author-owned source name in the template and
+renders a self-contained `run.sh` launcher into each run directory. The rendered artifact therefore
+has one obvious entrypoint without making the source file double as generated output.
 
 ## Keep testing local and simple
 
@@ -149,5 +150,5 @@ linkar test simple_echo --pack ./examples/packs/basic
 ## Rule of thumb
 
 - prefer `run.command` when one command is enough
-- prefer `run.sh` when logic is real and local
+- prefer `script.sh` when logic is real and local
 - switch to `run.py` when shell stops being clearer

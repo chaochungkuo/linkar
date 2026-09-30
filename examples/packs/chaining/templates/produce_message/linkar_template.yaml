@@ -8,4 +8,4 @@ params:
 outputs:
   results_dir: {}
 run:
-  entry: run.sh
+  entry: script.sh

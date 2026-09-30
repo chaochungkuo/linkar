@@ -70,13 +70,17 @@ linkar project author set --name "Project Owner" --email "owner@example.org"
 
 ## What happens after `linkar run`
 
-In project mode, Linkar currently separates:
+`scrna_prep` is a render-mode template. In project mode, its first `linkar run`:
 
-- the stable project-facing alias, such as `./scrna_prep`
-- the immutable recorded run workspace under `.linkar/runs/scrna_prep_001`
+- materializes and executes the visible workspace at `./scrna_prep`
+- records metadata under `.linkar/meta/scrna_prep_001.json`
+- records execution details under `.linkar/runtime/scrna_prep_001.json`
 
-That means the project root stays readable while the real history remains preserved. The workspace
-does not contain another `.linkar/`; its records live in the single project-root `.linkar/`.
+The workspace does not contain another `.linkar/`; its records live in the single project-root
+`.linkar/`. A later `linkar run scrna_prep` reuses the visible bundle by default, while
+`linkar run scrna_prep --refresh` regenerates it before execution. Direct-mode templates instead
+keep immutable execution workspaces under `.linkar/runs/<instance_id>` and expose a stable
+project-facing path.
 
 The planned project UX is simpler for day-to-day work: one template id should have one active
 workspace by default. Rerendering `scrna_prep` should refresh `./scrna_prep` and update the existing
@@ -104,16 +108,20 @@ linkar project init --name study --adopt /path/to/existing_run
 If you want a standalone runnable artifact instead of an executed run:
 
 ```bash
+cd ..
 linkar render scrna_prep \
   --pack github:IZKF-Genomics/izkf_pack \
   --input-h5ad /data/study/raw_counts.h5ad \
   --organism human \
   --binding default \
-  --outdir ./scrna_prep
-cd scrna_prep
+  --outdir ./scrna_prep_bundle
+cd scrna_prep_bundle
 bash run.sh
 linkar collect .
 ```
+
+Because this render happens outside the project, the bundle keeps portable `.linkar/meta.json` and
+`.linkar/runtime.json` records inside its own directory.
 
 This is the Linkar user path.
 

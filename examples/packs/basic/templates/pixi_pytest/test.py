@@ -6,7 +6,7 @@ import subprocess
 
 os.environ.setdefault("NAME", "Pytest")
 
-subprocess.run(["./run.sh"], check=True)
+subprocess.run(["./script.sh"], check=True)
 
 report_path = Path("pytest-report.xml")
 assert report_path.is_file()

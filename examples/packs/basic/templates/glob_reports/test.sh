@@ -6,7 +6,7 @@ export LINKAR_RESULTS_DIR="./.tmp-test/results"
 
 mkdir -p "${LINKAR_RESULTS_DIR}"
 
-./run.sh
+./script.sh
 
 test -f "${LINKAR_RESULTS_DIR}/reports/demo_summary.html"
 test -f "${LINKAR_RESULTS_DIR}/reports/demo_qc.html"

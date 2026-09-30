@@ -11,4 +11,4 @@ params:
 outputs:
   pytest_report: {}
 run:
-  entry: run.sh
+  entry: script.sh

@@ -14,7 +14,7 @@ It is a lightweight runtime for reusable computational templates, with a human-f
 For template authors:
 
 - use `run.command` for thin single-command wrappers
-- use `run.sh` only when the template needs real script logic
+- use `script.sh` as the source when the template needs real shell logic; Linkar renders `run.sh`
 
 New template and pack contracts should use:
 
@@ -338,7 +338,7 @@ Linkar also exposes a local stdio MCP server over the same core semantics.
 Install the optional dependency if you want the MCP bridge:
 
 ```bash
-pip install 'linkar[mcp]'
+pipx install --force 'linkar[mcp] @ git+https://github.com/chaochungkuo/linkar.git'
 ```
 
 Then start it with either entrypoint:

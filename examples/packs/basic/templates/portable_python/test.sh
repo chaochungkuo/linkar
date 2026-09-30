@@ -6,7 +6,7 @@ export LINKAR_RESULTS_DIR="./.tmp-test/results"
 
 mkdir -p "${LINKAR_RESULTS_DIR}"
 
-./run.sh
+./script.sh
 
 test -f "${LINKAR_RESULTS_DIR}/greeting.txt"
 grep -q "Hello from Portable" "${LINKAR_RESULTS_DIR}/greeting.txt"

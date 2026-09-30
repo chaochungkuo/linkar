@@ -10,7 +10,7 @@ Once a template grows beyond a thin launcher, the cleanest pattern is usually:
 ```text
 my_template/
   linkar_template.yaml
-  run.sh
+  script.sh
   run.py
   test.py
   optional config templates...
@@ -19,7 +19,7 @@ my_template/
 Use each file for one job:
 
 - `linkar_template.yaml` is the runtime contract
-- `run.sh` is a thin human-facing entrypoint
+- `script.sh` is the thin source wrapper that becomes the rendered `run.sh`
 - `run.py` holds the real execution logic
 - `test.py` exercises the runtime locally without depending on `linkar run`
 
@@ -28,7 +28,7 @@ assembly into Python where they are easier to test.
 
 ## When this pattern is a good fit
 
-Prefer `run.py` plus a thin `run.sh` when the template needs:
+Prefer `run.py` plus a thin `script.sh` when the template needs:
 
 - nontrivial parameter handling
 - generated config files
@@ -39,7 +39,7 @@ Prefer `run.py` plus a thin `run.sh` when the template needs:
 
 If one shell command is enough, stay with `run.command`.
 
-If a few shell lines are enough, use `run.sh`.
+If a few shell lines are enough, use `script.sh`.
 
 Switch to `run.py` when shell stops being clearer.
 
@@ -74,12 +74,12 @@ outputs:
     path: runtime_command.json
 run:
   mode: render
-  entry: run.sh
+  entry: script.sh
 ```
 
-## Keep `run.sh` thin
+## Keep `script.sh` thin
 
-`run.sh` should stay readable:
+The template-source `script.sh` should stay readable:
 
 ```bash
 #!/usr/bin/env bash
@@ -142,7 +142,7 @@ This is easier to maintain and test than complex shell quoting.
 
 ## Record runtime metadata explicitly
 
-Do not make downstream tools parse `run.sh` or `run.py` unless they have to.
+Do not make downstream tools parse `script.sh`, rendered `run.sh`, or `run.py` unless they have to.
 
 Instead, write explicit runtime metadata artifacts.
 
@@ -211,6 +211,6 @@ This keeps runtime logic testable even when Linkar is not available in the test 
 ## Rule of thumb
 
 - use `run.command` when one command is enough
-- use `run.sh` when shell is still the clearest implementation
+- use `script.sh` when shell is still the clearest implementation
 - use `run.py` when the template starts generating files, branching heavily, or recording runtime metadata
-- keep `run.sh` as a thin wrapper when you still want rendered bundles to have one obvious entrypoint
+- keep `script.sh` as a thin source wrapper when you still want rendered bundles to have one obvious `run.sh` entrypoint

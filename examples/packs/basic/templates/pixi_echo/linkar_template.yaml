@@ -11,4 +11,4 @@ params:
 outputs:
   greeting_file: {}
 run:
-  entry: run.sh
+  entry: script.sh

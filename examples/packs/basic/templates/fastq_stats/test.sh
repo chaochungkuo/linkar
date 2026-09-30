@@ -7,7 +7,7 @@ export LINKAR_RESULTS_DIR="./.tmp-test/results"
 
 mkdir -p "${LINKAR_RESULTS_DIR}"
 
-./run.sh
+./script.sh
 
 test -f "${LINKAR_RESULTS_DIR}/summary.txt"
 grep -q "sample=demo" "${LINKAR_RESULTS_DIR}/summary.txt"

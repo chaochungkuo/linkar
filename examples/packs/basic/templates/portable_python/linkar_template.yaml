@@ -12,4 +12,4 @@ tools:
   required_any:
     - [python3, python]
 run:
-  entry: run.sh
+  entry: script.sh

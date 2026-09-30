@@ -25,7 +25,8 @@ def _require_mcp() -> Any:
     except ImportError as exc:  # pragma: no cover - exercised through CLI/runtime use
         raise RuntimeError(
             "MCP support requires the optional dependency 'mcp'. Install it with "
-            "`pip install 'linkar[mcp]'`, `pipx install 'linkar[mcp]'`, or add the extra in your environment."
+            "`pipx install --force 'linkar[mcp] @ git+https://github.com/chaochungkuo/linkar.git'`, "
+            "or add the 'mcp' extra to the environment containing Linkar."
         ) from exc
     return FastMCP
 

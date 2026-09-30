@@ -166,10 +166,16 @@ the cleaner path.
 
 If the client already speaks MCP, use Linkar's stdio MCP server instead of wrapping the CLI.
 
-Install the optional dependency:
+Install Linkar with its optional MCP dependency in the same tool environment:
 
 ```bash
-pip install 'linkar[mcp]'
+pipx install --force 'linkar[mcp] @ git+https://github.com/chaochungkuo/linkar.git'
+```
+
+For `uv` users, the equivalent is:
+
+```bash
+uv tool install --force 'linkar[mcp] @ git+https://github.com/chaochungkuo/linkar.git'
 ```
 
 Then start the server:
