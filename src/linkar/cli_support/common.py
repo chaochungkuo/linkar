@@ -68,7 +68,7 @@ def click_type_for_param(param_type: str) -> click.ParamType:
         return click.INT
     if param_type == "float":
         return click.FLOAT
-    if param_type == "bool":
+    if param_type in {"bool", "flag"}:
         return click.BOOL
     if param_type == "path":
         return click.Path(path_type=str, dir_okay=True, file_okay=True)
@@ -76,13 +76,15 @@ def click_type_for_param(param_type: str) -> click.ParamType:
 
 
 def help_for_param(name: str, spec: dict[str, Any]) -> str:
+    description = str(spec.get("description") or "").strip()
+    if spec.get("type") == "flag":
+        return description or name.replace("_", " ")
     pieces = [f"type: {spec.get('type', 'str')}"]
     if spec.get("required"):
         pieces.append("required when not resolved elsewhere")
     if "default" in spec:
         pieces.append(f"default: {spec['default']}")
     summary = f"{name} ({'; '.join(pieces)})"
-    description = str(spec.get("description") or "").strip()
     if not description:
         return summary
     return f"{summary}\n{description}"

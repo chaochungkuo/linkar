@@ -107,11 +107,24 @@ def template_command_callback(
 
     params: list[click.Parameter] = []
     for key, spec in template_spec.params.items():
+        param_type = spec.get("type", "str")
+        if param_type == "flag":
+            params.append(
+                click.Option(
+                    [f"--{key.replace('_', '-')}"],
+                    is_flag=True,
+                    default=None,
+                    required=False,
+                    help=help_for_param(key, spec),
+                    show_default=False,
+                )
+            )
+            continue
         params.append(
             click.Option(
                 [f"--{key.replace('_', '-')}"],
-                type=click_type_for_param(spec.get("type", "str")),
-                metavar=spec.get("type", "str").upper(),
+                type=click_type_for_param(param_type),
+                metavar=param_type.upper(),
                 required=False,
                 help=help_for_param(key, spec),
                 show_default=False,

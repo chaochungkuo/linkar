@@ -2504,6 +2504,49 @@ def test_help_for_param_includes_description_text() -> None:
     assert help_text == "input_h5ad (type: path)\nPreferred input for an existing AnnData file."
 
 
+def test_template_flag_param_accepts_bare_option(tmp_path: Path) -> None:
+    pack_root = tmp_path / "pack"
+    make_template(
+        pack_root / "templates",
+        "flag_demo",
+        "  prepare:\n    type: flag\n    default: false\n    description: Prepare without submitting.",
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "${PREPARE}" > "${LINKAR_RESULTS_DIR}/prepare.txt"
+        """,
+    )
+    project_dir = tmp_path / "project"
+    init = run_cli("project", "init", str(project_dir), cwd=tmp_path)
+    assert init.returncode == 0, init.stderr
+    project_file = project_dir / "project.yaml"
+    project = yaml.safe_load(project_file.read_text())
+    project["packs"] = [{"ref": str(pack_root)}]
+    project_file.write_text(yaml.safe_dump(project, sort_keys=False))
+
+    completed = run_cli(
+        "run",
+        "flag_demo",
+        "--prepare",
+        cwd=project_dir,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    outdir = Path(completed.stdout.strip())
+    assert (outdir / "results" / "prepare.txt").read_text().strip() == "true"
+
+    follow_up = run_cli("run", "flag_demo", cwd=project_dir)
+    assert follow_up.returncode == 0, follow_up.stderr
+    assert Path(follow_up.stdout.strip()) == outdir
+    assert (outdir / "results" / "prepare.txt").read_text().strip() == "false"
+
+    help_result = run_cli("run", "flag_demo", "--help", cwd=project_dir)
+    assert help_result.returncode == 0, help_result.stderr
+    assert "--prepare" in help_result.stdout
+    assert "Prepare without submitting." in help_result.stdout
+    assert "type: flag" not in help_result.stdout
+    assert "FLAG" not in help_result.stdout
+
+
 def test_dynamic_render_help_includes_template_param_descriptions(tmp_path: Path) -> None:
     pack_root = tmp_path / "pack"
     make_template(

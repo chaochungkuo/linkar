@@ -49,11 +49,16 @@ Linkar supports:
 - `int`
 - `float`
 - `bool`
+- `flag`
 - `path`
 - `list[path]`
 
 Use explicit defaults in the schema whenever possible. That keeps wrapper logic small and makes the
 CLI help clearer.
+
+Use `flag` for an opt-in CLI switch with a fixed `false` default. Users enable it by writing only
+the option name, such as `--prepare`; unlike `bool`, it does not take a `true` or `false` value.
+Flags are one-shot actions and return to `false` on the next run when omitted.
 
 ## Declared outputs
 

@@ -43,7 +43,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["str", "int", "float", "bool", "path", "list[path]"]
+            "enum": ["str", "int", "float", "bool", "flag", "path", "list[path]"]
           },
           "required": {
             "type": "boolean"

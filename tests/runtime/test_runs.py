@@ -632,6 +632,43 @@ def test_render_template_rerender_fails_when_output_dir_exists(tmp_path: Path) -
     assert entry["instance_id"] == first["instance_id"]
 
 
+def test_run_template_exposes_refresh_state_to_render_mode_runtime(tmp_path: Path) -> None:
+    template_dir = make_template(
+        tmp_path / "templates",
+        "render_refresh_env",
+        (
+            "#!/usr/bin/env bash\n"
+            "set -euo pipefail\n"
+            "printf '%s\\n' \"${LINKAR_REFRESH}\" > \"${LINKAR_RESULTS_DIR}/refresh.txt\"\n"
+        ),
+    )
+    (template_dir / "linkar_template.yaml").write_text(
+        "\n".join(
+            [
+                "id: render_refresh_env",
+                "run:",
+                "  entry: run.sh",
+                "  mode: render",
+                "outputs:",
+                "  refresh:",
+                "    path: refresh.txt",
+                "",
+            ]
+        )
+    )
+    project_path = init_project(tmp_path / "project")
+    project = load_project(project_path.parent)
+
+    first = run_template(template_dir, project=project)
+    first_outdir = Path(first["outdir"])
+    assert (first_outdir / "results" / "refresh.txt").read_text().strip() == "false"
+
+    refreshed = run_template(template_dir, project=project, refresh=True)
+    refreshed_outdir = Path(refreshed["outdir"])
+    assert refreshed_outdir == first_outdir
+    assert (refreshed_outdir / "results" / "refresh.txt").read_text().strip() == "true"
+
+
 def test_render_template_explicit_outdir_fails_when_directory_exists(tmp_path: Path) -> None:
     template_dir = make_template(
         tmp_path / "templates",

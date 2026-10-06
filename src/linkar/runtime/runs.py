@@ -800,6 +800,12 @@ def prepare_template_execution(
             warnings,
             existing_binding_ref,
         ) = load_existing_render_bundle_context(existing_meta_path)
+        # Flags are one-shot CLI actions, not persistent configuration. A bare
+        # follow-up run must not repeat an earlier --prepare, --new, or similar
+        # action merely because the rendered bundle metadata recorded it.
+        for key, spec in template.params.items():
+            if (spec or {}).get("type") == "flag":
+                resolved_params[key] = False
         if selected_binding_ref is None and existing_binding_ref is not None:
             selected_binding_ref = existing_binding_ref
         outdir_provenance: dict[str, Any] | None = None
@@ -815,6 +821,7 @@ def prepare_template_execution(
         env["LINKAR_OUTPUT_DIR"] = str(output_dir)
         env["LINKAR_RESULTS_DIR"] = str(output_dir / "results")
         env["LINKAR_INSTANCE_ID"] = instance_id
+        env["LINKAR_REFRESH"] = "true" if refresh else "false"
         if template.pack_root is not None:
             env["LINKAR_PACK_ROOT"] = str(template.pack_root)
         if project_obj is not None:
@@ -902,6 +909,7 @@ def prepare_template_execution(
     env["LINKAR_OUTPUT_DIR"] = str(output_dir)
     env["LINKAR_RESULTS_DIR"] = str(output_dir / "results")
     env["LINKAR_INSTANCE_ID"] = instance_id
+    env["LINKAR_REFRESH"] = "true" if refresh else "false"
     if template.pack_root is not None:
         env["LINKAR_PACK_ROOT"] = str(template.pack_root)
     if project_obj is not None:

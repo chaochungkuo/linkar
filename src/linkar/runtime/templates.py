@@ -147,9 +147,13 @@ def load_template(
                 f"Template param spec must be a mapping for '{key}' in {spec_path}"
             )
         param_type = spec.get("type", "str")
-        if param_type not in {"str", "int", "float", "bool", "path", "list[path]"}:
+        if param_type not in {"str", "int", "float", "bool", "flag", "path", "list[path]"}:
             raise TemplateValidationError(
                 f"Unsupported param type '{param_type}' for '{key}' in {spec_path}"
+            )
+        if param_type == "flag" and spec.get("default", False) is not False:
+            raise TemplateValidationError(
+                f"Template flag param '{key}' must have default false in {spec_path}"
             )
 
     outputs = data.get("outputs") or {}

@@ -125,7 +125,7 @@ def parse_param_value(value: Any, param_type: str) -> Any:
         return int(value)
     if param_type == "float":
         return float(value)
-    if param_type == "bool":
+    if param_type in {"bool", "flag"}:
         if isinstance(value, bool):
             return value
         lowered = str(value).strip().lower()
